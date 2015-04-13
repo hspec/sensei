@@ -1,0 +1,44 @@
+-- This file has been generated from package.yaml by Cabalize.
+--
+-- see: https://github.com/sol/cabalize
+
+name:           autospec
+version:        0.0.0
+build-type:     Simple
+cabal-version:  >= 1.10
+
+library
+  hs-source-dirs: src, doctest/ghci-wrapper/src/
+  exposed-modules:
+      Interpreter
+      Run
+      Language.Haskell.GhciWrapper
+  build-depends:
+      base == 4.*
+    , process
+  ghc-options: -Wall
+  default-language: Haskell2010
+
+executable autospec
+  main-is: driver/Main.hs
+  build-depends:
+      base == 4.*
+    , process
+
+    , autospec
+  ghc-options: -Wall
+  default-language: Haskell2010
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test, doctest/ghci-wrapper/src/
+  main-is: Spec.hs
+  build-depends:
+      base == 4.*
+    , process
+
+    , autospec
+    , hspec == 2.*
+    , silently
+  ghc-options: -Wall
+  default-language: Haskell2010

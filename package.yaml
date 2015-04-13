@@ -1,0 +1,27 @@
+dependencies:
+  - base == 4.*
+  - process
+
+ghc-options: -Wall
+
+library:
+  source-dirs: 
+    - src
+    - doctest/ghci-wrapper/src/
+
+executables:
+  autospec:
+    main: driver/Main.hs
+    dependencies:
+      - autospec
+
+tests:
+  spec:
+    main: Spec.hs
+    source-dirs:
+      - test
+      - doctest/ghci-wrapper/src/
+    dependencies:
+      - autospec
+      - hspec == 2.*
+      - silently
