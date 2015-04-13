@@ -1,7 +1,9 @@
 module Interpreter (
-  new
+  Interpreter
+, new
 , close
-, trigger
+, reload
+, hspec
 ) where
 
 import qualified Language.Haskell.GhciWrapper as GhciWrapper
@@ -13,5 +15,8 @@ new args = do
   _ <- eval ghci (":set prompt " ++ show "")
   return ghci
 
-trigger :: Interpreter -> IO String
-trigger ghci = eval ghci ":reload"
+reload :: Interpreter -> IO String
+reload ghci = eval ghci ":reload"
+
+hspec :: Interpreter -> IO String
+hspec ghci =  eval ghci ":main --color"
