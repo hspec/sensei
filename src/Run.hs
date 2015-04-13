@@ -14,5 +14,4 @@ run args input = bracket (Interpreter.new args) Interpreter.close $ \interpreter
 
 trigger :: Interpreter -> IO ()
 trigger interpreter = do
-  Interpreter.reload interpreter >>= putStr
-  Interpreter.hspec interpreter >>= putStr
+  Interpreter.reload interpreter >> Interpreter.hspec interpreter >> return ()

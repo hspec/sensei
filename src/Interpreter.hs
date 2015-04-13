@@ -16,7 +16,7 @@ new args = do
   return ghci
 
 reload :: Interpreter -> IO String
-reload ghci = eval ghci ":reload"
+reload ghci = evalEcho ghci ":reload"
 
 hspec :: Interpreter -> IO String
-hspec ghci =  eval ghci ":main --color"
+hspec ghci = evalEcho ghci ":main --color"

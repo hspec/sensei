@@ -3,6 +3,7 @@ module InterpreterSpec (main, spec) where
 import           Test.Hspec
 import           Data.List
 import           Control.Exception
+import           System.IO.Silently
 
 import           Interpreter (Interpreter)
 import qualified Interpreter
@@ -18,10 +19,10 @@ spec = do
   describe "reload" $ do
     it "reloads" $ do
       withInterpreter [] $ \interpreter -> do
-        Interpreter.reload interpreter `shouldReturn` "Ok, modules loaded: none.\n"
+        silence (Interpreter.reload interpreter) `shouldReturn` "Ok, modules loaded: none.\n"
 
   describe "hspec" $ do
     it "runs specs" $ do
       withInterpreter ["resource/Spec.hs"] $ \interpreter -> do
-        xs <- (Interpreter.hspec interpreter >> Interpreter.hspec interpreter)
+        xs <- silence (Interpreter.hspec interpreter >> Interpreter.hspec interpreter)
         xs `shouldSatisfy` ("1 example, 0 failures" `isInfixOf`)
