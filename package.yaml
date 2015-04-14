@@ -1,6 +1,8 @@
 dependencies:
   - base == 4.*
   - process
+  - fsnotify
+  - time
 
 ghc-options: -Wall
 
