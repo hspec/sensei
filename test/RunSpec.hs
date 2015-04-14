@@ -22,8 +22,8 @@ spec = do
     it "reloads and runs specs" $ do
       withInterpreter ["resource/Spec.hs"] $ \ghci -> do
         xs <- silence (trigger ghci >> trigger ghci)
-        xs `shouldSatisfy` ("Ok, modules loaded:" `isInfixOf`)
-        xs `shouldSatisfy` ("1 example, 0 failures" `isInfixOf`)
+        xs `shouldContain` "Ok, modules loaded:"
+        xs `shouldContain` "1 example, 0 failures"
 
     context "with a program that does not compile" $ do
       it "stops after reloading" $ do

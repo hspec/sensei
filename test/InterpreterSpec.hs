@@ -1,7 +1,6 @@
 module InterpreterSpec (main, spec) where
 
 import           Helper
-import           Data.List
 
 import qualified Interpreter
 
@@ -19,4 +18,4 @@ spec = do
     it "runs specs" $ do
       withInterpreter ["resource/Spec.hs"] $ \ghci -> do
         xs <- silence (Interpreter.hspec ghci >> Interpreter.hspec ghci)
-        xs `shouldSatisfy` ("1 example, 0 failures" `isInfixOf`)
+        xs `shouldContain` "1 example, 0 failures"
