@@ -20,6 +20,11 @@ executables:
     dependencies:
       - autospec
 
+  autospec-web:
+    main: driver/Web.hs
+    dependencies:
+      - autospec
+
 tests:
   spec:
     main: Spec.hs

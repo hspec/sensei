@@ -45,6 +45,13 @@ run args = do
       output <- trigger interpreter
       return (output, t)
 
+runWeb :: [String] -> IO ()
+runWeb args = do
+  bracket (Interpreter.new args) Interpreter.close $ \interpreter -> do
+    lock <- newMVar ()
+    Http.start $ withMVar lock $ \() -> trigger interpreter
+    waitForever
+
 trigger :: Interpreter -> IO String
 trigger interpreter = do
   xs <- Interpreter.reload interpreter

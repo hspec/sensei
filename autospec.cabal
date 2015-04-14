@@ -41,6 +41,21 @@ executable autospec
   ghc-options: -Wall
   default-language: Haskell2010
 
+executable autospec-web
+  main-is: driver/Web.hs
+  build-depends:
+      base == 4.*
+    , process
+    , fsnotify
+    , time
+    , wai
+    , warp
+    , http-types
+
+    , autospec
+  ghc-options: -Wall
+  default-language: Haskell2010
+
 test-suite spec
   type: exitcode-stdio-1.0
   hs-source-dirs: test, doctest/ghci-wrapper/src/
