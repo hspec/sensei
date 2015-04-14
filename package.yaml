@@ -3,6 +3,9 @@ dependencies:
   - process
   - fsnotify
   - time
+  - wai
+  - warp
+  - http-types
 
 ghc-options: -Wall
 

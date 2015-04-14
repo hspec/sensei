@@ -6,10 +6,12 @@ import           Control.Concurrent
 import           Control.Monad (void, forever)
 import           Data.Foldable
 import           Data.List
+import           Data.Time.Clock
 import           System.FSNotify (withManager, watchTree)
 
 import           Interpreter (Interpreter)
 import qualified Interpreter
+import qualified Http
 
 import           EventQueue
 
@@ -34,8 +36,14 @@ run args = do
   queue <- newQueue
   watchFiles queue
   watchInput queue
+  lastOutput <- newMVar ""
+  Http.start (readMVar lastOutput)
   bracket (Interpreter.new args) Interpreter.close $ \interpreter -> do
-    processQueue queue (void $ trigger interpreter)
+    processQueue queue $ modifyMVar lastOutput $ \_ -> do
+      threadDelay 100000
+      t <- getCurrentTime
+      output <- trigger interpreter
+      return (output, t)
 
 trigger :: Interpreter -> IO String
 trigger interpreter = do

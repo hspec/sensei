@@ -18,7 +18,7 @@ emitEvent chan = (Event <$> getCurrentTime) >>= writeChan chan
 emitDone :: EventQueue -> IO ()
 emitDone chan = writeChan chan Done
 
-processQueue :: EventQueue -> IO () -> IO ()
+processQueue :: EventQueue -> IO UTCTime -> IO ()
 processQueue chan action = do
   emitEvent chan
   go (posixSecondsToUTCTime 0)
@@ -27,8 +27,5 @@ processQueue chan action = do
       event <- readChan chan
       case event of
         Done -> return ()
-        Event t | t0 < t -> do
-          threadDelay 100000
-          t1 <- getCurrentTime
-          action >> go t1
+        Event t | t0 < t -> action >>= go
         Event _ -> go t0

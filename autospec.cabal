@@ -11,6 +11,7 @@ library
   hs-source-dirs: src, doctest/ghci-wrapper/src/
   exposed-modules:
       EventQueue
+      Http
       Interpreter
       Run
       Language.Haskell.GhciWrapper
@@ -19,6 +20,9 @@ library
     , process
     , fsnotify
     , time
+    , wai
+    , warp
+    , http-types
   ghc-options: -Wall
   default-language: Haskell2010
 
@@ -29,6 +33,9 @@ executable autospec
     , process
     , fsnotify
     , time
+    , wai
+    , warp
+    , http-types
 
     , autospec
   ghc-options: -Wall
@@ -43,6 +50,9 @@ test-suite spec
     , process
     , fsnotify
     , time
+    , wai
+    , warp
+    , http-types
 
     , autospec
     , hspec == 2.*
