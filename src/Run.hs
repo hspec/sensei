@@ -3,55 +3,39 @@ module Run where
 
 import           Control.Exception
 import           Control.Concurrent
-import           Control.Applicative
 import           Control.Monad (void, forever)
 import           Data.Foldable
 import           Data.List
-import           Data.Time.Clock
 import           System.FSNotify (withManager, watchTree)
 
 import           Interpreter (Interpreter)
 import qualified Interpreter
 
-data Event = Event UTCTime | Done
+import           EventQueue
 
-emitEvent :: Chan Event -> IO ()
-emitEvent chan = (Event <$> getCurrentTime) >>= writeChan chan
+waitForever :: IO ()
+waitForever = forever $ threadDelay 10000000
 
-watchFiles :: Chan Event -> IO ()
-watchFiles chan = void . forkIO $ do
+watchFiles :: EventQueue -> IO ()
+watchFiles queue = void . forkIO $ do
   withManager $ \manager -> do
-    _ <- watchTree manager "." (const True) (const $ emitEvent chan)
-    forever $ threadDelay maxBound
+    _ <- watchTree manager "." (const True) (const $ emitEvent queue)
+    waitForever
 
-watchInput :: Chan Event -> String -> IO ()
-watchInput chan input = void . forkIO $ do
+watchInput :: EventQueue -> IO ()
+watchInput queue = void . forkIO $ do
+  input <- getContents
   forM_ (lines input) $ \_ -> do
-    emitEvent chan
-  writeChan chan Done
+    emitEvent queue
+  emitDone queue
 
-run :: [String] -> String -> IO ()
-run args input = do
-  chan <- newChan
-  watchFiles chan
-  watchInput chan input
-  bracket (Interpreter.new args) Interpreter.close (processEvents chan)
-
-processEvents :: Chan Event -> Interpreter -> IO ()
-processEvents chan interpreter = do
-  t <- getCurrentTime
-  emitEvent chan
-  go t
-  where
-    go t0 = do
-      event <- readChan chan
-      case event of
-        Done -> return ()
-        Event t | t0 < t -> do
-          threadDelay 100000
-          t1 <- getCurrentTime
-          trigger interpreter >> go t1
-        Event _ -> go t0
+run :: [String] -> IO ()
+run args = do
+  queue <- newQueue
+  watchFiles queue
+  watchInput queue
+  bracket (Interpreter.new args) Interpreter.close $ \interpreter -> do
+    processQueue queue (void $ trigger interpreter)
 
 trigger :: Interpreter -> IO String
 trigger interpreter = do

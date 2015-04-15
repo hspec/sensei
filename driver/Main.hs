@@ -5,6 +5,4 @@ import           System.Environment
 import           Run
 
 main :: IO ()
-main = do
-  args <- getArgs
-  getContents >>= run args
+main = getArgs >>= run

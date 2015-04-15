@@ -10,6 +10,7 @@ cabal-version:  >= 1.10
 library
   hs-source-dirs: src, doctest/ghci-wrapper/src/
   exposed-modules:
+      EventQueue
       Interpreter
       Run
       Language.Haskell.GhciWrapper
