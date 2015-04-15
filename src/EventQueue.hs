@@ -3,6 +3,7 @@ module EventQueue where
 import           Control.Concurrent
 import           Control.Applicative
 import           Data.Time.Clock
+import           Data.Time.Clock.POSIX
 
 type EventQueue = Chan Event
 
@@ -19,9 +20,8 @@ emitDone chan = writeChan chan Done
 
 processQueue :: EventQueue -> IO () -> IO ()
 processQueue chan action = do
-  t <- getCurrentTime
   emitEvent chan
-  go t
+  go (posixSecondsToUTCTime 0)
   where
     go t0 = do
       event <- readChan chan
