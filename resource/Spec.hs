@@ -1,9 +1,6 @@
-module Spec (main, spec) where
+module Spec (spec) where
 
 import           Test.Hspec
-
-main :: IO ()
-main = hspec spec
 
 spec :: Spec
 spec = do

@@ -14,7 +14,7 @@ normalizeOutput = map normalize . lines
     normalize line
       | message `isPrefixOf` line = message ++ "..."
       | otherwise = line
-    message = "resource/BrokenSpec.hs:12:7: Not in scope: "
+    message = "resource/BrokenSpec.hs:9:7: Not in scope: "
 
 spec :: Spec
 spec = do
@@ -32,6 +32,6 @@ spec = do
           normalizeOutput xs `shouldBe` [
               "[1 of 1] Compiling Spec             ( resource/BrokenSpec.hs, interpreted )"
             , ""
-            , "resource/BrokenSpec.hs:12:7: Not in scope: ..."
+            , "resource/BrokenSpec.hs:9:7: Not in scope: ..."
             , "Failed, modules loaded: none."
             ]

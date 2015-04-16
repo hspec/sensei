@@ -23,6 +23,7 @@ new args = do
   ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False} ghciArgs
   _ <- eval ghci (":set prompt " ++ show "")
   _ <- eval ghci ("import qualified System.Environment")
+  _ <- eval ghci ("import qualified Test.Hspec")
   return (Session ghci hspecArgs)
 
 close :: Session -> IO ()
@@ -32,4 +33,4 @@ reload :: Session -> IO String
 reload Session{..} = evalEcho sessionInterpreter ":reload"
 
 hspec :: Session -> IO String
-hspec Session{..} = evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ (show $ "--color" : sessionHspecArgs) ++ " $ main"
+hspec Session{..} = evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ (show $ "--color" : sessionHspecArgs) ++ " $ Test.Hspec.hspec spec"
