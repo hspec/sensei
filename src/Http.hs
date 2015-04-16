@@ -10,7 +10,7 @@ import           Network.Wai.Handler.Warp (run)
 
 start :: IO String -> IO ()
 start trigger = do
-  putStrLn $ "http://localhost:" ++ show port
+  putStrLn $ "listening on http://localhost:" ++ show port
   void . forkIO $ run port (app trigger)
   where
     port = 8080
