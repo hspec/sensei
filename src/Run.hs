@@ -9,7 +9,7 @@ import           Data.List
 import           Data.Time.Clock
 import           System.FSNotify (withManager, watchTree)
 
-import           Interpreter (Interpreter)
+import           Interpreter (Session)
 import qualified Interpreter
 import qualified Http
 
@@ -52,7 +52,7 @@ runWeb args = do
     Http.start $ withMVar lock $ \() -> trigger interpreter
     waitForever
 
-trigger :: Interpreter -> IO String
+trigger :: Session -> IO String
 trigger interpreter = do
   xs <- Interpreter.reload interpreter
   ys <- if "Ok, modules loaded:" `isInfixOf` xs

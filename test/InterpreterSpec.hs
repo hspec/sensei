@@ -19,3 +19,8 @@ spec = do
       withInterpreter ["resource/Spec.hs"] $ \ghci -> do
         xs <- silence (Interpreter.hspec ghci >> Interpreter.hspec ghci)
         xs `shouldContain` "1 example, 0 failures"
+
+    it "accepts Hspec args" $ do
+      withInterpreter ["resource/Spec.hs", "-m", "foo"] $ \ghci -> do
+        xs <- silence (Interpreter.hspec ghci >> Interpreter.hspec ghci)
+        xs `shouldContain` "0 examples, 0 failures"

@@ -10,8 +10,8 @@ import           Control.Exception
 import           Control.Applicative
 import           System.IO.Silently
 
-import           Interpreter (Interpreter)
+import           Interpreter (Session)
 import qualified Interpreter
 
-withInterpreter :: [String] -> (Interpreter -> IO a) -> IO a
+withInterpreter :: [String] -> (Session -> IO a) -> IO a
 withInterpreter args action = bracket (Interpreter.new $ "-ignore-dot-ghci" : args) Interpreter.close action

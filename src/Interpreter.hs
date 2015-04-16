@@ -1,5 +1,6 @@
+{-# LANGUAGE RecordWildCards #-}
 module Interpreter (
-  Interpreter
+  Session
 , new
 , close
 , reload
@@ -7,16 +8,28 @@ module Interpreter (
 ) where
 
 import qualified Language.Haskell.GhciWrapper as GhciWrapper
-import           Language.Haskell.GhciWrapper hiding (new)
+import           Language.Haskell.GhciWrapper hiding (new, close)
 
-new :: [String] -> IO Interpreter
+import           Options
+
+data Session = Session {
+  sessionInterpreter :: Interpreter
+, sessionHspecArgs :: [String]
+}
+
+new :: [String] -> IO Session
 new args = do
-  ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False} args
+  let (ghciArgs, hspecArgs) = splitArgs args
+  ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False} ghciArgs
   _ <- eval ghci (":set prompt " ++ show "")
-  return ghci
+  _ <- eval ghci ("import qualified System.Environment")
+  return (Session ghci hspecArgs)
 
-reload :: Interpreter -> IO String
-reload ghci = evalEcho ghci ":reload"
+close :: Session -> IO ()
+close = GhciWrapper.close . sessionInterpreter
 
-hspec :: Interpreter -> IO String
-hspec ghci = evalEcho ghci ":main --color"
+reload :: Session -> IO String
+reload Session{..} = evalEcho sessionInterpreter ":reload"
+
+hspec :: Session -> IO String
+hspec Session{..} = evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ (show $ "--color" : sessionHspecArgs) ++ " $ main"
