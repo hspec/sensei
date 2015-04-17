@@ -15,6 +15,7 @@ library
       Interpreter
       Options
       Run
+      Util
       Language.Haskell.GhciWrapper
   build-depends:
       base == 4.*
@@ -24,6 +25,7 @@ library
     , wai
     , warp
     , http-types
+    , system-filepath
   ghc-options: -Wall
   default-language: Haskell2010
 
@@ -37,6 +39,7 @@ executable autospec
     , wai
     , warp
     , http-types
+    , system-filepath
 
     , autospec
   ghc-options: -Wall
@@ -52,6 +55,7 @@ executable autospec-web
     , wai
     , warp
     , http-types
+    , system-filepath
 
     , autospec
   ghc-options: -Wall
@@ -61,6 +65,14 @@ test-suite spec
   type: exitcode-stdio-1.0
   hs-source-dirs: test, doctest/ghci-wrapper/src/
   main-is: Spec.hs
+  other-modules:
+      Helper
+      InterpreterSpec
+      OptionsSpec
+      RunSpec
+      Spec
+      UtilSpec
+      Language.Haskell.GhciWrapper
   build-depends:
       base == 4.*
     , process
@@ -69,6 +81,7 @@ test-suite spec
     , wai
     , warp
     , http-types
+    , system-filepath
 
     , autospec
     , hspec == 2.*

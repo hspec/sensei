@@ -7,12 +7,13 @@ import           Control.Monad (void, forever)
 import           Data.Foldable
 import           Data.List
 import           Data.Time.Clock
-import           System.FSNotify (withManager, watchTree)
+import           System.FSNotify
 
 import           Interpreter (Session)
 import qualified Interpreter
 import qualified Http
 
+import           Util
 import           EventQueue
 
 waitForever :: IO ()
@@ -21,7 +22,7 @@ waitForever = forever $ threadDelay 10000000
 watchFiles :: EventQueue -> IO ()
 watchFiles queue = void . forkIO $ do
   withManager $ \manager -> do
-    _ <- watchTree manager "." (const True) (const $ emitEvent queue)
+    _ <- watchTree manager "." (not . isBoring . eventPath) (const $ emitEvent queue)
     waitForever
 
 watchInput :: EventQueue -> IO ()

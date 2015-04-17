@@ -6,6 +6,7 @@ dependencies:
   - wai
   - warp
   - http-types
+  - system-filepath
 
 ghc-options: -Wall
 
