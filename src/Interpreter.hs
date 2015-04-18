@@ -20,7 +20,7 @@ data Session = Session {
 new :: [String] -> IO Session
 new args = do
   let (ghciArgs, hspecArgs) = splitArgs args
-  ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False} ghciArgs
+  ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False, configGhci = "cabal"} ("exec" : "ghci" : "--" : ghciArgs)
   _ <- eval ghci (":set prompt " ++ show "")
   _ <- eval ghci ("import qualified System.Environment")
   _ <- eval ghci ("import qualified Test.Hspec")
