@@ -19,3 +19,7 @@ All command-line arguments after the last `--` are passed to Hspec, regardless
 how they look:
 
     autospec -isrc -itest test/Spec.hs -- --no-color --match foo
+
+## Using `autospec` with Cabal sandboxes
+
+    cabal exec autospec test/Spec.hs
