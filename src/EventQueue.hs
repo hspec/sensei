@@ -13,18 +13,18 @@ newQueue :: IO EventQueue
 newQueue = newChan
 
 emitEvent :: EventQueue -> IO ()
-emitEvent chan = (Event <$> getCurrentTime) >>= writeChan chan
+emitEvent queue = (Event <$> getCurrentTime) >>= writeChan queue
 
 emitDone :: EventQueue -> IO ()
-emitDone chan = writeChan chan Done
+emitDone queue = writeChan queue Done
 
 processQueue :: EventQueue -> IO UTCTime -> IO ()
-processQueue chan action = do
-  emitEvent chan
+processQueue queue action = do
+  emitEvent queue
   go (posixSecondsToUTCTime 0)
   where
     go t0 = do
-      event <- readChan chan
+      event <- readChan queue
       case event of
         Done -> return ()
         Event t | t0 < t -> action >>= go
