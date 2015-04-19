@@ -6,6 +6,7 @@ module EventQueue (
 , processQueue
 ) where
 
+import           Data.List
 import           Control.Applicative
 import           Control.Concurrent (threadDelay)
 import           Control.Monad.STM
@@ -13,14 +14,14 @@ import           Control.Concurrent.STM.TChan
 
 type EventQueue = TChan Event
 
-data Event = Event | Done
+data Event = Event (Maybe FilePath) | Done
   deriving Eq
 
 newQueue :: IO EventQueue
 newQueue = atomically $ newTChan
 
-emitEvent :: EventQueue -> IO ()
-emitEvent chan = atomically $ writeTChan chan Event
+emitEvent :: Maybe FilePath -> EventQueue -> IO ()
+emitEvent path chan = atomically $ writeTChan chan (Event path)
 
 emitDone :: EventQueue -> IO ()
 emitDone chan = atomically $ writeTChan chan Done
@@ -41,11 +42,15 @@ readEvents chan = do
 
 processQueue :: EventQueue -> IO () -> IO ()
 processQueue chan action = do
-  emitEvent chan
+  emitEvent Nothing chan
   go
   where
     go = do
       events <- readEvents chan
       if Done `elem` events
         then return ()
-        else action >> go
+        else do
+          let files = (nub . sort) [p | Event (Just p) <- events]
+          mapM_ putStrLn (map ("--> " ++) files)
+          action
+          go
