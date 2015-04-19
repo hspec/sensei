@@ -6,7 +6,6 @@ import           Control.Concurrent
 import           Control.Monad (void, forever)
 import           Data.Foldable
 import           Data.List
-import           Data.Time.Clock
 import           System.FSNotify
 
 import           Interpreter (Session)
@@ -40,11 +39,7 @@ run args = do
   lastOutput <- newMVar ""
   Http.start (readMVar lastOutput)
   bracket (Interpreter.new args) Interpreter.close $ \interpreter -> do
-    processQueue queue $ modifyMVar lastOutput $ \_ -> do
-      threadDelay 100000
-      t <- getCurrentTime
-      output <- trigger interpreter
-      return (output, t)
+    processQueue queue $ modifyMVar_ lastOutput $ \_ -> trigger interpreter
 
 runWeb :: [String] -> IO ()
 runWeb args = do

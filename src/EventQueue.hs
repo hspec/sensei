@@ -1,31 +1,51 @@
-module EventQueue where
+module EventQueue (
+  EventQueue
+, newQueue
+, emitEvent
+, emitDone
+, processQueue
+) where
 
-import           Control.Concurrent
 import           Control.Applicative
-import           Data.Time.Clock
-import           Data.Time.Clock.POSIX
+import           Control.Concurrent (threadDelay)
+import           Control.Monad.STM
+import           Control.Concurrent.STM.TChan
 
-type EventQueue = Chan Event
+type EventQueue = TChan Event
 
-data Event = Event UTCTime | Done
+data Event = Event | Done
+  deriving Eq
 
 newQueue :: IO EventQueue
-newQueue = newChan
+newQueue = atomically $ newTChan
 
 emitEvent :: EventQueue -> IO ()
-emitEvent chan = (Event <$> getCurrentTime) >>= writeChan chan
+emitEvent chan = atomically $ writeTChan chan Event
 
 emitDone :: EventQueue -> IO ()
-emitDone chan = writeChan chan Done
+emitDone chan = atomically $ writeTChan chan Done
 
-processQueue :: EventQueue -> IO UTCTime -> IO ()
+readEvents :: EventQueue -> IO [Event]
+readEvents chan = do
+  x <- atomically $ readTChan chan
+  threadDelay 100000
+  xs <- atomically $ emptyQueue
+  return (x : xs)
+  where
+    emptyQueue :: STM [Event]
+    emptyQueue = do
+      mx <- tryReadTChan chan
+      case mx of
+        Nothing -> return []
+        Just x -> (x :) <$> emptyQueue
+
+processQueue :: EventQueue -> IO () -> IO ()
 processQueue chan action = do
   emitEvent chan
-  go (posixSecondsToUTCTime 0)
+  go
   where
-    go t0 = do
-      event <- readChan chan
-      case event of
-        Done -> return ()
-        Event t | t0 < t -> action >>= go
-        Event _ -> go t0
+    go = do
+      events <- readEvents chan
+      if Done `elem` events
+        then return ()
+        else action >> go

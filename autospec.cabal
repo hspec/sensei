@@ -26,6 +26,7 @@ library
     , warp
     , http-types
     , system-filepath
+    , stm
   ghc-options: -Wall
   default-language: Haskell2010
 
@@ -40,6 +41,7 @@ executable autospec
     , warp
     , http-types
     , system-filepath
+    , stm
 
     , autospec
   ghc-options: -Wall
@@ -56,6 +58,7 @@ executable autospec-web
     , warp
     , http-types
     , system-filepath
+    , stm
 
     , autospec
   ghc-options: -Wall
@@ -70,7 +73,6 @@ test-suite spec
       InterpreterSpec
       OptionsSpec
       RunSpec
-      Spec
       UtilSpec
       Language.Haskell.GhciWrapper
   build-depends:
@@ -82,6 +84,7 @@ test-suite spec
     , warp
     , http-types
     , system-filepath
+    , stm
 
     , autospec
     , hspec == 2.*
