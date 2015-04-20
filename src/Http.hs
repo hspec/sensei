@@ -2,6 +2,7 @@
 module Http (start) where
 
 import           Data.String
+import           Data.Text.Lazy.Encoding (encodeUtf8)
 import           Control.Monad
 import           Control.Concurrent
 import           Network.Wai
@@ -16,6 +17,6 @@ start trigger = do
     port = 8080
 
 app :: IO String -> Application
-app trigger _ respond = trigger >>= textPlain . fromString
+app trigger _ respond = trigger >>= textPlain . encodeUtf8 . fromString
   where
     textPlain = respond . responseLBS status200 [(hContentType, "text/plain")]

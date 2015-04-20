@@ -8,6 +8,7 @@ dependencies:
   - http-types
   - system-filepath
   - stm
+  - text
 
 ghc-options: -Wall
 
