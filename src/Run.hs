@@ -45,6 +45,7 @@ run args = do
 runWeb :: [String] -> IO ()
 runWeb args = do
   bracket (Interpreter.new args) Interpreter.close $ \interpreter -> do
+    _ <- trigger interpreter
     lock <- newMVar ()
     Http.start $ withMVar lock $ \() -> trigger interpreter
     waitForever
