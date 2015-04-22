@@ -9,6 +9,9 @@ dependencies:
   - system-filepath
   - stm
   - text
+  - network
+  - ansi-terminal
+  - directory
 
 ghc-options: -Wall
 

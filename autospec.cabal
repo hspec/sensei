@@ -28,6 +28,9 @@ library
     , system-filepath
     , stm
     , text
+    , network
+    , ansi-terminal
+    , directory
   ghc-options: -Wall
   default-language: Haskell2010
 
@@ -44,6 +47,9 @@ executable autospec
     , system-filepath
     , stm
     , text
+    , network
+    , ansi-terminal
+    , directory
 
     , autospec
   ghc-options: -Wall
@@ -62,6 +68,9 @@ executable autospec-web
     , system-filepath
     , stm
     , text
+    , network
+    , ansi-terminal
+    , directory
 
     , autospec
   ghc-options: -Wall
@@ -89,6 +98,9 @@ test-suite spec
     , system-filepath
     , stm
     , text
+    , network
+    , ansi-terminal
+    , directory
 
     , autospec
     , hspec == 2.*

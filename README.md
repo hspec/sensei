@@ -23,3 +23,23 @@ how they look:
 ## Using `autospec` with Cabal sandboxes
 
     cabal exec autospec test/Spec.hs
+
+## Accessing result with `curl`
+
+__Note:__ This only works with `curl` version `7.40.0` and newer.
+
+    curl --unix-socket .autospec.sock http://localhost
+
+### Vim integration
+
+Create a Makefile with the following content:
+
+```Makefile
+all:
+        curl --silent --unix-socket .autospec.sock http://localhost | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
+```
+
+(`sed` is used to strip ANSI color sequences)
+
+You can then load the result of the last test run into your quick fix list by
+executing `:make` in Vim.
