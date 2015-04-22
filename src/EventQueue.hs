@@ -12,6 +12,8 @@ import           Control.Concurrent (threadDelay)
 import           Control.Monad.STM
 import           Control.Concurrent.STM.TChan
 
+import           Util
+
 type EventQueue = TChan Event
 
 data Event = Event (Maybe FilePath) | Done
@@ -51,6 +53,7 @@ processQueue chan action = do
         then return ()
         else do
           let files = (nub . sort) [p | Event (Just p) <- events]
-          mapM_ putStrLn (map ("--> " ++) files)
+          withInfoColor $ do
+            mapM_ putStrLn (map ("--> " ++) files)
           action
           go
