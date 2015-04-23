@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
-module HttpSpec (spec) where
+module HTTPSpec (spec) where
 
 import           Test.Hspec
 import           Test.Hspec.Wai
 
-import           Http
+import           HTTP
 
 spec :: Spec
 spec = do
@@ -15,4 +15,4 @@ spec = do
 
     with (return $ app $ return (False, "hello")) $ do
       it "return 412 on failure" $ do
-        get "/" `shouldRespondWith` 412
+        get "/" `shouldRespondWith` 500

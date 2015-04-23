@@ -1,6 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Helper (
   module Test.Hspec
+, module Test.Mockery.Directory
 , module Control.Applicative
 , module System.IO.Silently
 , withInterpreter

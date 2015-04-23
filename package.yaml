@@ -13,6 +13,8 @@ dependencies:
   - network
   - ansi-terminal
   - directory
+  - http-client
+  - bytestring
 
 ghc-options: -Wall
 
@@ -29,6 +31,11 @@ executables:
 
   autospec-web:
     main: driver/Web.hs
+    dependencies:
+      - autospec
+
+  autospec-client:
+    main: driver/Client.hs
     dependencies:
       - autospec
 
