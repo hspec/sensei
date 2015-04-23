@@ -37,4 +37,6 @@ tests:
     dependencies:
       - autospec
       - hspec == 2.*
+      - mockery
       - silently
+      - interpolate
