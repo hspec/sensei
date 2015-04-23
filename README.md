@@ -36,7 +36,7 @@ Create a Makefile with the following content:
 
 ```Makefile
 all:
-        curl --silent --unix-socket .autospec.sock http://localhost | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
+	curl --silent --unix-socket .autospec.sock http://localhost | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
 ```
 
 (`sed` is used to strip ANSI color sequences)
