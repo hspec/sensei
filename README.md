@@ -1,3 +1,5 @@
+THIS IS EXPERIMENTAL ROCKET SCIENCE! USE AT YOUR OWN RISK!
+
 # autospec
 
 In it's simplest form, you run `autospec` with the `Main` module of your test
