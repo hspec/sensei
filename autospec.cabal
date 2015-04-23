@@ -1,6 +1,6 @@
--- This file has been generated from package.yaml by Cabalize.
+-- This file has been generated from package.yaml by hpack.
 --
--- see: https://github.com/sol/cabalize
+-- see: https://github.com/sol/hpack
 
 name:           autospec
 version:        0.0.0
