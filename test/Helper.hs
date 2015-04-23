@@ -6,6 +6,7 @@ module Helper (
 , withInterpreter
 , withSomeSpec
 , someSpec
+, failingSpec
 ) where
 
 import           Test.Hspec
@@ -35,4 +36,17 @@ spec = do
   describe "reverse" $ do
     it "reverses a list" $ do
       reverse [1 :: Int, 2, 3] `shouldBe` [3, 2, 1]
+|]
+
+failingSpec :: String
+failingSpec = [i|
+module Spec (spec) where
+
+import           Test.Hspec
+
+spec :: Spec
+spec = do
+  describe "reverse" $ do
+    it "reverses a list" $ do
+      23 `shouldBe` (42 :: Int)
 |]

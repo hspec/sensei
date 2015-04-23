@@ -2,6 +2,7 @@ module InterpreterSpec (spec) where
 
 import           Helper
 
+import           Interpreter (Summary(..))
 import qualified Interpreter
 
 spec :: Spec
@@ -14,10 +15,10 @@ spec = do
   describe "hspec" $ around_ withSomeSpec $ do
     it "runs specs" $ do
       withInterpreter ["Spec.hs"] $ \ghci -> do
-        xs <- silence (Interpreter.hspec ghci >> Interpreter.hspec ghci)
-        xs `shouldContain` "1 example, 0 failures"
+        (_, summary) <- silence (Interpreter.hspec ghci >> Interpreter.hspec ghci)
+        summary `shouldBe` Just (Summary 1 0)
 
     it "accepts Hspec args" $ do
-      withInterpreter ["Spec.hs", "-m", "foo"] $ \ghci -> do
-        xs <- silence (Interpreter.hspec ghci >> Interpreter.hspec ghci)
-        xs `shouldContain` "0 examples, 0 failures"
+      withInterpreter ["Spec.hs", "--no-color", "-m", "foo"] $ \ghci -> do
+        (_, summary) <- silence (Interpreter.hspec ghci >> Interpreter.hspec ghci)
+        summary `shouldBe` Just (Summary 0 0)

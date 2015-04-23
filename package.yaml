@@ -1,12 +1,13 @@
 dependencies:
   - base == 4.*
+  - base-compat >= 0.8
   - process
   - fsnotify
   - time
   - wai
   - warp
   - http-types
-  - system-filepath
+  - system-filepath >= 0.4.13.2
   - stm
   - text
   - network
@@ -40,6 +41,7 @@ tests:
     dependencies:
       - autospec
       - hspec == 2.*
+      - hspec-wai
       - mockery
       - silently
       - interpolate

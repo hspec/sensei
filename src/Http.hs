@@ -1,5 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Http (start) where
+module Http (
+  start
+
+-- exported for testing
+, app
+) where
 
 import           Data.String
 import           Data.Text.Lazy.Encoding (encodeUtf8)
@@ -12,7 +17,7 @@ import           Network.HTTP.Types
 import           Network.Wai.Handler.Warp
 import           Network.Socket
 
-start :: String -> IO String -> IO ()
+start :: String -> IO (Bool, String) -> IO ()
 start socketName trigger = do
   _ <- tryJust (guard . isDoesNotExistError) (removeFile socketName)
   bracket (socket AF_UNIX Stream 0) close $ \sock -> do
@@ -20,7 +25,11 @@ start socketName trigger = do
     listen sock maxListenQueue
     runSettingsSocket defaultSettings sock (app trigger)
 
-app :: IO String -> Application
-app trigger _ respond = trigger >>= textPlain . encodeUtf8 . fromString
+app :: IO (Bool, String) -> Application
+app trigger _ respond = trigger >>= textPlain
   where
-    textPlain = respond . responseLBS status200 [(hContentType, "text/plain")]
+    textPlain (success, xs) = respond $ responseLBS status [(hContentType, "text/plain")] (encodeUtf8 . fromString $ xs)
+      where
+        status
+          | success = ok200
+          | otherwise = preconditionFailed412

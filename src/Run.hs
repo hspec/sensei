@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Run where
 
+import           Prelude ()
+import           Prelude.Compat
 import           Control.Exception
 import           Control.Concurrent
 import           Control.Monad (void, forever)
@@ -9,7 +11,7 @@ import           Data.List
 import           System.FSNotify
 import           Filesystem.Path.CurrentOS (encodeString)
 
-import           Interpreter (Session)
+import           Interpreter (Session, Summary(..))
 import qualified Interpreter
 import qualified Http
 
@@ -43,7 +45,7 @@ run args = do
   queue <- newQueue
   watchFiles queue
   watchInput queue
-  lastOutput <- newMVar ""
+  lastOutput <- newMVar (True, "")
   reportSocketName
   void . forkIO $ Http.start socketName (readMVar lastOutput)
   bracket (Interpreter.new args) Interpreter.close $ \interpreter -> do
@@ -57,10 +59,10 @@ runWeb args = do
     reportSocketName
     Http.start socketName $ withMVar lock $ \() -> trigger interpreter
 
-trigger :: Session -> IO String
+trigger :: Session -> IO (Bool, String)
 trigger interpreter = do
   xs <- Interpreter.reload interpreter
-  ys <- if "Ok, modules loaded:" `isInfixOf` xs
+  (ys, summary) <- if "Ok, modules loaded:" `isInfixOf` xs
     then Interpreter.hspec interpreter
-    else return ""
-  return (xs ++ ys)
+    else return ("", Nothing)
+  return (maybe False ((== 0) . summaryFailures) summary, xs ++ ys)
