@@ -26,11 +26,17 @@ how they look:
 
     cabal exec autospec test/Spec.hs
 
-## Accessing result with `curl`
+## Accessing result on the command-line
 
-__Note:__ This only works with `curl` version `7.40.0` and newer.
+You can access the results of the last test run with `autospec-client`:
 
-    curl --unix-socket .autospec.sock http://localhost
+    autospec-client
+
+Alternatively, if you have `curl` version `7.40.0` or newer, you can use `curl`
+instead:
+
+    curl --unix-socket .autospec.sock http://localhost/
+
 
 ### Vim integration
 
@@ -38,10 +44,10 @@ Create a Makefile with the following content:
 
 ```Makefile
 all:
-	curl --silent --unix-socket .autospec.sock http://localhost | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
+	autospec-client | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
 ```
 
 (`sed` is used to strip ANSI color sequences)
 
-You can then load the result of the last test run into your quick fix list by
+You can then load the result of the last test run into your quickfix list by
 executing `:make` in Vim.
