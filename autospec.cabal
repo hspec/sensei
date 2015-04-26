@@ -16,6 +16,7 @@ library
       Interpreter
       Options
       Run
+      Trigger
       Util
       Language.Haskell.GhciWrapper
   build-depends:
@@ -120,7 +121,7 @@ test-suite spec
       Helper
       InterpreterSpec
       OptionsSpec
-      RunSpec
+      TriggerSpec
       UtilSpec
       Language.Haskell.GhciWrapper
   build-depends:

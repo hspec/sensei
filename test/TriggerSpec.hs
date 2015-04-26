@@ -1,9 +1,9 @@
-module RunSpec (spec) where
+module TriggerSpec (spec) where
 
 import           Helper
 import           Data.List
 
-import           Run
+import           Trigger
 
 normalizeOutput :: String -> [String]
 normalizeOutput = map normalize . lines

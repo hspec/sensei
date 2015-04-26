@@ -7,15 +7,14 @@ import           Control.Exception
 import           Control.Concurrent
 import           Control.Monad (void, forever)
 import           Data.Foldable
-import           Data.List
 import           System.FSNotify
 import           Filesystem.Path.CurrentOS (encodeString)
 
-import           Interpreter (Session, Summary(..))
 import qualified Interpreter
 import qualified HTTP
 
 import           Util
+import           Trigger
 import           EventQueue
 
 waitForever :: IO ()
@@ -51,11 +50,3 @@ runWeb args = do
     lock <- newMVar ()
     HTTP.withServer (withMVar lock $ \() -> trigger interpreter) $ do
       waitForever
-
-trigger :: Session -> IO (Bool, String)
-trigger interpreter = do
-  xs <- Interpreter.reload interpreter
-  (ys, summary) <- if "Ok, modules loaded:" `isInfixOf` xs
-    then Interpreter.hspec interpreter
-    else return ("", Nothing)
-  return (maybe False ((== 0) . summaryFailures) summary, xs ++ ys)
