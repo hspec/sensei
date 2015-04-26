@@ -8,9 +8,14 @@ import           Interpreter (Session, Summary(..))
 import qualified Interpreter
 
 trigger :: Session -> IO (Bool, String)
-trigger interpreter = do
-  xs <- Interpreter.reload interpreter
-  (ys, summary) <- if "Ok, modules loaded:" `isInfixOf` xs
-    then Interpreter.hspec interpreter
-    else return ("", Nothing)
-  return (maybe False ((== 0) . summaryFailures) summary, xs ++ ys)
+trigger session = do
+  xs <- Interpreter.reload session
+  fmap (xs ++) <$> if "Ok, modules loaded:" `isInfixOf` xs
+    then do
+      hasSpec <- Interpreter.hasSpec session
+      if hasSpec then do
+        (ys, summary) <- Interpreter.runSpec session
+        return (maybe False ((== 0) . summaryFailures) summary, ys)
+      else
+        return (True, "")
+    else return (False, "")

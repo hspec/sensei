@@ -22,7 +22,7 @@ spec = do
         xs `shouldContain` "Ok, modules loaded:"
         xs `shouldContain` "1 example, 0 failures"
 
-    context "with a program that does not compile" $ do
+    context "with a module that does not compile" $ do
       it "stops after reloading" $ do
         withInterpreter ["Spec.hs"] $ \ghci -> do
           writeFile "Spec.hs" (someSpec ++ "foo = bar")
@@ -41,3 +41,9 @@ spec = do
           (False, xs) <- silence (trigger ghci >> trigger ghci)
           xs `shouldContain` "Ok, modules loaded:"
           xs `shouldContain` "1 example, 1 failure"
+
+    context "with a module that does not expose a spec" $ do
+      it "only reloads" $ do
+        withInterpreter ["Spec.hs"] $ \ghci -> do
+          writeFile "Spec.hs" "module Main where"
+          silence (trigger ghci >> trigger ghci) `shouldReturn` (True, "Ok, modules loaded: Main.\n")

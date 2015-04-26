@@ -6,7 +6,8 @@ module Interpreter (
 , reload
 
 , Summary(..)
-, hspec
+, hasSpec
+, runSpec
 ) where
 
 import           Prelude ()
@@ -44,9 +45,19 @@ data Summary = Summary {
 , summaryFailures :: Int
 } deriving (Eq, Show, Read)
 
-hspec :: Session -> IO (String, Maybe Summary)
-hspec Session{..} = do
-  r <- evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ (show $ "--color" : sessionHspecArgs) ++ " $ Test.Hspec.Runner.hspecResult spec"
+hspecCommand :: String
+hspecCommand = "Test.Hspec.Runner.hspecResult spec"
+
+hasSpec :: Session -> IO Bool
+hasSpec Session{..} = do
+  xs <- eval sessionInterpreter (":type " ++ hspecCommand)
+  case lines xs of
+    [ys] -> return $ (hspecCommand ++ " :: IO ") `isPrefixOf` ys && "Summary" `isSuffixOf` ys
+    _ -> return False
+
+runSpec :: Session -> IO (String, Maybe Summary)
+runSpec Session{..} = do
+  r <- evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ (show $ "--color" : sessionHspecArgs) ++ " $ " ++ hspecCommand
   return $ case reverse $ lines r of
     x : _ | Just summary <- readMaybe (dropAnsiEscapeSequences x) -> (r, Just summary)
     _ -> (r, Nothing)
