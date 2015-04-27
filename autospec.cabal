@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack.
+-- This file has been generated from package.yaml by hpack version 0.1.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -113,7 +113,7 @@ executable autospec-client
 
 test-suite spec
   type: exitcode-stdio-1.0
-  hs-source-dirs: test, doctest/ghci-wrapper/src/
+  hs-source-dirs: test
   main-is: Spec.hs
   other-modules:
       ClientSpec
@@ -123,7 +123,6 @@ test-suite spec
       OptionsSpec
       TriggerSpec
       UtilSpec
-      Language.Haskell.GhciWrapper
   build-depends:
       base == 4.*
     , base-compat >= 0.8

@@ -6,7 +6,7 @@ module Helper (
 , module System.IO.Silently
 , withInterpreter
 , withSomeSpec
-, someSpec
+, passingSpec
 , failingSpec
 ) where
 
@@ -24,19 +24,21 @@ withInterpreter :: [String] -> (Session -> IO a) -> IO a
 withInterpreter args action = bracket (Interpreter.new $ "-ignore-dot-ghci" : args) Interpreter.close action
 
 withSomeSpec :: IO a -> IO a
-withSomeSpec = (inTempDirectory .  (writeFile "Spec.hs" someSpec >>))
+withSomeSpec = (inTempDirectory .  (writeFile "Spec.hs" passingSpec >>))
 
-someSpec :: String
-someSpec = [i|
+passingSpec :: String
+passingSpec = [i|
 module Spec (spec) where
 
 import           Test.Hspec
 
 spec :: Spec
 spec = do
-  describe "reverse" $ do
-    it "reverses a list" $ do
-      reverse [1 :: Int, 2, 3] `shouldBe` [3, 2, 1]
+  it "foo" $ do
+    23 `shouldBe` (23 :: Int)
+
+  it "bar" $ do
+    42 `shouldBe` (42 :: Int)
 |]
 
 failingSpec :: String
@@ -47,7 +49,9 @@ import           Test.Hspec
 
 spec :: Spec
 spec = do
-  describe "reverse" $ do
-    it "reverses a list" $ do
-      23 `shouldBe` (42 :: Int)
+  it "foo" $ do
+    23 `shouldBe` (23 :: Int)
+
+  it "bar" $ do
+    23 `shouldBe` (42 :: Int)
 |]

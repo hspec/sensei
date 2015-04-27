@@ -19,7 +19,7 @@ dependencies:
 ghc-options: -Wall
 
 library:
-  source-dirs: 
+  source-dirs:
     - src
     - doctest/ghci-wrapper/src/
 
@@ -44,7 +44,6 @@ tests:
     main: Spec.hs
     source-dirs:
       - test
-      - doctest/ghci-wrapper/src/
     dependencies:
       - autospec
       - hspec == 2.*

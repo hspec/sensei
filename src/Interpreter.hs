@@ -1,29 +1,41 @@
 {-# LANGUAGE RecordWildCards #-}
 module Interpreter (
-  Session
+  Session(..)
+, hspecFailureEnvName
 , new
 , close
 , reload
 
 , Summary(..)
+, isFailure
+, isSuccess
 , hasSpec
 , runSpec
+, hspecPreviousSummary
 ) where
 
+import           Data.IORef
+import           Data.List.Compat
 import           Prelude ()
 import           Prelude.Compat
 import           Text.Read.Compat
-import           Data.List.Compat
 
 import qualified Language.Haskell.GhciWrapper as GhciWrapper
 import           Language.Haskell.GhciWrapper hiding (new, close)
 
 import           Options
 
+hspecFailureEnvName :: String
+hspecFailureEnvName = "HSPEC_FAILURES"
+
 data Session = Session {
   sessionInterpreter :: Interpreter
 , sessionHspecArgs :: [String]
+, sessionHspecPreviousSummary :: IORef (Maybe Summary)
 }
+
+hspecPreviousSummary :: Session -> IO (Maybe Summary)
+hspecPreviousSummary Session{..} = readIORef sessionHspecPreviousSummary
 
 new :: [String] -> IO Session
 new args = do
@@ -32,7 +44,9 @@ new args = do
   _ <- eval ghci (":set prompt " ++ show "")
   _ <- eval ghci ("import qualified System.Environment")
   _ <- eval ghci ("import qualified Test.Hspec.Runner")
-  return (Session ghci hspecArgs)
+  _ <- eval ghci ("System.Environment.unsetEnv " ++ show hspecFailureEnvName)
+  ref <- newIORef (Just $ Summary 0 0)
+  return (Session ghci hspecArgs ref)
 
 close :: Session -> IO ()
 close = GhciWrapper.close . sessionInterpreter
@@ -55,12 +69,27 @@ hasSpec Session{..} = do
     [ys] -> return $ (hspecCommand ++ " :: IO ") `isPrefixOf` ys && "Summary" `isSuffixOf` ys
     _ -> return False
 
-runSpec :: Session -> IO (String, Maybe Summary)
-runSpec Session{..} = do
-  r <- evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ (show $ "--color" : sessionHspecArgs) ++ " $ " ++ hspecCommand
-  return $ case reverse $ lines r of
-    x : _ | Just summary <- readMaybe (dropAnsiEscapeSequences x) -> (r, Just summary)
-    _ -> (r, Nothing)
+runSpec :: Session -> IO String
+runSpec session@Session{..} = do
+  failedPreviously <- isFailure <$> hspecPreviousSummary session
+  let args = "--color" : (if failedPreviously then addRerun else id) sessionHspecArgs
+  r <- evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ hspecCommand
+  writeIORef sessionHspecPreviousSummary (parseSummary r)
+  return r
+  where
+    addRerun :: [String] -> [String]
+    addRerun args = "--rerun" : args
+
+isFailure :: Maybe Summary -> Bool
+isFailure = maybe True ((/= 0) . summaryFailures)
+
+isSuccess :: Maybe Summary -> Bool
+isSuccess = not . isFailure
+
+parseSummary :: String -> Maybe Summary
+parseSummary r = case reverse $ lines r of
+  x : _ | Just summary <- readMaybe (dropAnsiEscapeSequences x) -> Just summary
+  _ -> Nothing
   where
     dropAnsiEscapeSequences xs
       | "Summary" `isPrefixOf` xs = xs
