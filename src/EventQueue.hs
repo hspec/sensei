@@ -6,11 +6,13 @@ module EventQueue (
 , processQueue
 ) where
 
-import           Data.List
-import           Control.Applicative
+import           Prelude ()
+import           Prelude.Compat
+
 import           Control.Concurrent (threadDelay)
-import           Control.Monad.STM
 import           Control.Concurrent.STM.TChan
+import           Control.Monad.STM
+import           Data.List.Compat
 
 import           Util
 

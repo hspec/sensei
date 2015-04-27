@@ -33,18 +33,21 @@ newSocket :: IO Socket
 newSocket = socket AF_UNIX Stream 0
 
 withSocket :: (Socket -> IO a) -> IO a
-withSocket action = bracket newSocket sClose action
+withSocket action = bracket newSocket close action
 
 withServer :: IO (Bool, String) -> IO a -> IO a
 withServer trigger = withApplication (app trigger)
 
 withApplication :: Application -> IO a -> IO a
 withApplication application action = do
-  _ <- tryJust (guard . isDoesNotExistError) (removeFile socketName)
+  removeSocketFile
   withSocket $ \sock -> do
-    bind sock socketAddr
-    listen sock maxListenQueue
-    withThread (runSettingsSocket defaultSettings sock application) action
+    bracket_ (bind sock socketAddr) removeSocketFile $ do
+      listen sock maxListenQueue
+      withThread (runSettingsSocket defaultSettings sock application) action
+
+removeSocketFile :: IO ()
+removeSocketFile = void $ tryJust (guard . isDoesNotExistError) (removeFile socketName)
 
 withThread :: IO () -> IO a -> IO a
 withThread asyncAction action = do
