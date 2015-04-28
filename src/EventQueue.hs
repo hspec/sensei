@@ -1,7 +1,8 @@
+{-# LANGUAGE LambdaCase #-}
 module EventQueue (
   EventQueue
 , newQueue
-, emitTrigger
+, emitTriggerAll
 , emitModified
 , emitDone
 , processQueue
@@ -10,6 +11,7 @@ module EventQueue (
 import           Prelude ()
 import           Prelude.Compat
 
+import           Control.Monad.Compat
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.STM.TChan
 import           Control.Monad.STM
@@ -19,14 +21,14 @@ import           Util
 
 type EventQueue = TChan Event
 
-data Event = Trigger | Modified FilePath | Done
+data Event = TriggerAll | Modified FilePath | Done
   deriving Eq
 
 newQueue :: IO EventQueue
 newQueue = atomically $ newTChan
 
-emitTrigger :: EventQueue -> IO ()
-emitTrigger chan = atomically $ writeTChan chan Trigger
+emitTriggerAll :: EventQueue -> IO ()
+emitTriggerAll chan = atomically $ writeTChan chan TriggerAll
 
 emitModified :: FilePath -> EventQueue -> IO ()
 emitModified path chan = atomically $ writeTChan chan (Modified path)
@@ -36,28 +38,34 @@ emitDone chan = atomically $ writeTChan chan Done
 
 readEvents :: EventQueue -> IO [Event]
 readEvents chan = do
-  x <- atomically $ readTChan chan
-  threadDelay 100000
-  xs <- atomically $ emptyQueue
-  return (x : xs)
+  e <- atomically $ readTChan chan
+  unless (isKeyboardInput e) $ do
+    threadDelay 100000
+  es <- atomically emptyQueue
+  return (e : es)
   where
+    isKeyboardInput :: Event -> Bool
+    isKeyboardInput event = event == Done || event == TriggerAll
+
     emptyQueue :: STM [Event]
     emptyQueue = do
-      mx <- tryReadTChan chan
-      case mx of
+      mEvent <- tryReadTChan chan
+      case mEvent of
         Nothing -> return []
-        Just x -> (x :) <$> emptyQueue
+        Just e -> (e :) <$> emptyQueue
 
-processQueue :: EventQueue -> IO () -> IO ()
-processQueue chan action = go
+processQueue :: EventQueue -> IO () -> IO () -> IO ()
+processQueue chan triggerAll trigger = go
   where
     go = do
-      events <- readEvents chan
-      if Done `elem` events
-        then return ()
-        else do
+      readEvents chan >>= \case
+        events | Done `elem` events -> return ()
+        events | TriggerAll `elem` events -> do
+          triggerAll
+          go
+        events -> do
           let files = (nub . sort) [p | Modified p <- events]
           withInfoColor $ do
             mapM_ putStrLn (map ("--> " ++) files)
-          action
+          trigger
           go

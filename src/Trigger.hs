@@ -1,11 +1,19 @@
-module Trigger (trigger) where
+module Trigger (
+  trigger
+, triggerAll
+) where
 
 import           Prelude ()
 import           Prelude.Compat
 import           Data.List
 
-import           Session (Session, isFailure, isSuccess, hspecPreviousSummary)
+import           Session (Session, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
+
+triggerAll :: Session -> IO (Bool, String)
+triggerAll session = do
+  resetSummary session
+  trigger session
 
 trigger :: Session -> IO (Bool, String)
 trigger session = do

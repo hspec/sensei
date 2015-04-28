@@ -30,7 +30,7 @@ watchInput :: EventQueue -> IO ()
 watchInput queue = void . forkIO $ do
   input <- getContents
   forM_ (lines input) $ \_ -> do
-    emitTrigger queue
+    emitTriggerAll queue
   emitDone queue
 
 run :: [String] -> IO ()
@@ -41,9 +41,12 @@ run args = do
   lastOutput <- newMVar (True, "")
   HTTP.withServer (readMVar lastOutput) $ do
     bracket (Session.new args) Session.close $ \session -> do
-      let triggerAction = modifyMVar_ lastOutput $ \_ -> trigger session
+      let saveOutput :: IO (Bool, String) -> IO ()
+          saveOutput action = modifyMVar_ lastOutput $ \_ -> action
+          triggerAction = saveOutput (trigger session)
+          triggerAllAction = saveOutput (triggerAll session)
       triggerAction
-      processQueue queue triggerAction
+      processQueue queue triggerAllAction triggerAction
 
 runWeb :: [String] -> IO ()
 runWeb args = do

@@ -26,6 +26,30 @@ normalize = normalizeErrors . normalizeTiming . normalizeSeed . lines
 
 spec :: Spec
 spec = do
+  describe "triggerAll" $ around_ withSomeSpec $ do
+    it "runs all specs" $ do
+      withSession ["Spec.hs", "--no-color"] $ \session -> do
+        writeFile "Spec.hs" failingSpec
+        (False, xs) <- silence (trigger session >> triggerAll session)
+        normalize xs `shouldBe` [
+            "Ok, modules loaded: Spec."
+          , ""
+          , "foo"
+          , "bar FAILED [1]"
+          , ""
+          , "Failures:"
+          , ""
+          , "  1) bar"
+          , "       expected: 42"
+          , "        but got: 23"
+          , ""
+          , "Randomized with seed ..."
+          , ""
+          , "Finished in ..."
+          , "2 examples, 1 failure"
+          , "Summary {summaryExamples = 2, summaryFailures = 1}"
+          ]
+
   describe "trigger" $ around_ withSomeSpec $ do
     it "reloads and runs specs" $ do
       withSession ["Spec.hs", "--no-color"] $ \session -> do

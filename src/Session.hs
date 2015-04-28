@@ -12,6 +12,7 @@ module Session (
 , hasSpec
 , runSpec
 , hspecPreviousSummary
+, resetSummary
 ) where
 
 import           Data.IORef
@@ -33,6 +34,9 @@ data Session = Session {
 , sessionHspecArgs :: [String]
 , sessionHspecPreviousSummary :: IORef (Maybe Summary)
 }
+
+resetSummary :: Session -> IO ()
+resetSummary Session{..} = writeIORef sessionHspecPreviousSummary (Just $ Summary 0 0)
 
 hspecPreviousSummary :: Session -> IO (Maybe Summary)
 hspecPreviousSummary Session{..} = readIORef sessionHspecPreviousSummary
