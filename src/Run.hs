@@ -23,14 +23,14 @@ waitForever = forever $ threadDelay 10000000
 watchFiles :: EventQueue -> IO ()
 watchFiles queue = void . forkIO $ do
   withManager $ \manager -> do
-    _ <- watchTree manager "." (not . isBoring . eventPath) (\event -> emitEvent (Just . encodeString $ eventPath event) queue)
+    _ <- watchTree manager "." (not . isBoring . eventPath) (\event -> emitModified (encodeString $ eventPath event) queue)
     waitForever
 
 watchInput :: EventQueue -> IO ()
 watchInput queue = void . forkIO $ do
   input <- getContents
   forM_ (lines input) $ \_ -> do
-    emitEvent Nothing queue
+    emitTrigger queue
   emitDone queue
 
 run :: [String] -> IO ()

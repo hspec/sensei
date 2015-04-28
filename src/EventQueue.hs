@@ -1,7 +1,8 @@
 module EventQueue (
   EventQueue
 , newQueue
-, emitEvent
+, emitTrigger
+, emitModified
 , emitDone
 , processQueue
 ) where
@@ -18,14 +19,17 @@ import           Util
 
 type EventQueue = TChan Event
 
-data Event = Event (Maybe FilePath) | Done
+data Event = Trigger | Modified FilePath | Done
   deriving Eq
 
 newQueue :: IO EventQueue
 newQueue = atomically $ newTChan
 
-emitEvent :: Maybe FilePath -> EventQueue -> IO ()
-emitEvent path chan = atomically $ writeTChan chan (Event path)
+emitTrigger :: EventQueue -> IO ()
+emitTrigger chan = atomically $ writeTChan chan Trigger
+
+emitModified :: FilePath -> EventQueue -> IO ()
+emitModified path chan = atomically $ writeTChan chan (Modified path)
 
 emitDone :: EventQueue -> IO ()
 emitDone chan = atomically $ writeTChan chan Done
@@ -52,7 +56,7 @@ processQueue chan action = go
       if Done `elem` events
         then return ()
         else do
-          let files = (nub . sort) [p | Event (Just p) <- events]
+          let files = (nub . sort) [p | Modified p <- events]
           withInfoColor $ do
             mapM_ putStrLn (map ("--> " ++) files)
           action
