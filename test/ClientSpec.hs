@@ -18,3 +18,8 @@ spec = do
       inTempDirectory $ do
         withServer (return (False, "hello")) $ do
           client `shouldReturn` (False, "hello")
+
+    context "when server socket is missing" $ do
+      it "reports error" $ do
+        inTempDirectory $ do
+          client `shouldReturn` (False, "could not connect to .autospec.sock\n")
