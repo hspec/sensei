@@ -4,18 +4,18 @@ import           Prelude ()
 import           Prelude.Compat
 import           Data.List
 
-import           Interpreter (Session, isFailure, isSuccess, hspecPreviousSummary)
-import qualified Interpreter
+import           Session (Session, isFailure, isSuccess, hspecPreviousSummary)
+import qualified Session
 
 trigger :: Session -> IO (Bool, String)
 trigger session = do
-  xs <- Interpreter.reload session
+  xs <- Session.reload session
   fmap (xs ++) <$> if "Ok, modules loaded:" `isInfixOf` xs
     then hspec
     else return (False, "")
   where
     hspec = do
-      hasSpec <- Interpreter.hasSpec session
+      hasSpec <- Session.hasSpec session
       if hasSpec
         then runSpecs
         else return (True, "")
@@ -28,6 +28,6 @@ trigger session = do
         else return (success, "")
 
     runSpec = do
-      xs <- Interpreter.runSpec session
+      xs <- Session.runSpec session
       success <- isSuccess <$> hspecPreviousSummary session
       return (success, xs)

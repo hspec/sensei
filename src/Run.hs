@@ -10,7 +10,7 @@ import           Data.Foldable
 import           System.FSNotify
 import           Filesystem.Path.CurrentOS (encodeString)
 
-import qualified Interpreter
+import qualified Session
 import qualified HTTP
 
 import           Util
@@ -40,14 +40,14 @@ run args = do
   watchInput queue
   lastOutput <- newMVar (True, "")
   HTTP.withServer (readMVar lastOutput) $ do
-    bracket (Interpreter.new args) Interpreter.close $ \session -> do
+    bracket (Session.new args) Session.close $ \session -> do
       let triggerAction = modifyMVar_ lastOutput $ \_ -> trigger session
       triggerAction
       processQueue queue triggerAction
 
 runWeb :: [String] -> IO ()
 runWeb args = do
-  bracket (Interpreter.new args) Interpreter.close $ \session -> do
+  bracket (Session.new args) Session.close $ \session -> do
     _ <- trigger session
     lock <- newMVar ()
     HTTP.withServer (withMVar lock $ \() -> trigger session) $ do

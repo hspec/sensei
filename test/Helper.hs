@@ -4,7 +4,7 @@ module Helper (
 , module Test.Mockery.Directory
 , module Control.Applicative
 , module System.IO.Silently
-, withInterpreter
+, withSession
 , withSomeSpec
 , passingSpec
 , failingSpec
@@ -17,11 +17,11 @@ import           Control.Applicative
 import           System.IO.Silently
 import           Data.String.Interpolate
 
-import           Interpreter (Session)
-import qualified Interpreter
+import           Session (Session)
+import qualified Session
 
-withInterpreter :: [String] -> (Session -> IO a) -> IO a
-withInterpreter args action = bracket (Interpreter.new $ "-ignore-dot-ghci" : args) Interpreter.close action
+withSession :: [String] -> (Session -> IO a) -> IO a
+withSession args action = bracket (Session.new $ "-ignore-dot-ghci" : args) Session.close action
 
 withSomeSpec :: IO a -> IO a
 withSomeSpec = (inTempDirectory .  (writeFile "Spec.hs" passingSpec >>))

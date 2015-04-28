@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module Interpreter (
+module Session (
   Session(..)
 , hspecFailureEnvName
 , new

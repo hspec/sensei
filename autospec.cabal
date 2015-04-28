@@ -13,9 +13,9 @@ library
       Client
       EventQueue
       HTTP
-      Interpreter
       Options
       Run
+      Session
       Trigger
       Util
       Language.Haskell.GhciWrapper
@@ -119,8 +119,8 @@ test-suite spec
       ClientSpec
       HTTPSpec
       Helper
-      InterpreterSpec
       OptionsSpec
+      SessionSpec
       TriggerSpec
       UtilSpec
   build-depends:

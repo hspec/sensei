@@ -28,7 +28,7 @@ spec :: Spec
 spec = do
   describe "trigger" $ around_ withSomeSpec $ do
     it "reloads and runs specs" $ do
-      withInterpreter ["Spec.hs", "--no-color"] $ \session -> do
+      withSession ["Spec.hs", "--no-color"] $ \session -> do
         result <- silence (trigger session >> trigger session)
         fmap normalize result `shouldBe` (True, [
             "Ok, modules loaded: Spec."
@@ -43,7 +43,7 @@ spec = do
 
     context "with a module that does not compile" $ do
       it "stops after reloading" $ do
-        withInterpreter ["Spec.hs"] $ \session -> do
+        withSession ["Spec.hs"] $ \session -> do
           writeFile "Spec.hs" (passingSpec ++ "foo = bar")
           (False, xs) <- silence (trigger session >> trigger session)
           normalize xs `shouldBe` [
@@ -55,14 +55,14 @@ spec = do
 
     context "with a failing spec" $ do
       it "indicates failure" $ do
-        withInterpreter ["Spec.hs"] $ \session -> do
+        withSession ["Spec.hs"] $ \session -> do
           writeFile "Spec.hs" failingSpec
           (False, xs) <- silence (trigger session)
           xs `shouldContain` "Ok, modules loaded:"
           xs `shouldContain` "2 examples, 1 failure"
 
       it "only reruns failing specs" $ do
-        withInterpreter ["Spec.hs", "--no-color"] $ \session -> do
+        withSession ["Spec.hs", "--no-color"] $ \session -> do
           writeFile "Spec.hs" failingSpec
           (False, xs) <- silence (trigger session >> trigger session)
           normalize xs `shouldBe` [
@@ -85,7 +85,7 @@ spec = do
 
     context "after a failing spec passes" $ do
       it "runs all specs" $ do
-        withInterpreter ["Spec.hs", "--no-color"] $ \session -> do
+        withSession ["Spec.hs", "--no-color"] $ \session -> do
           writeFile "Spec.hs" failingSpec
           _ <- silence (trigger session)
           writeFile "Spec.hs" passingSpec
@@ -110,6 +110,6 @@ spec = do
 
     context "with a module that does not expose a spec" $ do
       it "only reloads" $ do
-        withInterpreter ["Spec.hs"] $ \session -> do
+        withSession ["Spec.hs"] $ \session -> do
           writeFile "Spec.hs" "module Main where"
           silence (trigger session >> trigger session) `shouldReturn` (True, "Ok, modules loaded: Main.\n")
