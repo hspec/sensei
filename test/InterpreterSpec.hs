@@ -20,30 +20,30 @@ spec = do
 
   describe "reload" $ do
     it "reloads" $ do
-      withInterpreter [] $ \ghci -> do
-        silence (Interpreter.reload ghci) `shouldReturn` "Ok, modules loaded: none.\n"
+      withInterpreter [] $ \session -> do
+        silence (Interpreter.reload session) `shouldReturn` "Ok, modules loaded: none.\n"
 
   describe "hasSpec" $ around_ withSomeSpec $ do
     context "when module contains spec" $ do
       it "returns True" $ do
-        withInterpreter ["Spec.hs"] $ \ghci -> do
-          _ <- silence (Interpreter.reload ghci)
-          Interpreter.hasSpec ghci `shouldReturn` True
+        withInterpreter ["Spec.hs"] $ \session -> do
+          _ <- silence (Interpreter.reload session)
+          Interpreter.hasSpec session `shouldReturn` True
 
     context "when module does not contain spec" $ do
       it "returns False" $ do
-        withInterpreter ["Spec.hs"] $ \ghci -> do
+        withInterpreter ["Spec.hs"] $ \session -> do
           writeFile "Spec.hs" "module Main where"
-          _ <- silence (Interpreter.reload ghci)
-          Interpreter.hasSpec ghci `shouldReturn` False
+          _ <- silence (Interpreter.reload session)
+          Interpreter.hasSpec session `shouldReturn` False
 
   describe "runSpec" $ around_ withSomeSpec $ do
     it "stores summary of spec run" $ do
-      withInterpreter ["Spec.hs"] $ \ghci -> do
-        _ <- silence (Interpreter.runSpec ghci >> Interpreter.runSpec ghci)
-        hspecPreviousSummary ghci `shouldReturn` Just (Summary 2 0)
+      withInterpreter ["Spec.hs"] $ \session -> do
+        _ <- silence (Interpreter.runSpec session >> Interpreter.runSpec session)
+        hspecPreviousSummary session `shouldReturn` Just (Summary 2 0)
 
     it "accepts Hspec args" $ do
-      withInterpreter ["Spec.hs", "--no-color", "-m", "foo"] $ \ghci -> do
-        _ <- silence (Interpreter.runSpec ghci >> Interpreter.runSpec ghci)
-        hspecPreviousSummary ghci `shouldReturn` Just (Summary 1 0)
+      withInterpreter ["Spec.hs", "--no-color", "-m", "foo"] $ \session -> do
+        _ <- silence (Interpreter.runSpec session >> Interpreter.runSpec session)
+        hspecPreviousSummary session `shouldReturn` Just (Summary 1 0)

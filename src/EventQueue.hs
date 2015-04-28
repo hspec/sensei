@@ -45,9 +45,7 @@ readEvents chan = do
         Just x -> (x :) <$> emptyQueue
 
 processQueue :: EventQueue -> IO () -> IO ()
-processQueue chan action = do
-  emitEvent Nothing chan
-  go
+processQueue chan action = go
   where
     go = do
       events <- readEvents chan

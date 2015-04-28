@@ -40,13 +40,15 @@ run args = do
   watchInput queue
   lastOutput <- newMVar (True, "")
   HTTP.withServer (readMVar lastOutput) $ do
-    bracket (Interpreter.new args) Interpreter.close $ \interpreter -> do
-      processQueue queue $ modifyMVar_ lastOutput $ \_ -> trigger interpreter
+    bracket (Interpreter.new args) Interpreter.close $ \session -> do
+      let triggerAction = modifyMVar_ lastOutput $ \_ -> trigger session
+      triggerAction
+      processQueue queue triggerAction
 
 runWeb :: [String] -> IO ()
 runWeb args = do
-  bracket (Interpreter.new args) Interpreter.close $ \interpreter -> do
-    _ <- trigger interpreter
+  bracket (Interpreter.new args) Interpreter.close $ \session -> do
+    _ <- trigger session
     lock <- newMVar ()
-    HTTP.withServer (withMVar lock $ \() -> trigger interpreter) $ do
+    HTTP.withServer (withMVar lock $ \() -> trigger session) $ do
       waitForever
