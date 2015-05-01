@@ -1,7 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, LambdaCase #-}
 module Util where
 
 import           Prelude hiding (FilePath)
+import           Data.List
 import           Control.Exception
 import           System.Console.ANSI
 import           Filesystem.Path
@@ -17,3 +18,9 @@ isBoring :: FilePath -> Bool
 isBoring p = ".git/" `elem` dirs || "dist/" `elem` dirs
   where
     dirs = splitDirectories p
+
+normalizeTypeSignatures :: String -> String
+normalizeTypeSignatures = \case
+  xs | "\n  :: " `isPrefixOf` xs -> normalizeTypeSignatures (drop 2 xs)
+  x : xs -> x : normalizeTypeSignatures xs
+  [] -> []

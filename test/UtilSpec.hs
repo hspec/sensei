@@ -13,3 +13,7 @@ spec = do
 
     it "ignores files in dist/" $ do
       isBoring "/foo/bar/dist/baz/foo.txt" `shouldBe` True
+
+  describe "normalizeTypeSignatures" $ do
+    it "removes newlines from type signatures" $ do
+      normalizeTypeSignatures "foo\n  :: Int" `shouldBe` "foo :: Int"

@@ -24,6 +24,7 @@ import           Text.Read.Compat
 import qualified Language.Haskell.GhciWrapper as GhciWrapper
 import           Language.Haskell.GhciWrapper hiding (new, close)
 
+import           Util
 import           Options
 
 hspecFailureEnvName :: String
@@ -68,7 +69,7 @@ hspecCommand = "Test.Hspec.Runner.hspecResult spec"
 
 hasSpec :: Session -> IO Bool
 hasSpec Session{..} = do
-  xs <- eval sessionInterpreter (":type " ++ hspecCommand)
+  xs <- normalizeTypeSignatures <$> eval sessionInterpreter (":type " ++ hspecCommand)
   case lines xs of
     [ys] -> return $ (hspecCommand ++ " :: IO ") `isPrefixOf` ys && "Summary" `isSuffixOf` ys
     _ -> return False
