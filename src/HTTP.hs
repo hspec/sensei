@@ -24,7 +24,7 @@ import           Network.Wai.Handler.Warp
 import           Network.Socket
 
 socketName :: String
-socketName = ".autospec.sock"
+socketName = ".sensei.sock"
 
 socketAddr :: SockAddr
 socketAddr = SockAddrUnix socketName

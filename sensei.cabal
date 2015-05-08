@@ -1,8 +1,8 @@
--- This file has been generated from package.yaml by hpack version 0.1.1.
+-- This file has been generated from package.yaml by hpack version 0.1.2.
 --
 -- see: https://github.com/sol/hpack
 
-name:           autospec
+name:           sensei
 version:        0.0.0
 build-type:     Simple
 cabal-version:  >= 1.10
@@ -39,55 +39,7 @@ library
   ghc-options: -Wall
   default-language: Haskell2010
 
-executable autospec
-  main-is: driver/Main.hs
-  build-depends:
-      base >= 4.7 && < 5
-    , base-compat >= 0.8
-    , process
-    , fsnotify
-    , time
-    , wai
-    , warp
-    , http-types
-    , system-filepath >= 0.4.13.2
-    , stm
-    , text
-    , network
-    , ansi-terminal
-    , directory
-    , http-client
-    , bytestring
-
-    , autospec
-  ghc-options: -Wall
-  default-language: Haskell2010
-
-executable autospec-web
-  main-is: driver/Web.hs
-  build-depends:
-      base >= 4.7 && < 5
-    , base-compat >= 0.8
-    , process
-    , fsnotify
-    , time
-    , wai
-    , warp
-    , http-types
-    , system-filepath >= 0.4.13.2
-    , stm
-    , text
-    , network
-    , ansi-terminal
-    , directory
-    , http-client
-    , bytestring
-
-    , autospec
-  ghc-options: -Wall
-  default-language: Haskell2010
-
-executable autospec-client
+executable sensei-client
   main-is: driver/Client.hs
   build-depends:
       base >= 4.7 && < 5
@@ -107,7 +59,55 @@ executable autospec-client
     , http-client
     , bytestring
 
-    , autospec
+    , sensei
+  ghc-options: -Wall
+  default-language: Haskell2010
+
+executable sensei-web
+  main-is: driver/Web.hs
+  build-depends:
+      base >= 4.7 && < 5
+    , base-compat >= 0.8
+    , process
+    , fsnotify
+    , time
+    , wai
+    , warp
+    , http-types
+    , system-filepath >= 0.4.13.2
+    , stm
+    , text
+    , network
+    , ansi-terminal
+    , directory
+    , http-client
+    , bytestring
+
+    , sensei
+  ghc-options: -Wall
+  default-language: Haskell2010
+
+executable sensei
+  main-is: driver/Main.hs
+  build-depends:
+      base >= 4.7 && < 5
+    , base-compat >= 0.8
+    , process
+    , fsnotify
+    , time
+    , wai
+    , warp
+    , http-types
+    , system-filepath >= 0.4.13.2
+    , stm
+    , text
+    , network
+    , ansi-terminal
+    , directory
+    , http-client
+    , bytestring
+
+    , sensei
   ghc-options: -Wall
   default-language: Haskell2010
 
@@ -141,7 +141,7 @@ test-suite spec
     , http-client
     , bytestring
 
-    , autospec
+    , sensei
     , hspec == 2.*
     , hspec-wai
     , mockery

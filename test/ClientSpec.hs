@@ -22,4 +22,4 @@ spec = do
     context "when server socket is missing" $ do
       it "reports error" $ do
         inTempDirectory $ do
-          client `shouldReturn` (False, "could not connect to .autospec.sock\n")
+          client `shouldReturn` (False, "could not connect to .sensei.sock\n")

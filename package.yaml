@@ -1,3 +1,4 @@
+name: sensei
 dependencies:
   - base >= 4.7 && < 5
   - base-compat >= 0.8
@@ -24,20 +25,20 @@ library:
     - doctest/ghci-wrapper/src/
 
 executables:
-  autospec:
+  sensei:
     main: driver/Main.hs
     dependencies:
-      - autospec
+      - sensei
 
-  autospec-web:
+  sensei-web:
     main: driver/Web.hs
     dependencies:
-      - autospec
+      - sensei
 
-  autospec-client:
+  sensei-client:
     main: driver/Client.hs
     dependencies:
-      - autospec
+      - sensei
 
 tests:
   spec:
@@ -45,7 +46,7 @@ tests:
     source-dirs:
       - test
     dependencies:
-      - autospec
+      - sensei
       - hspec == 2.*
       - hspec-wai
       - mockery
