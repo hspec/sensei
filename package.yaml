@@ -35,7 +35,7 @@ executables:
     dependencies:
       - sensei
 
-  sensei-client:
+  seito:
     main: driver/Client.hs
     dependencies:
       - sensei

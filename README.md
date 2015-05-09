@@ -1,6 +1,6 @@
-__THIS IS EXPERIMENTAL ROCKET SCIENCE! USE AT YOUR OWN RISK!__
+__THIS IS EXPERIMENTAL STUFF! USE AT YOUR OWN RISK!__
 
-# sensei
+# 先生 (*rōmaji* sensei)
 
 In it's simplest form, you run `sensei` with the `Main` module of your test
 suite as an argument:
@@ -28,9 +28,9 @@ how they look:
 
 ## Accessing result on the command-line
 
-You can access the results of the last test run with `sensei-client`:
+You can access the results of the last test run with `seito`:
 
-    sensei-client
+    seito
 
 Alternatively, if you have `curl` version `7.40.0` or newer, you can use `curl`
 instead:
@@ -44,7 +44,7 @@ Create a Makefile with the following content:
 
 ```Makefile
 all:
-	sensei-client | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
+	@seito | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
 ```
 
 (`sed` is used to strip ANSI color sequences)
