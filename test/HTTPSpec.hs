@@ -14,5 +14,5 @@ spec = do
         get "/" `shouldRespondWith` 200
 
     with (return $ app $ return (False, "hello")) $ do
-      it "return 412 on failure" $ do
+      it "return 500 on failure" $ do
         get "/" `shouldRespondWith` 500
