@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.3.0.
+-- This file has been generated from package.yaml by hpack version 0.5.4.
 --
 -- see: https://github.com/sol/hpack
 
@@ -8,7 +8,27 @@ build-type:     Simple
 cabal-version:  >= 1.10
 
 library
-  hs-source-dirs: src, doctest/ghci-wrapper/src/
+  hs-source-dirs:
+      src
+    , doctest/ghci-wrapper/src/
+  ghc-options: -Wall
+  build-depends:
+      base >= 4.7 && < 5
+    , base-compat >= 0.8
+    , process
+    , fsnotify
+    , time
+    , wai
+    , warp
+    , http-types
+    , stm
+    , text
+    , network
+    , ansi-terminal
+    , directory
+    , http-client
+    , bytestring
+    , filepath
   exposed-modules:
       Client
       EventQueue
@@ -19,28 +39,11 @@ library
       Trigger
       Util
       Language.Haskell.GhciWrapper
-  build-depends:
-      base >= 4.7 && < 5
-    , base-compat >= 0.8
-    , process
-    , fsnotify
-    , time
-    , wai
-    , warp
-    , http-types
-    , system-filepath >= 0.4.13.2
-    , stm
-    , text
-    , network
-    , ansi-terminal
-    , directory
-    , http-client
-    , bytestring
-  ghc-options: -Wall
   default-language: Haskell2010
 
 executable sensei-web
   main-is: driver/Web.hs
+  ghc-options: -Wall
   build-depends:
       base >= 4.7 && < 5
     , base-compat >= 0.8
@@ -50,7 +53,6 @@ executable sensei-web
     , wai
     , warp
     , http-types
-    , system-filepath >= 0.4.13.2
     , stm
     , text
     , network
@@ -58,13 +60,13 @@ executable sensei-web
     , directory
     , http-client
     , bytestring
-
+    , filepath
     , sensei
-  ghc-options: -Wall
   default-language: Haskell2010
 
 executable seito
   main-is: driver/Client.hs
+  ghc-options: -Wall
   build-depends:
       base >= 4.7 && < 5
     , base-compat >= 0.8
@@ -74,7 +76,6 @@ executable seito
     , wai
     , warp
     , http-types
-    , system-filepath >= 0.4.13.2
     , stm
     , text
     , network
@@ -82,13 +83,13 @@ executable seito
     , directory
     , http-client
     , bytestring
-
+    , filepath
     , sensei
-  ghc-options: -Wall
   default-language: Haskell2010
 
 executable sensei
   main-is: driver/Main.hs
+  ghc-options: -Wall
   build-depends:
       base >= 4.7 && < 5
     , base-compat >= 0.8
@@ -98,7 +99,6 @@ executable sensei
     , wai
     , warp
     , http-types
-    , system-filepath >= 0.4.13.2
     , stm
     , text
     , network
@@ -106,23 +106,16 @@ executable sensei
     , directory
     , http-client
     , bytestring
-
+    , filepath
     , sensei
-  ghc-options: -Wall
   default-language: Haskell2010
 
 test-suite spec
   type: exitcode-stdio-1.0
-  hs-source-dirs: test
   main-is: Spec.hs
-  other-modules:
-      ClientSpec
-      HTTPSpec
-      Helper
-      OptionsSpec
-      SessionSpec
-      TriggerSpec
-      UtilSpec
+  hs-source-dirs:
+      test
+  ghc-options: -Wall
   build-depends:
       base >= 4.7 && < 5
     , base-compat >= 0.8
@@ -132,7 +125,6 @@ test-suite spec
     , wai
     , warp
     , http-types
-    , system-filepath >= 0.4.13.2
     , stm
     , text
     , network
@@ -140,12 +132,19 @@ test-suite spec
     , directory
     , http-client
     , bytestring
-
+    , filepath
     , sensei
     , hspec == 2.*
     , hspec-wai
     , mockery
     , silently
     , interpolate
-  ghc-options: -Wall
+  other-modules:
+      ClientSpec
+      Helper
+      HTTPSpec
+      OptionsSpec
+      SessionSpec
+      TriggerSpec
+      UtilSpec
   default-language: Haskell2010

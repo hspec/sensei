@@ -1,12 +1,10 @@
 {-# LANGUAGE OverloadedStrings, LambdaCase #-}
 module Util where
 
-import           Prelude hiding (FilePath)
-import           Data.List
 import           Control.Exception
+import           Data.List
 import           System.Console.ANSI
-import           Filesystem.Path
-import           Filesystem.Path.CurrentOS () -- https://github.com/fpco/haskell-filesystem/issues/11
+import           System.FilePath
 
 withInfoColor :: IO a -> IO a
 withInfoColor = bracket_ set reset
@@ -15,7 +13,7 @@ withInfoColor = bracket_ set reset
     reset = setSGR []
 
 isBoring :: FilePath -> Bool
-isBoring p = ".git/" `elem` dirs || "dist/" `elem` dirs
+isBoring p = ".git" `elem` dirs || "dist" `elem` dirs
   where
     dirs = splitDirectories p
 

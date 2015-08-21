@@ -30,7 +30,8 @@ client = either (const $ connectError) id <$> tryJust p go
     isDoesNotExistException :: SomeException -> Bool
     isDoesNotExistException = maybe False isDoesNotExistError . fromException
 
-    go = withManager defaultManagerSettings {managerRawConnection = return newConnection} $ \manager -> do
+    go = do
+      manager <- newManager defaultManagerSettings {managerRawConnection = return newConnection}
       request <- parseUrl "http://localhost/"
       Response{..} <- httpLbs request {checkStatus = \_ _ _ -> Nothing} manager
       return (statusIsSuccessful responseStatus, responseBody)

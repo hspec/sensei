@@ -8,7 +8,6 @@ dependencies:
   - wai
   - warp
   - http-types
-  - system-filepath >= 0.4.13.2
   - stm
   - text
   - network
@@ -16,6 +15,7 @@ dependencies:
   - directory
   - http-client
   - bytestring
+  - filepath
 
 ghc-options: -Wall
 

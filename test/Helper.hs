@@ -34,11 +34,8 @@ import           Test.Hspec
 
 spec :: Spec
 spec = do
-  it "foo" $ do
-    23 `shouldBe` (23 :: Int)
-
-  it "bar" $ do
-    42 `shouldBe` (42 :: Int)
+  it "foo" True
+  it "bar" True
 |]
 
 failingSpec :: String
@@ -49,9 +46,6 @@ import           Test.Hspec
 
 spec :: Spec
 spec = do
-  it "foo" $ do
-    23 `shouldBe` (23 :: Int)
-
-  it "bar" $ do
-    23 `shouldBe` (42 :: Int)
+  it "foo" True
+  it "bar" False
 |]

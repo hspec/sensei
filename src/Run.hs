@@ -8,7 +8,6 @@ import           Control.Concurrent
 import           Control.Monad (void, forever)
 import           Data.Foldable
 import           System.FSNotify
-import           Filesystem.Path.CurrentOS (encodeString)
 
 import qualified Session
 import qualified HTTP
@@ -23,7 +22,7 @@ waitForever = forever $ threadDelay 10000000
 watchFiles :: EventQueue -> IO ()
 watchFiles queue = void . forkIO $ do
   withManager $ \manager -> do
-    _ <- watchTree manager "." (not . isBoring . eventPath) (\event -> emitModified (encodeString $ eventPath event) queue)
+    _ <- watchTree manager "." (not . isBoring . eventPath) (\event -> emitModified (eventPath event) queue)
     waitForever
 
 watchInput :: EventQueue -> IO ()
