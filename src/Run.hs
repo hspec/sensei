@@ -1,20 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Run where
-
 import           Prelude ()
 import           Prelude.Compat
-import           Control.Exception
+
 import           Control.Concurrent
-import           Control.Monad (void, forever)
+import           Control.Exception
+import           Control.Monad (void, forever, when)
 import           Data.Foldable
+import           System.Exit
 import           System.FSNotify
 
-import qualified Session
 import qualified HTTP
+import qualified Session
+import           Session (Session)
 
-import           Util
-import           Trigger
 import           EventQueue
+import           Trigger
+import           Util
 
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
@@ -34,12 +36,12 @@ watchInput queue = void . forkIO $ do
 
 run :: [String] -> IO ()
 run args = do
-  queue <- newQueue
-  watchFiles queue
-  watchInput queue
-  lastOutput <- newMVar (True, "")
-  HTTP.withServer (readMVar lastOutput) $ do
-    bracket (Session.new args) Session.close $ \session -> do
+  withSession args $ \session -> do
+    queue <- newQueue
+    watchFiles queue
+    watchInput queue
+    lastOutput <- newMVar (True, "")
+    HTTP.withServer (readMVar lastOutput) $ do
       let saveOutput :: IO (Bool, String) -> IO ()
           saveOutput action = modifyMVar_ lastOutput $ \_ -> action
           triggerAction = saveOutput (trigger session)
@@ -49,8 +51,19 @@ run args = do
 
 runWeb :: [String] -> IO ()
 runWeb args = do
-  bracket (Session.new args) Session.close $ \session -> do
+  withSession args $ \session -> do
     _ <- trigger session
     lock <- newMVar ()
     HTTP.withServer (withMVar lock $ \() -> trigger session) $ do
       waitForever
+
+withSession :: [String] -> (Session -> IO ()) -> IO ()
+withSession args action = do
+  check <- dotGhciWritableByOthers
+  when check $ do
+    putStrLn ".ghci is writable by others, you can fix this with:"
+    putStrLn ""
+    putStrLn "    chmod go-w .ghci ."
+    putStrLn ""
+    exitFailure
+  bracket (Session.new args) Session.close action

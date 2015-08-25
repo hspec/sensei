@@ -1,7 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UtilSpec (spec) where
 
-import           Test.Hspec
+import           Helper
+
+import           System.Posix.Files
+import           System.Process
 
 import           Util
 
@@ -17,3 +20,38 @@ spec = do
   describe "normalizeTypeSignatures" $ do
     it "removes newlines from type signatures" $ do
       normalizeTypeSignatures "foo\n  :: Int" `shouldBe` "foo :: Int"
+
+  describe "dotGhciWritableByOthers" $ do
+    around_ inTempDirectory $ do
+      before_ (touch ".ghci" >> callCommand "chmod go-w .ghci") $ do
+        it "returns False" $ do
+          dotGhciWritableByOthers `shouldReturn` False
+
+        context "when writable by group" $ do
+          it "returns True" $ do
+            callCommand "chmod g+w .ghci"
+            dotGhciWritableByOthers `shouldReturn` True
+
+        context "when writable by others" $ do
+          it "returns True" $ do
+            callCommand "chmod o+w .ghci"
+            dotGhciWritableByOthers `shouldReturn` True
+
+        context "when directory is writable by group" $ do
+          it "returns True" $ do
+            callCommand "chmod g+w ."
+            dotGhciWritableByOthers `shouldReturn` True
+
+      context "when .ghci does not exist" $ do
+        it "returns False" $ do
+          dotGhciWritableByOthers `shouldReturn` False
+
+  describe "writableByOthers" $ do
+    it "returns False for owner" $ do
+      writableByOthers ownerWriteMode `shouldBe` False
+
+    it "returns True for group" $ do
+      writableByOthers groupWriteMode `shouldBe` True
+
+    it "returns True for others" $ do
+      writableByOthers otherWriteMode `shouldBe` True

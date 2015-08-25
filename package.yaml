@@ -16,6 +16,7 @@ dependencies:
   - http-client
   - bytestring
   - filepath
+  - unix
 
 ghc-options: -Wall
 

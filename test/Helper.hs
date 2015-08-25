@@ -10,15 +10,16 @@ module Helper (
 , failingSpec
 ) where
 
+import           Control.Applicative
+import           Control.Exception
+import           Data.String.Interpolate
+import           System.IO.Silently
 import           Test.Hspec
 import           Test.Mockery.Directory
-import           Control.Exception
-import           Control.Applicative
-import           System.IO.Silently
-import           Data.String.Interpolate
 
-import           Session (Session)
+import           Run ()
 import qualified Session
+import           Session (Session)
 
 withSession :: [String] -> (Session -> IO a) -> IO a
 withSession args action = bracket (Session.new $ "-ignore-dot-ghci" : args) Session.close action
