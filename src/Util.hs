@@ -18,9 +18,10 @@ withInfoColor = bracket_ set reset
     reset = setSGR []
 
 isBoring :: FilePath -> Bool
-isBoring p = ".git" `elem` dirs || "dist" `elem` dirs
+isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
   where
     dirs = splitDirectories p
+    isEmacsAutoSave = isPrefixOf ".#" . takeBaseName
 
 normalizeTypeSignatures :: String -> String
 normalizeTypeSignatures = \case
