@@ -70,9 +70,8 @@ hspecCommand = "Test.Hspec.Runner.hspecResult spec"
 hasSpec :: Session -> IO Bool
 hasSpec Session{..} = do
   xs <- normalizeTypeSignatures <$> eval sessionInterpreter (":type " ++ hspecCommand)
-  case lines xs of
-    [ys] -> return $ (hspecCommand ++ " :: IO ") `isPrefixOf` ys && "Summary" `isSuffixOf` ys
-    _ -> return False
+  let match line = (hspecCommand ++ " :: IO ") `isPrefixOf` line && "Summary" `isSuffixOf` line
+  return . any match . lines $ xs
 
 runSpec :: Session -> IO String
 runSpec session@Session{..} = do
