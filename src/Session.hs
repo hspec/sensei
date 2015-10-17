@@ -93,8 +93,8 @@ isSuccess = not . isFailure
 
 parseSummary :: String -> Maybe Summary
 parseSummary r = case reverse $ lines r of
-  x : _ | Just summary <- readMaybe (dropAnsiEscapeSequences x) -> Just summary
-  _ -> Nothing
+  x : _ -> readMaybe (dropAnsiEscapeSequences x)
+  [] -> Nothing
   where
     dropAnsiEscapeSequences xs
       | "Summary" `isPrefixOf` xs = xs
