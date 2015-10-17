@@ -17,6 +17,7 @@ module Session (
 
 import           Data.IORef
 import           Data.List.Compat
+import           Data.Maybe (listToMaybe, catMaybes)
 import           Prelude ()
 import           Prelude.Compat
 import           Text.Read.Compat
@@ -91,10 +92,10 @@ isSuccess :: Maybe Summary -> Bool
 isSuccess = not . isFailure
 
 parseSummary :: String -> Maybe Summary
-parseSummary r = case reverse $ lines r of
-  x : _ -> readMaybe (dropAnsiEscapeSequences x)
-  [] -> Nothing
+parseSummary = findJust . (map $ readMaybe . dropAnsiEscapeSequences) . take 3 . reverse . lines
   where
+    findJust = listToMaybe . catMaybes
+
     dropAnsiEscapeSequences xs
       | "Summary" `isPrefixOf` xs = xs
       | otherwise = case xs of
