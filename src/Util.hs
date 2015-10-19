@@ -21,7 +21,7 @@ isBoring :: FilePath -> Bool
 isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
   where
     dirs = splitDirectories p
-    isEmacsAutoSave = isPrefixOf ".#" . takeBaseName
+    isEmacsAutoSave = isPrefixOf ".#" . takeFileName
 
 normalizeTypeSignatures :: String -> String
 normalizeTypeSignatures = \case
