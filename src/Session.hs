@@ -13,6 +13,7 @@ module Session (
 , runSpec
 , hspecPreviousSummary
 , resetSummary
+, parseSummary
 ) where
 
 import           Data.IORef
