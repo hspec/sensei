@@ -10,6 +10,7 @@ module Session (
 , isFailure
 , isSuccess
 , hasSpec
+, hasSpecString
 , runSpec
 , hspecPreviousSummary
 , resetSummary

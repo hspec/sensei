@@ -37,6 +37,25 @@ spec = do
           _ <- silence (Session.reload session)
           Session.hasSpec session `shouldReturn` False
 
+  describe "hasSpecString" $ do
+    let sample i b e = unlines
+          [ "..."
+          , b ++ "Test.Hspec.Runner.hspecResult spec :: IO " ++ i ++ "Summary" ++ e
+          , "..."
+          ]
+
+    context "when module contains spec" $ do
+      it "returns True" $ do
+        Session.hasSpecString (sample "" "" "") `shouldBe` True
+        Session.hasSpecString (sample "oriy" "" "") `shouldBe` True
+        Session.hasSpecString (sample "..........................." "" "") `shouldBe` True
+
+    context "when module does not contain spec" $ do
+      it "returns False" $ do
+        Session.hasSpecString "..." `shouldBe` False
+        Session.hasSpecString (sample "" ".." "") `shouldBe` False
+        Session.hasSpecString (sample "oriy" "" "<<") `shouldBe` False
+
   describe "runSpec" $ around_ withSomeSpec $ do
     it "stores summary of spec run" $ do
       withSession ["Spec.hs"] $ \session -> do
