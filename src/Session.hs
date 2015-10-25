@@ -98,7 +98,7 @@ isSuccess :: Maybe Summary -> Bool
 isSuccess = not . isFailure
 
 parseSummary :: String -> Maybe Summary
-parseSummary = findJust . (map $ readMaybe . dropAnsiEscapeSequences) . take 3 . reverse . lines
+parseSummary = findJust . (map $ readMaybe . dropAnsiEscapeSequences) . reverse . lines
   where
     findJust = listToMaybe . catMaybes
 

@@ -71,7 +71,7 @@ spec = do
     it "takes a rendering of a summary and returns the parse result" $ do
       Session.parseSummary "Summary {summaryExamples = 2, summaryFailures = 0}" `shouldBe` Just (Summary 2 0)
 
-    it "can find the summary in the last 3 lines of a multi-line input" $ do
+    it "can find the summary anywere in a multi-line input" $ do
       Session.parseSummary "\n...\n...\nSummary {summaryExamples = 2, summaryFailures = 0}" `shouldBe` Just (Summary 2 0)
       Session.parseSummary "...\n...\nSummary {summaryExamples = 2, summaryFailures = 0}\n" `shouldBe` Just (Summary 2 0)
       Session.parseSummary "...\nSummary {summaryExamples = 2, summaryFailures = 0}\n...\n" `shouldBe` Just (Summary 2 0)
@@ -79,6 +79,3 @@ spec = do
 
     it "can find Summary at the middle of a line, after noise (to cope with ansi escapes)" $ do
       Session.parseSummary "noiseSummary {summaryExamples = 2, summaryFailures = 0}" `shouldBe` Just (Summary 2 0)
-
-    it "does NOT find the summary in earlier lines of a multi-line input" $ do
-      Session.parseSummary "Summary {summaryExamples = 2, summaryFailures = 0}\n...\n...\n...\n" `shouldBe` Nothing
