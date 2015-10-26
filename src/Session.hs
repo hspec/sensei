@@ -10,7 +10,7 @@ module Session (
 , isFailure
 , isSuccess
 , hasSpec
-, hasSpecString
+, hasHspecCommandSignature
 , runSpec
 , hspecPreviousSummary
 , resetSummary
@@ -71,14 +71,12 @@ hspecCommand :: String
 hspecCommand = "Test.Hspec.Runner.hspecResult spec"
 
 hasSpec :: Session -> IO Bool
-hasSpec Session{..} =
-  hasSpecString . normalizeTypeSignatures <$> eval sessionInterpreter (":type " ++ hspecCommand)
+hasSpec Session{..} = hasHspecCommandSignature <$> eval sessionInterpreter (":type " ++ hspecCommand)
 
-hasSpecString :: String -> Bool
-hasSpecString = any match . lines
+hasHspecCommandSignature :: String -> Bool
+hasHspecCommandSignature = any match . lines . normalizeTypeSignatures
   where
-    match line = (hspecCommand ++ " :: IO ") `isPrefixOf` line
-              && "Summary" `isSuffixOf` line
+    match line = (hspecCommand ++ " :: IO ") `isPrefixOf` line && "Summary" `isSuffixOf` line
 
 runSpec :: Session -> IO String
 runSpec session@Session{..} = do
@@ -98,7 +96,7 @@ isSuccess :: Maybe Summary -> Bool
 isSuccess = not . isFailure
 
 parseSummary :: String -> Maybe Summary
-parseSummary = findJust . (map $ readMaybe . dropAnsiEscapeSequences) . reverse . lines
+parseSummary = findJust . map (readMaybe . dropAnsiEscapeSequences) . reverse . lines
   where
     findJust = listToMaybe . catMaybes
 

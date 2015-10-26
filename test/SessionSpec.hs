@@ -37,24 +37,27 @@ spec = do
           _ <- silence (Session.reload session)
           Session.hasSpec session `shouldReturn` False
 
-  describe "hasSpecString" $ do
-    let sample i b e = unlines
-          [ "..."
-          , b ++ "Test.Hspec.Runner.hspecResult spec :: IO " ++ i ++ "Summary" ++ e
-          , "..."
-          ]
+  describe "hasHspecCommandSignature" $ do
+    let signature = "Test.Hspec.Runner.hspecResult spec :: IO Test.Hspec.Core.Runner.Summary"
 
-    context "when module contains spec" $ do
+    context "when input contains qualified Hspec command signature" $ do
       it "returns True" $ do
-        Session.hasSpecString (sample "" "" "") `shouldBe` True
-        Session.hasSpecString (sample "oriy" "" "") `shouldBe` True
-        Session.hasSpecString (sample "..........................." "" "") `shouldBe` True
+        Session.hasHspecCommandSignature signature `shouldBe` True
 
-    context "when module does not contain spec" $ do
+      it "ignores additional output after summary" $ do
+        (Session.hasHspecCommandSignature . unlines) [
+            "bar"
+          , signature
+          , "foo"
+          ] `shouldBe` True
+
+    context "when input contains unqualified Hspec command signature" $ do
+      it "returns True" $ do
+        Session.hasHspecCommandSignature "Test.Hspec.Runner.hspecResult spec :: IO Summary" `shouldBe` True
+
+    context "when input dose not contain Hspec command signature" $ do
       it "returns False" $ do
-        Session.hasSpecString "..." `shouldBe` False
-        Session.hasSpecString (sample "" ".." "") `shouldBe` False
-        Session.hasSpecString (sample "oriy" "" "<<") `shouldBe` False
+        Session.hasHspecCommandSignature "foo" `shouldBe` False
 
   describe "runSpec" $ around_ withSomeSpec $ do
     it "stores summary of spec run" $ do
@@ -68,14 +71,23 @@ spec = do
         hspecPreviousSummary session `shouldReturn` Just (Summary 1 0)
 
   describe "parseSummary" $ do
-    it "takes a rendering of a summary and returns the parse result" $ do
-      Session.parseSummary "Summary {summaryExamples = 2, summaryFailures = 0}" `shouldBe` Just (Summary 2 0)
+    let summary = Summary 2 0
 
-    it "can find the summary anywere in a multi-line input" $ do
-      Session.parseSummary "\n...\n...\nSummary {summaryExamples = 2, summaryFailures = 0}" `shouldBe` Just (Summary 2 0)
-      Session.parseSummary "...\n...\nSummary {summaryExamples = 2, summaryFailures = 0}\n" `shouldBe` Just (Summary 2 0)
-      Session.parseSummary "...\nSummary {summaryExamples = 2, summaryFailures = 0}\n...\n" `shouldBe` Just (Summary 2 0)
-      Session.parseSummary "Summary {summaryExamples = 2, summaryFailures = 0}\n...\n...\n" `shouldBe` Just (Summary 2 0)
+    it "parses summary" $ do
+      Session.parseSummary (show summary) `shouldBe` Just summary
 
-    it "can find Summary at the middle of a line, after noise (to cope with ansi escapes)" $ do
-      Session.parseSummary "noiseSummary {summaryExamples = 2, summaryFailures = 0}" `shouldBe` Just (Summary 2 0)
+    it "ignores additional output before / after summary" $ do
+      (Session.parseSummary . unlines) [
+          "foo"
+        , show summary
+        , "bar"
+        ] `shouldBe` Just summary
+
+    it "gives last occurrence precedence" $ do
+      (Session.parseSummary . unlines) [
+          show (Summary 3 0)
+        , show summary
+        ] `shouldBe` Just summary
+
+    it "ignores additional output at the beginning of a line (to cope with ansi escape sequences)" $ do
+      Session.parseSummary ("foo " ++ show summary) `shouldBe` Just (Summary 2 0)
