@@ -21,6 +21,9 @@ spec = do
     it "removes newlines from type signatures" $ do
       normalizeTypeSignatures "foo\n  :: Int" `shouldBe` "foo :: Int"
 
+    it "replaces unicode characters" $ do
+      normalizeTypeSignatures "head ∷ [a] → a" `shouldBe` "head :: [a] -> a"
+
   describe "dotGhciWritableByOthers" $ do
     around_ inTempDirectory $ do
       before_ (touch ".ghci" >> callCommand "chmod go-w .ghci") $ do

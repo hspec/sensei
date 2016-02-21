@@ -24,10 +24,17 @@ isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
     isEmacsAutoSave = isPrefixOf ".#" . takeFileName
 
 normalizeTypeSignatures :: String -> String
-normalizeTypeSignatures = \case
-  xs | "\n  :: " `isPrefixOf` xs -> normalizeTypeSignatures (drop 2 xs)
-  x : xs -> x : normalizeTypeSignatures xs
-  [] -> []
+normalizeTypeSignatures = normalize . concatMap replace
+  where
+    normalize = \case
+      xs | "\n  :: " `isPrefixOf` xs -> normalizeTypeSignatures (drop 2 xs)
+      x : xs -> x : normalizeTypeSignatures xs
+      [] -> []
+
+    replace c = case c of
+      '\8759' -> "::"
+      '\8594' -> "->"
+      _ -> [c]
 
 dotGhciWritableByOthers :: IO Bool
 dotGhciWritableByOthers = do
