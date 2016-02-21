@@ -48,7 +48,7 @@ tests:
       - test
     dependencies:
       - sensei
-      - hspec == 2.*
+      - hspec >= 2.2.1
       - hspec-wai
       - mockery
       - silently
