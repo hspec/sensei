@@ -1,5 +1,5 @@
 name: sensei
-version: 0.0.0
+version: 0.1.0
 synopsis: Automatically run Hspec tests on file modifications
 maintainer: Simon Hengel <sol@typeful.net>
 license: MIT
@@ -27,26 +27,22 @@ dependencies:
 
 ghc-options: -Wall
 
-library:
-  source-dirs:
-    - src
-    - doctest/ghci-wrapper/src/
+source-dirs:
+  - src
+  - doctest/ghci-wrapper/src/
 
 executables:
   sensei:
-    main: driver/Main.hs
-    dependencies:
-      - sensei
+    source-dirs: driver
+    main: sensei.hs
 
   sensei-web:
-    main: driver/Web.hs
-    dependencies:
-      - sensei
+    source-dirs: driver
+    main: sensei-web.hs
 
   seito:
-    main: driver/Client.hs
-    dependencies:
-      - sensei
+    source-dirs: driver
+    main: seito.hs
 
 tests:
   spec:
@@ -54,7 +50,6 @@ tests:
     source-dirs:
       - test
     dependencies:
-      - sensei
       - hspec >= 2.2.1
       - hspec-wai
       - mockery
