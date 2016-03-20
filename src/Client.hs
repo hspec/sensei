@@ -1,20 +1,22 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 module Client (client) where
 
-import           Prelude ()
-import           Prelude.Compat
-import           Control.Monad.Compat
 import           Control.Exception
+import           Control.Monad.Compat
+import qualified Data.ByteString.Lazy         as L
 import           Data.String
-import           System.IO.Error
 import           Network.HTTP.Client
 import           Network.HTTP.Client.Internal
 import           Network.HTTP.Types
-import           Network.Socket hiding (recv)
-import           Network.Socket.ByteString (sendAll, recv)
-import qualified Data.ByteString.Lazy as L
+import           Network.Socket               hiding (recv)
+import           Network.Socket.ByteString    (recv, sendAll)
+import           Prelude                      ()
+import           Prelude.Compat
+import           System.IO.Error
 
-import           HTTP (newSocket, socketAddr, socketName)
+import           HTTP                         (newSocket, socketAddr,
+                                               socketName)
 
 client :: IO (Bool, L.ByteString)
 client = either (const $ connectError) id <$> tryJust p go

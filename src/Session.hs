@@ -19,23 +19,24 @@ module Session (
 
 import           Data.IORef
 import           Data.List.Compat
-import           Data.Maybe (listToMaybe, catMaybes)
-import           Prelude ()
+import           Data.Maybe                   (catMaybes, listToMaybe)
+import           Prelude                      ()
 import           Prelude.Compat
 import           Text.Read.Compat
 
+import           Language.Haskell.GhciWrapper hiding (close, new)
 import qualified Language.Haskell.GhciWrapper as GhciWrapper
-import           Language.Haskell.GhciWrapper hiding (new, close)
 
-import           Util
 import           Options
+import           Util
 
 hspecFailureEnvName :: String
 hspecFailureEnvName = "HSPEC_FAILURES"
 
 data Session = Session {
-  sessionInterpreter :: Interpreter
-, sessionHspecArgs :: [String]
+  sessionInterpreter          :: Interpreter
+, sessionHspecArgs            :: [String]
+, sessionTestFlag             :: Bool
 , sessionHspecPreviousSummary :: IORef (Maybe Summary)
 }
 
@@ -45,16 +46,16 @@ resetSummary Session{..} = writeIORef sessionHspecPreviousSummary (Just $ Summar
 hspecPreviousSummary :: Session -> IO (Maybe Summary)
 hspecPreviousSummary Session{..} = readIORef sessionHspecPreviousSummary
 
-new :: [String] -> IO Session
-new args = do
-  let (ghciArgs, hspecArgs) = splitArgs args
+new :: SenseiArgs -> IO Session
+new SenseiArgs{..} = do
+  let (ghciArgs, hspecArgs) = splitArgs otherArgs
   ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False} ghciArgs
   _ <- eval ghci (":set prompt " ++ show "")
   _ <- eval ghci ("import qualified System.Environment")
   _ <- eval ghci ("import qualified Test.Hspec.Runner")
   _ <- eval ghci ("System.Environment.unsetEnv " ++ show hspecFailureEnvName)
   ref <- newIORef (Just $ Summary 0 0)
-  return (Session ghci hspecArgs ref)
+  return (Session ghci hspecArgs testFlag ref)
 
 close :: Session -> IO ()
 close = GhciWrapper.close . sessionInterpreter

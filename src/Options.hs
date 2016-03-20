@@ -1,6 +1,11 @@
-module Options (splitArgs) where
+
+module Options (splitArgs
+               ,SenseiArgs(..)
+               ,withArgs
+               ) where
 
 import           Data.List
+import           Options.Applicative
 import           System.Console.GetOpt
 
 splitArgs :: [String] -> ([String], [String])
@@ -36,3 +41,35 @@ options = map ($ "") [
   , Option []  ["fail-fast"]        (NoArg ())
   , Option "r" ["rerun"]            (NoArg ())
   ]
+
+data SenseiArgs = SenseiArgs { watch     :: String    -- ^ Pattern to filter files to be watched
+                             , testFlag  :: Bool
+                             , otherArgs :: [String]  -- ^ ghci and hspec arguments
+                             } deriving (Show)
+
+senseiArgsParser :: Parser SenseiArgs
+senseiArgsParser = SenseiArgs
+                   <$> watching
+                   <*> testflag
+                   <*> many (strArgument (metavar "-- ARGS (ghci or hspec args)"))
+  where watching = strOption
+                   ( long "watch"
+                     <> short 'w'
+                     <> metavar "PATTERN"
+                     <> help "regex to what files to include in watching the directory"
+                   ) <|> pure "^*$"
+
+        testflag = flag True False
+                   (long "only-compile"
+                    <> short 'c'
+                    <> help "Only compile, no tests run!"
+                   )
+
+
+
+withArgs :: (SenseiArgs -> IO ()) -> IO ()
+withArgs run = execParser opts' >>= run
+  where opts' = info (helper <*> senseiArgsParser)
+                ( fullDesc
+                  <> progDesc "Automatically compile and run Hspec tests on file modifications"
+                )

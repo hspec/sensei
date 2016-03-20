@@ -43,6 +43,8 @@ executable seito
     , bytestring
     , filepath
     , unix
+    , optparse-applicative
+    , regex-tdfa
   other-modules:
       Client
       EventQueue
@@ -80,6 +82,8 @@ executable sensei
     , bytestring
     , filepath
     , unix
+    , optparse-applicative
+    , regex-tdfa
   other-modules:
       Client
       EventQueue
@@ -117,6 +121,8 @@ executable sensei-web
     , bytestring
     , filepath
     , unix
+    , optparse-applicative
+    , regex-tdfa
   other-modules:
       Client
       EventQueue
@@ -155,6 +161,8 @@ test-suite spec
     , bytestring
     , filepath
     , unix
+    , optparse-applicative
+    , regex-tdfa
     , hspec >= 2.2.1
     , hspec-wai
     , mockery
