@@ -17,6 +17,19 @@ spec = do
     it "ignores files in dist/" $ do
       isBoring "/foo/bar/dist/baz/foo.txt" `shouldBe` True
 
+  describe "isIntresting" $ do
+    it "ignores files in .git/" $ do
+      allIntresting "^*$" "/foo/bar/.git/baz/foo.txt" `shouldBe` False
+
+    it "ignores filepaths which doesn't match regex" $ do
+      allIntresting "^*.hs$" "/foo/bar/baz/foo.txt" `shouldBe` False
+
+    it "dones't ignore matching and not boring filepaths" $ do
+      allIntresting "^*.hs$" "/foo/bar/baz/foo.hs" `shouldBe` True
+
+
+
+
   describe "normalizeTypeSignatures" $ do
     it "removes newlines from type signatures" $ do
       normalizeTypeSignatures "foo\n  :: Int" `shouldBe` "foo :: Int"
