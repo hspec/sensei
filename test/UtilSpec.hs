@@ -27,9 +27,6 @@ spec = do
     it "dones't ignore matching and not boring filepaths" $ do
       allIntresting "^*.hs$" "/foo/bar/baz/foo.hs" `shouldBe` True
 
-
-
-
   describe "normalizeTypeSignatures" $ do
     it "removes newlines from type signatures" $ do
       normalizeTypeSignatures "foo\n  :: Int" `shouldBe` "foo :: Int"
