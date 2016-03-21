@@ -1,1 +1,6 @@
 /dist/
+.stack-work/
+*.hi
+*.i_hi
+*.o
+*.i_o
