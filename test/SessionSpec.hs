@@ -32,8 +32,9 @@ spec = do
 
     context "when module does not contain spec" $ do
       it "returns False" $ do
+        writeFile "Spec.hs" "module Main where"
+
         withSession ["Spec.hs"] $ \session -> do
-          writeFile "Spec.hs" "module Main where"
           _ <- silence (Session.reload session)
           Session.hasSpec session `shouldReturn` False
 
