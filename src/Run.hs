@@ -18,6 +18,7 @@ import           EventQueue
 import           Trigger
 import           Util
 import           Options
+import           System.Environment
 
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
@@ -60,12 +61,20 @@ runWeb args = do
 
 withSession :: [String] -> (Session -> IO ()) -> IO ()
 withSession args action = do
-  let (ghciArgs, hspecArgs) = splitArgs args
-  check <- dotGhciWritableByOthers
-  when check $ do
-    putStrLn ".ghci is writable by others, you can fix this with:"
-    putStrLn ""
-    putStrLn "    chmod go-w .ghci ."
-    putStrLn ""
-    exitFailure
-  bracket (Session.new ghciArgs hspecArgs) Session.close action
+  case parseArgs args of
+    Help -> printHelp
+    Run (RunArgs ghciArgs hspecArgs) -> do
+      check <- dotGhciWritableByOthers
+      when check $ do
+        putStrLn ".ghci is writable by others, you can fix this with:"
+        putStrLn ""
+        putStrLn "    chmod go-w .ghci ."
+        putStrLn ""
+        exitFailure
+      bracket (Session.new ghciArgs hspecArgs) Session.close action
+
+printHelp :: IO ()
+printHelp = do
+  name <- getProgName
+  putStrLn $ "Usage: " ++ name ++ " [GHCI ARGS] [HSPEC ARGS]"
+  putStrLn $ "       " ++ name ++ " --help"

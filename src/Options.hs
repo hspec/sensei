@@ -1,14 +1,29 @@
-module Options (splitArgs) where
+module Options (
+  parseArgs
+, RunArgs (..)
+, Mode (..)
+) where
 
 import           Data.List
 import           System.Console.GetOpt
 
-splitArgs :: [String] -> ([String], [String])
+data Mode = Help | Run RunArgs deriving (Eq, Show)
+
+data RunArgs = RunArgs {
+  runGhciArgs :: [String]
+, runHspecArgs :: [String]
+} deriving (Eq, Show)
+
+parseArgs :: [String] -> Mode
+parseArgs ("--help":_) = Help
+parseArgs args = splitArgs args
+
+splitArgs :: [String] -> Mode
 splitArgs args = case break (== "--") $ reverse args of
-  (xs, "--" : ys) -> (reverse ys, reverse xs)
+  (xs, "--" : ys) -> Run $ RunArgs (reverse ys) (reverse xs)
   _ -> case filter isHspecArgs $ tails args of
-    x : _ -> (dropEnd (length x) args, x)
-    [] -> (args, [])
+    x : _ -> Run $ RunArgs (dropEnd (length x) args) x
+    [] -> Run $ RunArgs args []
   where
     isHspecArgs xs = case getOpt Permute options xs of
       (_, [], []) -> True
