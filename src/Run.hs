@@ -26,7 +26,7 @@ waitForever = forever $ threadDelay 10000000
 watchFiles :: EventQueue -> IO ()
 watchFiles queue = void . forkIO $ do
   withManager $ \manager -> do
-    _ <- watchTree manager "." (not . isBoring . eventPath) (\event -> emitModified (eventPath event) queue)
+    _ <- watchTree manager "." (isIntresting . eventPath) (\event -> emitModified (eventPath event) queue)
     waitForever
 
 watchInput :: EventQueue -> IO ()

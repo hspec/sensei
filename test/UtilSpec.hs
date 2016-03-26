@@ -10,6 +10,13 @@ import           Util
 
 spec :: Spec
 spec = do
+  describe "isHaskell" $ do
+    it "accepts hs files" $ do
+      isHaskell "/foo/bar/.git/baz/foo.hs" `shouldBe` True
+
+    it "accepts hs files" $ do
+      isHaskell "/foo/bar/.git/baz/foo.lhs" `shouldBe` True
+
   describe "isBoring" $ do
     it "ignores files in .git/" $ do
       isBoring "/foo/bar/.git/baz/foo.txt" `shouldBe` True
