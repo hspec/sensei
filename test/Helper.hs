@@ -21,8 +21,8 @@ import           Run ()
 import qualified Session
 import           Session (Session)
 
-withSession :: [String] -> (Session -> IO a) -> IO a
-withSession args action = bracket (Session.new $ "-ignore-dot-ghci" : args) Session.close action
+withSession :: [String] -> [String] -> (Session -> IO a) -> IO a
+withSession ghciArgs hspecArgs action = bracket (Session.new ("-ignore-dot-ghci" : ghciArgs) hspecArgs) Session.close action
 
 withSomeSpec :: IO a -> IO a
 withSomeSpec = (inTempDirectory .  (writeFile "Spec.hs" passingSpec >>))

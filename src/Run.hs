@@ -17,6 +17,7 @@ import           Session (Session)
 import           EventQueue
 import           Trigger
 import           Util
+import           Options
 
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
@@ -59,6 +60,7 @@ runWeb args = do
 
 withSession :: [String] -> (Session -> IO ()) -> IO ()
 withSession args action = do
+  let (ghciArgs, hspecArgs) = splitArgs args
   check <- dotGhciWritableByOthers
   when check $ do
     putStrLn ".ghci is writable by others, you can fix this with:"
@@ -66,4 +68,4 @@ withSession args action = do
     putStrLn "    chmod go-w .ghci ."
     putStrLn ""
     exitFailure
-  bracket (Session.new args) Session.close action
+  bracket (Session.new ghciArgs hspecArgs) Session.close action

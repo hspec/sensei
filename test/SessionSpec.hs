@@ -14,19 +14,19 @@ spec = do
   describe "new" $ do
     it "unsets HSPEC_FAILURES" $ do
       setEnv hspecFailureEnvName "foo"
-      withSession [] $ \Session{..} -> do
+      withSession [] [] $ \Session{..} -> do
         _ <- eval sessionInterpreter "import System.Environment"
         eval sessionInterpreter ("lookupEnv " ++ show hspecFailureEnvName) `shouldReturn` "Nothing\n"
 
   describe "reload" $ do
     it "reloads" $ do
-      withSession [] $ \session -> do
+      withSession [] [] $ \session -> do
         silence (Session.reload session) `shouldReturn` "Ok, modules loaded: none.\n"
 
   describe "hasSpec" $ around_ withSomeSpec $ do
     context "when module contains spec" $ do
       it "returns True" $ do
-        withSession ["Spec.hs"] $ \session -> do
+        withSession ["Spec.hs"] [] $ \session -> do
           _ <- silence (Session.reload session)
           Session.hasSpec session `shouldReturn` True
 
@@ -34,7 +34,7 @@ spec = do
       it "returns False" $ do
         writeFile "Spec.hs" "module Main where"
 
-        withSession ["Spec.hs"] $ \session -> do
+        withSession ["Spec.hs"] [] $ \session -> do
           _ <- silence (Session.reload session)
           Session.hasSpec session `shouldReturn` False
 
@@ -62,12 +62,12 @@ spec = do
 
   describe "runSpec" $ around_ withSomeSpec $ do
     it "stores summary of spec run" $ do
-      withSession ["Spec.hs"] $ \session -> do
+      withSession ["Spec.hs"] [] $ \session -> do
         _ <- silence (Session.runSpec session >> Session.runSpec session)
         hspecPreviousSummary session `shouldReturn` Just (Summary 2 0)
 
     it "accepts Hspec args" $ do
-      withSession ["Spec.hs", "--no-color", "-m", "foo"] $ \session -> do
+      withSession ["Spec.hs"] ["--no-color", "-m", "foo"] $ \session -> do
         _ <- silence (Session.runSpec session >> Session.runSpec session)
         hspecPreviousSummary session `shouldReturn` Just (Summary 1 0)
 
