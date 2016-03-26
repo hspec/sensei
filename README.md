@@ -61,7 +61,6 @@ all:
 	@seito | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
 ```
 
-
 #### Option 2: Set `makeprg`:
 
 Add the following to your Vim configuration (e.g.
@@ -70,3 +69,10 @@ Add the following to your Vim configuration (e.g.
 ```vim
 :set makeprg=seito\ \\\|\ sed\ 's/\\x1B\\[[0-9;]*[JKmsu]//g'
 ```
+You can then load the result of the last test run into your quickfix list by
+executing `:make` in Vim.
+
+## Q & A
+
+Q: My tests are pretty slow, how can I use `sensei` to only typecheck my code but not run any tests?
+A: Pass `-fno-code` to `sensei` like: `sensei -fno-code test/Spec.hs`
