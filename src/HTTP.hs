@@ -20,7 +20,7 @@ import           System.IO.Error
 import           System.Directory
 import           Network.Wai
 import           Network.HTTP.Types
-import           Network.Wai.Handler.Warp
+import           Network.Wai.Handler.Warp (runSettingsSocket, defaultSettings)
 import           Network.Socket
 
 socketName :: String
