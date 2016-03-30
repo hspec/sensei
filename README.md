@@ -44,6 +44,16 @@ instead:
 
 ### Vim integration
 
+You can use `sensei` to load the result of the last test run into your quickfix
+list by executing `:make` in Vim.
+
+For this to work you can either create a `Makefile` or set `makeprg` to a
+custom value.
+
+(In both cases `sed` is used to strip ANSI color sequences.)
+
+#### Option 1: Create a `Makefile`
+
 Create a Makefile with the following content:
 
 ```Makefile
@@ -51,7 +61,12 @@ all:
 	@seito | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
 ```
 
-(`sed` is used to strip ANSI color sequences)
 
-You can then load the result of the last test run into your quickfix list by
-executing `:make` in Vim.
+#### Option 2: Set `makeprg`:
+
+Add the following to your Vim configuration (e.g.
+`~/.vim/after/ftplugin/haskell.vim`):
+
+```vim
+:set makeprg=seito\ \\\|\ sed\ 's/\\x1B\\[[0-9;]*[JKmsu]//g'
+```
