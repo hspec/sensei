@@ -72,6 +72,13 @@ Add the following to your Vim configuration (e.g.
 :set makeprg=seito\ \\\|\ sed\ 's/\\x1B\\[[0-9;]*[JKmsu]//g'
 ```
 
+### Emacs Integration
+
+Similarly you can use `sensei` to load the result of the last test run into emacs
+buffer by executing `M-x compile` in emacs.
+
+For this to work you can create a `Makefile` as described in Option 1 above.
+
 ## Development
 
 If you want to use `sensei` while hacking on `sensei` you will need to tell
