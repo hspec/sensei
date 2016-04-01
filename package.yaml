@@ -24,6 +24,8 @@ dependencies:
   - bytestring
   - filepath
   - unix
+  - optparse-applicative
+  - regex-tdfa
 
 ghc-options: -Wall
 

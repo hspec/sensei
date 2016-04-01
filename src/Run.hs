@@ -1,30 +1,32 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Run where
-import           Prelude ()
+import           Prelude            ()
 import           Prelude.Compat
 
 import           Control.Concurrent
 import           Control.Exception
-import           Control.Monad (void, forever, when)
+import           Control.Monad      (forever, void, when)
 import           Data.Foldable
 import           System.Exit
 import           System.FSNotify
 
 import qualified HTTP
+import           Session            (Session)
 import qualified Session
-import           Session (Session)
 
 import           EventQueue
+import           Options
 import           Trigger
 import           Util
-
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
 
-watchFiles :: EventQueue -> IO ()
-watchFiles queue = void . forkIO $ do
+watchFiles :: String -- ^ Pattern to match files
+           -> EventQueue
+           -> IO ()
+watchFiles pattern queue = void . forkIO $ do
   withManager $ \manager -> do
-    _ <- watchTree manager "." (not . isBoring . eventPath) (\event -> emitModified (eventPath event) queue)
+    _ <- watchTree manager "." (allIntresting pattern . eventPath) (\event -> emitModified (eventPath event) queue)
     waitForever
 
 watchInput :: EventQueue -> IO ()
@@ -34,11 +36,11 @@ watchInput queue = void . forkIO $ do
     emitTriggerAll queue
   emitDone queue
 
-run :: [String] -> IO ()
+run :: SenseiArgs -> IO ()
 run args = do
   withSession args $ \session -> do
     queue <- newQueue
-    watchFiles queue
+    watchFiles (watch args) queue
     watchInput queue
     lastOutput <- newMVar (True, "")
     HTTP.withServer (readMVar lastOutput) $ do
@@ -49,7 +51,7 @@ run args = do
       triggerAction
       processQueue queue triggerAllAction triggerAction
 
-runWeb :: [String] -> IO ()
+runWeb :: SenseiArgs -> IO ()
 runWeb args = do
   withSession args $ \session -> do
     _ <- trigger session
@@ -57,7 +59,7 @@ runWeb args = do
     HTTP.withServer (withMVar lock $ \() -> trigger session) $ do
       waitForever
 
-withSession :: [String] -> (Session -> IO ()) -> IO ()
+withSession :: SenseiArgs -> (Session -> IO ()) -> IO ()
 withSession args action = do
   check <- dotGhciWritableByOthers
   when check $ do

@@ -1,10 +1,10 @@
 module TriggerSpec (spec) where
 
-import           Helper
 import           Data.List
+import           Helper
 
+import           Options   (SenseiArgs (..))
 import           Trigger
-
 normalize :: String -> [String]
 normalize = normalizeErrors . normalizeTiming . normalizeSeed . lines
   where
@@ -113,7 +113,7 @@ spec = do
           writeFile "Spec.hs" passingSpec
           (True, xs) <- silence (trigger session)
           normalize xs `shouldBe` [
-              "[1 of 1] Compiling Spec             ( Spec.hs, interpreted )"
+            "[1 of 1] Compiling Spec             ( Spec.hs, interpreted )"
             , "Ok, modules loaded: Spec."
             , ""
             , "bar"
@@ -135,3 +135,9 @@ spec = do
         withSession ["Spec.hs"] $ \session -> do
           writeFile "Spec.hs" "module Main where"
           silence (trigger session >> trigger session) `shouldReturn` (True, "Ok, modules loaded: Main.\n")
+
+    context "with only-compile flag on, should not run tests" $ do
+      it "only reloads" $ do
+        withSenseiSession (SenseiArgs "^*$" False ["Spec.hs"]) $ \session -> do
+          writeFile "Spec.hs" passingSpec
+          silence (trigger session >> trigger session) `shouldReturn` (True, "Ok, modules loaded: Spec.\n")

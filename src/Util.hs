@@ -1,7 +1,8 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Util where
 
-import           Prelude ()
+import           Prelude                ()
 import           Prelude.Compat
 
 import           Control.Exception
@@ -10,6 +11,8 @@ import           System.Console.ANSI
 import           System.FilePath
 import           System.Posix.Files
 import           System.Posix.Types
+import           Text.Regex.TDFA        ((=~))
+import           Text.Regex.TDFA.String ()
 
 withInfoColor :: IO a -> IO a
 withInfoColor = bracket_ set reset
@@ -22,6 +25,9 @@ isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
   where
     dirs = splitDirectories p
     isEmacsAutoSave = isPrefixOf ".#" . takeFileName
+
+allIntresting :: String -> FilePath -> Bool
+allIntresting regex p = (p =~ regex) && (not $ isBoring p)
 
 normalizeTypeSignatures :: String -> String
 normalizeTypeSignatures = normalize . concatMap replace
