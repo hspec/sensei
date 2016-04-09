@@ -23,7 +23,7 @@ isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p || is
   where
     dirs = splitDirectories p
     isEmacsAutoSave = isPrefixOf ".#" . takeFileName
-    isflyCheckFile = isInfixOf "_flycheck.hs" . takeFileName
+    isflyCheckFile = isInfixOf "_flycheck" . takeFileName
 
 isHaskell :: FilePath -> Bool
 isHaskell = (`elem` [".hs", ".lhs"]) . takeExtension

@@ -24,6 +24,9 @@ spec = do
     it "ignores files in dist/" $
       isBoring "/foo/bar/dist/baz/foo.txt" `shouldBe` True
 
+    it "ignores flycheck files" $
+      isBoring "/foo/bar/dist/baz/foo_flycheck.hs" `shouldBe` True
+
   describe "normalizeTypeSignatures" $ do
     it "removes newlines from type signatures" $
       normalizeTypeSignatures "foo\n  :: Int" `shouldBe` "foo :: Int"
