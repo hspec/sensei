@@ -75,4 +75,5 @@ executing `:make` in Vim.
 ## Q & A
 
 Q: My tests are pretty slow, how can I use `sensei` to only typecheck my code but not run any tests?
+
 A: Pass `-fno-code` to `sensei` like: `sensei -fno-code test/Spec.hs`
