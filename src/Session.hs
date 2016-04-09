@@ -28,7 +28,6 @@ import qualified Language.Haskell.GhciWrapper as GhciWrapper
 import           Language.Haskell.GhciWrapper hiding (new, close)
 
 import           Util
-import           Options
 
 hspecFailureEnvName :: String
 hspecFailureEnvName = "HSPEC_FAILURES"
@@ -45,9 +44,8 @@ resetSummary Session{..} = writeIORef sessionHspecPreviousSummary (Just $ Summar
 hspecPreviousSummary :: Session -> IO (Maybe Summary)
 hspecPreviousSummary Session{..} = readIORef sessionHspecPreviousSummary
 
-new :: [String] -> IO Session
-new args = do
-  let (ghciArgs, hspecArgs) = splitArgs args
+new :: [String] -> [String] -> IO Session
+new ghciArgs hspecArgs = do
   ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False} ghciArgs
   _ <- eval ghci (":set prompt " ++ show "")
   _ <- eval ghci ("import qualified System.Environment")

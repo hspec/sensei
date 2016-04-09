@@ -9,9 +9,12 @@ main = hspec spec
 
 spec :: Spec
 spec = do
-  describe "splitArgs" $ do
+  describe "parseArgs" $ do
     it "returns longest matching list of Hspec arguments from end of given list" $ do
-      splitArgs ["foo", "--bar", "-m", "FooSpec", "-a", "1000"] `shouldBe` (["foo", "--bar"], ["-m", "FooSpec", "-a", "1000"])
+      parseArgs ["foo", "--bar", "-m", "FooSpec", "-a", "1000"] `shouldBe` (Run $ RunArgs ["foo", "--bar"] ["-m", "FooSpec", "-a", "1000"])
 
     it "assumes everything after the last '--' to be Hspec arguments" $ do
-      splitArgs ["foo", "bar", "--", "foo", "baz"] `shouldBe` (["foo", "bar"], ["foo", "baz"])
+      parseArgs ["foo", "bar", "--", "foo", "baz"] `shouldBe` (Run $ RunArgs ["foo", "bar"] ["foo", "baz"])
+
+    it "recognizes help" $ do
+      parseArgs ["--help"] `shouldBe` Help

@@ -10,6 +10,7 @@ import           System.Console.ANSI
 import           System.FilePath
 import           System.Posix.Files
 import           System.Posix.Types
+import           Control.Applicative
 
 withInfoColor :: IO a -> IO a
 withInfoColor = bracket_ set reset
@@ -18,10 +19,17 @@ withInfoColor = bracket_ set reset
     reset = setSGR []
 
 isBoring :: FilePath -> Bool
-isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
+isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p || isflyCheckFile p
   where
     dirs = splitDirectories p
     isEmacsAutoSave = isPrefixOf ".#" . takeFileName
+    isflyCheckFile = isInfixOf "_flycheck" . takeFileName
+
+isHaskell :: FilePath -> Bool
+isHaskell = (`elem` [".hs", ".lhs"]) . takeExtension
+
+isIntresting :: FilePath -> Bool
+isIntresting = liftA2 (&&) isHaskell (not . isBoring)
 
 normalizeTypeSignatures :: String -> String
 normalizeTypeSignatures = normalize . concatMap replace

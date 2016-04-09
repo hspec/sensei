@@ -17,6 +17,8 @@ import           Session (Session)
 import           EventQueue
 import           Trigger
 import           Util
+import           Options
+import           System.Environment
 
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
@@ -24,7 +26,7 @@ waitForever = forever $ threadDelay 10000000
 watchFiles :: EventQueue -> IO ()
 watchFiles queue = void . forkIO $ do
   withManager $ \manager -> do
-    _ <- watchTree manager "." (not . isBoring . eventPath) (\event -> emitModified (eventPath event) queue)
+    _ <- watchTree manager "." (isIntresting . eventPath) (\event -> emitModified (eventPath event) queue)
     waitForever
 
 watchInput :: EventQueue -> IO ()
@@ -59,11 +61,20 @@ runWeb args = do
 
 withSession :: [String] -> (Session -> IO ()) -> IO ()
 withSession args action = do
-  check <- dotGhciWritableByOthers
-  when check $ do
-    putStrLn ".ghci is writable by others, you can fix this with:"
-    putStrLn ""
-    putStrLn "    chmod go-w .ghci ."
-    putStrLn ""
-    exitFailure
-  bracket (Session.new args) Session.close action
+  case parseArgs args of
+    Help -> printHelp
+    Run (RunArgs ghciArgs hspecArgs) -> do
+      check <- dotGhciWritableByOthers
+      when check $ do
+        putStrLn ".ghci is writable by others, you can fix this with:"
+        putStrLn ""
+        putStrLn "    chmod go-w .ghci ."
+        putStrLn ""
+        exitFailure
+      bracket (Session.new ghciArgs hspecArgs) Session.close action
+
+printHelp :: IO ()
+printHelp = do
+  name <- getProgName
+  putStrLn $ "Usage: " ++ name ++ " [GHCI ARGS] [HSPEC ARGS]"
+  putStrLn $ "       " ++ name ++ " --help"
