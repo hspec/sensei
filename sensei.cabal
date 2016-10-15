@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.11.0.
+-- This file has been generated from package.yaml by hpack version 0.15.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -22,8 +22,8 @@ executable seito
   main-is: seito.hs
   hs-source-dirs:
       src
-    , doctest/ghci-wrapper/src/
-    , driver
+      doctest/ghci-wrapper/src/
+      driver
   ghc-options: -Wall
   build-depends:
       base >= 4.7 && < 5
@@ -39,7 +39,7 @@ executable seito
     , network
     , ansi-terminal
     , directory
-    , http-client
+    , http-client >= 0.5.0
     , bytestring
     , filepath
     , unix
@@ -59,8 +59,8 @@ executable sensei
   main-is: sensei.hs
   hs-source-dirs:
       src
-    , doctest/ghci-wrapper/src/
-    , driver
+      doctest/ghci-wrapper/src/
+      driver
   ghc-options: -Wall
   build-depends:
       base >= 4.7 && < 5
@@ -76,7 +76,7 @@ executable sensei
     , network
     , ansi-terminal
     , directory
-    , http-client
+    , http-client >= 0.5.0
     , bytestring
     , filepath
     , unix
@@ -96,8 +96,8 @@ executable sensei-web
   main-is: sensei-web.hs
   hs-source-dirs:
       src
-    , doctest/ghci-wrapper/src/
-    , driver
+      doctest/ghci-wrapper/src/
+      driver
   ghc-options: -Wall
   build-depends:
       base >= 4.7 && < 5
@@ -113,7 +113,7 @@ executable sensei-web
     , network
     , ansi-terminal
     , directory
-    , http-client
+    , http-client >= 0.5.0
     , bytestring
     , filepath
     , unix
@@ -134,8 +134,8 @@ test-suite spec
   main-is: Spec.hs
   hs-source-dirs:
       src
-    , doctest/ghci-wrapper/src/
-    , test
+      doctest/ghci-wrapper/src/
+      test
   ghc-options: -Wall
   build-depends:
       base >= 4.7 && < 5
@@ -151,7 +151,7 @@ test-suite spec
     , network
     , ansi-terminal
     , directory
-    , http-client
+    , http-client >= 0.5.0
     , bytestring
     , filepath
     , unix

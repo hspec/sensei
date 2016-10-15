@@ -4,14 +4,14 @@ module Client (client) where
 import           Prelude ()
 import           Prelude.Compat
 import           Control.Monad.Compat
+import           Data.Monoid.Compat
 import           Control.Exception
 import           Data.String
 import           System.IO.Error
 import           Network.HTTP.Client
-import           Network.HTTP.Client.Internal
+import           Network.HTTP.Client.Internal (Response(..))
 import           Network.HTTP.Types
-import           Network.Socket hiding (recv)
-import           Network.Socket.ByteString (sendAll, recv)
+import           Network.Socket (connect)
 import qualified Data.ByteString.Lazy as L
 
 import           HTTP (newSocket, socketAddr, socketName)
@@ -24,7 +24,7 @@ client = either (const $ connectError) id <$> tryJust p go
 
     p :: HttpException -> Maybe ()
     p e = case e of
-      FailedConnectionException2 _ _ _ se -> guard (isDoesNotExistException se) >> Just ()
+      HttpExceptionRequest _ (ConnectionFailure se) -> guard (isDoesNotExistException se) >> Just ()
       _ -> Nothing
 
     isDoesNotExistException :: SomeException -> Bool
@@ -32,14 +32,10 @@ client = either (const $ connectError) id <$> tryJust p go
 
     go = do
       manager <- newManager defaultManagerSettings {managerRawConnection = return newConnection}
-      request <- parseUrl "http://localhost/"
-      Response{..} <- httpLbs request {checkStatus = \_ _ _ -> Nothing} manager
+      Response{..} <- httpLbs "http://localhost/" manager
       return (statusIsSuccessful responseStatus, responseBody)
 
     newConnection _ _ _ = do
       sock <- newSocket
       connect sock socketAddr
       socketConnection sock 8192
-
-socketConnection :: Socket -> Int -> IO Connection
-socketConnection sock chunksize = makeConnection (recv sock chunksize) (sendAll sock) (sClose sock)
