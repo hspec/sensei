@@ -1,20 +1,26 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 module Session (
   Session(..)
-, hspecFailureEnvName
 , new
 , close
 , reload
 
 , Summary(..)
+, resetSummary
+, hspecPreviousSummary
 , isFailure
 , isSuccess
-, hasSpec
-, hasHspecCommandSignature
+, getRunSpec
+
+#ifdef TEST
 , runSpec
-, hspecPreviousSummary
-, resetSummary
+, hasSpec
+, hspecFailureEnvName
+, hasHspecCommandSignature
+, hspecCommand
 , parseSummary
+#endif
 ) where
 
 import           Data.IORef
@@ -52,6 +58,7 @@ new args = do
   _ <- eval ghci (":set prompt " ++ show "")
   _ <- eval ghci ("import qualified System.Environment")
   _ <- eval ghci ("import qualified Test.Hspec.Runner")
+  _ <- eval ghci ("import qualified Test.Hspec.Meta")
   _ <- eval ghci ("System.Environment.unsetEnv " ++ show hspecFailureEnvName)
   ref <- newIORef (Just $ Summary 0 0)
   return (Session ghci hspecArgs ref)
@@ -70,19 +77,36 @@ data Summary = Summary {
 hspecCommand :: String
 hspecCommand = "Test.Hspec.Runner.hspecResult spec"
 
-hasSpec :: Session -> IO Bool
-hasSpec Session{..} = hasHspecCommandSignature <$> eval sessionInterpreter (":type " ++ hspecCommand)
+hspecMetaCommand :: String
+hspecMetaCommand = "Test.Hspec.Meta.hspecResult spec"
 
-hasHspecCommandSignature :: String -> Bool
-hasHspecCommandSignature = any match . lines . normalizeTypeSignatures
+getRunSpec :: Session -> IO (Maybe (IO String))
+getRunSpec session = do
+  r <- getRunSpecWith hspecCommand session
+  case r of
+    Just _  -> return r
+    Nothing -> getRunSpecWith hspecMetaCommand session
+
+getRunSpecWith :: String -> Session -> IO (Maybe (IO String))
+getRunSpecWith command session = do
+  has <- hasSpec command session
+  if has
+    then return $ Just (runSpec command session)
+    else return Nothing
+
+hasSpec :: String -> Session -> IO Bool
+hasSpec command Session{..} = hasHspecCommandSignature command <$> eval sessionInterpreter (":type " ++ command)
+
+hasHspecCommandSignature :: String -> String -> Bool
+hasHspecCommandSignature command = any match . lines . normalizeTypeSignatures
   where
-    match line = (hspecCommand ++ " :: IO ") `isPrefixOf` line && "Summary" `isSuffixOf` line
+    match line = (command ++ " :: IO ") `isPrefixOf` line && "Summary" `isSuffixOf` line
 
-runSpec :: Session -> IO String
-runSpec session@Session{..} = do
+runSpec :: String -> Session -> IO String
+runSpec command session@Session{..} = do
   failedPreviously <- isFailure <$> hspecPreviousSummary session
   let args = "--color" : (if failedPreviously then addRerun else id) sessionHspecArgs
-  r <- evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ hspecCommand
+  r <- evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ command
   writeIORef sessionHspecPreviousSummary (parseSummary r)
   return r
   where

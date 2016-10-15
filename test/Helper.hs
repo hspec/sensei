@@ -7,6 +7,7 @@ module Helper (
 , withSession
 , withSomeSpec
 , passingSpec
+, passingMetaSpec
 , failingSpec
 ) where
 
@@ -32,6 +33,18 @@ passingSpec = [i|
 module Spec (spec) where
 
 import           Test.Hspec
+
+spec :: Spec
+spec = do
+  it "foo" True
+  it "bar" True
+|]
+
+passingMetaSpec :: String
+passingMetaSpec = [i|
+module Spec (spec) where
+
+import           Test.Hspec.Meta
 
 spec :: Spec
 spec = do

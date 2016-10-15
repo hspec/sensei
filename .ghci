@@ -1,1 +1,1 @@
-:set -isrc -itest -idoctest/ghci-wrapper/src
+:set -DTEST -isrc -itest -idoctest/ghci-wrapper/src

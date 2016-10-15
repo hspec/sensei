@@ -23,19 +23,19 @@ trigger session = do
     else return (False, "")
   where
     hspec = do
-      hasSpec <- Session.hasSpec session
-      if hasSpec
-        then runSpecs
-        else return (True, "")
+      mRun <- Session.getRunSpec session
+      case mRun of
+        Just run -> runSpecs run
+        Nothing -> return (True, "")
 
-    runSpecs = do
+    runSpecs run = do
       failedPreviously <- isFailure <$> hspecPreviousSummary session
-      (success, xs) <- runSpec
+      (success, xs) <- runSpec run
       fmap (xs ++) <$> if success && failedPreviously
-        then runSpec
+        then runSpec run
         else return (success, "")
 
-    runSpec = do
-      xs <- Session.runSpec session
+    runSpec run = do
+      xs <- run
       success <- isSuccess <$> hspecPreviousSummary session
       return (success, xs)

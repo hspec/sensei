@@ -135,3 +135,19 @@ spec = do
         withSession ["Spec.hs"] $ \session -> do
           writeFile "Spec.hs" "module Main where"
           silence (trigger session >> trigger session) `shouldReturn` (True, "Ok, modules loaded: Main.\n")
+
+    context "with an hspec-meta spec" $ do
+      it "reloads and runs spec" $ do
+        withSession ["Spec.hs", "--no-color"] $ \session -> do
+          writeFile "Spec.hs" passingMetaSpec
+          result <- silence (trigger session >> trigger session)
+          fmap normalize result `shouldBe` (True, [
+              "Ok, modules loaded: Spec."
+            , ""
+            , "foo"
+            , "bar"
+            , ""
+            , "Finished in ..."
+            , "2 examples, 0 failures"
+            , "Summary {summaryExamples = 2, summaryFailures = 0}"
+            ])

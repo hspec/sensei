@@ -137,6 +137,7 @@ test-suite spec
       doctest/ghci-wrapper/src/
       test
   ghc-options: -Wall
+  cpp-options: -DTEST
   build-depends:
       base >= 4.7 && < 5
     , base-compat >= 0.8
@@ -156,6 +157,7 @@ test-suite spec
     , filepath
     , unix
     , hspec >= 2.2.1
+    , hspec-meta
     , hspec-wai
     , mockery
     , silently

@@ -51,7 +51,9 @@ tests:
       - test
     dependencies:
       - hspec >= 2.2.1
+      - hspec-meta
       - hspec-wai
       - mockery
       - silently
       - interpolate
+    cpp-options: -DTEST
