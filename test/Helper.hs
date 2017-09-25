@@ -17,7 +17,9 @@ module Helper (
 import           Control.Applicative
 import           Control.Exception
 import           Data.String.Interpolate
+#if __GLASGOW_HASKELL__ < 802
 import           Data.List.Compat
+#endif
 import           System.IO.Silently
 import           Test.Hspec
 import           Test.Mockery.Directory
