@@ -133,8 +133,8 @@ spec = do
     context "with a module that does not expose a spec" $ do
       it "only reloads" $ do
         withSession ["Spec.hs"] $ \session -> do
-          writeFile "Spec.hs" "module Main where"
-          silence (trigger session >> trigger session) `shouldReturn` (True, "Ok, modules loaded: Main.\n")
+          writeFile "Spec.hs" "module Foo where"
+          (trigger session >> trigger session) `shouldReturn` (True, "Ok, modules loaded: Foo.\n")
 
     context "with an hspec-meta spec" $ do
       it "reloads and runs spec" $ do
