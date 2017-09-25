@@ -1,9 +1,9 @@
--- This file has been generated from package.yaml by hpack version 0.15.0.
+-- This file has been generated from package.yaml by hpack version 0.18.0.
 --
 -- see: https://github.com/sol/hpack
 
 name:           sensei
-version:        0.2.0
+version:        0.3.0
 synopsis:       Automatically run Hspec tests on file modifications
 category:       Development
 homepage:       https://github.com/hspec/sensei#readme
