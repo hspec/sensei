@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 module Helper (
   module Test.Hspec
@@ -9,11 +10,14 @@ module Helper (
 , passingSpec
 , passingMetaSpec
 , failingSpec
+, Status(..)
+, modulesLoaded
 ) where
 
 import           Control.Applicative
 import           Control.Exception
 import           Data.String.Interpolate
+import           Data.List.Compat
 import           System.IO.Silently
 import           Test.Hspec
 import           Test.Mockery.Directory
@@ -63,3 +67,22 @@ spec = do
   it "foo" True
   it "bar" False
 |]
+
+data Status = Ok | Failed
+  deriving (Eq, Show)
+
+modulesLoaded :: Status -> [String] -> String
+#if __GLASGOW_HASKELL__ < 802
+modulesLoaded status xs = show status ++ ", modules loaded: " ++ mods ++ "."
+  where
+    mods = case xs of
+      [] -> "none"
+      _ -> intercalate ", " xs
+#else
+modulesLoaded status xs = show status ++ ", " ++ show n ++ " " ++ mods ++ " loaded."
+  where
+    n = length xs
+    mods
+      | n == 1 = "module"
+      | otherwise = "modules"
+#endif

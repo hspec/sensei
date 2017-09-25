@@ -1,11 +1,16 @@
+{-# LANGUAGE CPP #-}
 module Trigger (
   trigger
 , triggerAll
+#ifdef TEST
+, reloadedSuccessfully
+#endif
 ) where
 
 import           Prelude ()
 import           Prelude.Compat
-import           Data.List
+import           Data.List.Compat
+import           Data.Char
 
 import           Session (Session, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
@@ -15,10 +20,20 @@ triggerAll session = do
   resetSummary session
   trigger session
 
+reloadedSuccessfully :: String -> Bool
+reloadedSuccessfully = any success . lines
+  where
+    success :: String -> Bool
+    success x = case stripPrefix "Ok, " x of
+      Just "1 module loaded." -> True
+      Just xs | " modules loaded." <- dropWhile isNumber xs -> True
+      Just xs -> "modules loaded: " `isPrefixOf` xs
+      Nothing -> False
+
 trigger :: Session -> IO (Bool, String)
 trigger session = do
   xs <- Session.reload session
-  fmap (xs ++) <$> if "Ok, modules loaded:" `isInfixOf` xs
+  fmap (xs ++) <$> if reloadedSuccessfully xs
     then hspec
     else return (False, "")
   where

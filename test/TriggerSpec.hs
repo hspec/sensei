@@ -1,16 +1,14 @@
 module TriggerSpec (spec) where
 
 import           Helper
-import           Data.List
+import           Data.List.Compat
+import           Data.Char
 
 import           Trigger
 
 normalize :: String -> [String]
-normalize = normalizeErrors . normalizeTiming . normalizeSeed . lines
+normalize = normalizeErrors . normalizeTiming . normalizeSeed . lines . stripAnsiColors
   where
-    normalizeErrors :: [String] -> [String]
-    normalizeErrors = mkNormalize "Spec.hs:"
-
     normalizeTiming :: [String] -> [String]
     normalizeTiming = mkNormalize "Finished in "
 
@@ -24,15 +22,46 @@ normalize = normalizeErrors . normalizeTiming . normalizeSeed . lines
           | message `isPrefixOf` line = message ++ "..."
           | otherwise = line
 
+    normalizeErrors :: [String] -> [String]
+    normalizeErrors xs = case xs of
+      y : ys | "Spec.hs:" `isPrefixOf` y -> "Spec.hs:..." : normalizeErrors (removeErrorDetails ys)
+      y : ys -> y : normalizeErrors ys
+      [] -> []
+
+    removeErrorDetails :: [String] -> [String]
+    removeErrorDetails xs = case xs of
+      (_ : _ : ' ' : '|' : _) : ys -> removeErrorDetails ys
+      _ -> xs
+
+    stripAnsiColors xs = case xs of
+      '\ESC' : '[' : ';' : ys | 'm' : zs <- dropWhile isNumber ys -> stripAnsiColors zs
+      '\ESC' : '[' : ys | 'm' : zs <- dropWhile isNumber ys -> stripAnsiColors zs
+      y : ys -> y : stripAnsiColors ys
+      [] -> []
+
 spec :: Spec
 spec = do
+  describe "reloadedSuccessfully" $ do
+    context "with GHC < 8.2.1" $ do
+      it "detects success" $ do
+        reloadedSuccessfully "Ok, modules loaded: Spec." `shouldBe` True
+
+    context "with GHC >= 8.2.1" $ do
+      context "with a single module" $ do
+        it "detects success" $ do
+          reloadedSuccessfully "Ok, 1 module loaded." `shouldBe` True
+
+      context "with multiple modules" $ do
+        it "detects success" $ do
+          reloadedSuccessfully "Ok, 5 modules loaded." `shouldBe` True
+
   describe "triggerAll" $ around_ withSomeSpec $ do
     it "runs all specs" $ do
       withSession ["Spec.hs", "--no-color"] $ \session -> do
         writeFile "Spec.hs" failingSpec
         (False, xs) <- silence (trigger session >> triggerAll session)
         normalize xs `shouldBe` [
-            "Ok, modules loaded: Spec."
+            modulesLoaded Ok ["Spec"]
           , ""
           , "foo"
           , "bar FAILED [1]"
@@ -54,7 +83,7 @@ spec = do
       withSession ["Spec.hs", "--no-color"] $ \session -> do
         result <- silence (trigger session >> trigger session)
         fmap normalize result `shouldBe` (True, [
-            "Ok, modules loaded: Spec."
+            modulesLoaded Ok ["Spec"]
           , ""
           , "foo"
           , "bar"
@@ -73,7 +102,7 @@ spec = do
               "[1 of 1] Compiling Spec             ( Spec.hs, interpreted )"
             , ""
             , "Spec.hs:..."
-            , "Failed, modules loaded: none."
+            , modulesLoaded Failed []
             ]
 
     context "with a failing spec" $ do
@@ -81,7 +110,7 @@ spec = do
         withSession ["Spec.hs"] $ \session -> do
           writeFile "Spec.hs" failingSpec
           (False, xs) <- silence (trigger session)
-          xs `shouldContain` "Ok, modules loaded:"
+          xs `shouldContain` modulesLoaded Ok ["Spec"]
           xs `shouldContain` "2 examples, 1 failure"
 
       it "only reruns failing specs" $ do
@@ -89,7 +118,7 @@ spec = do
           writeFile "Spec.hs" failingSpec
           (False, xs) <- silence (trigger session >> trigger session)
           normalize xs `shouldBe` [
-              "Ok, modules loaded: Spec."
+              modulesLoaded Ok ["Spec"]
             , ""
             , "bar FAILED [1]"
             , ""
@@ -114,7 +143,7 @@ spec = do
           (True, xs) <- silence (trigger session)
           normalize xs `shouldBe` [
               "[1 of 1] Compiling Spec             ( Spec.hs, interpreted )"
-            , "Ok, modules loaded: Spec."
+            , modulesLoaded Ok ["Spec"]
             , ""
             , "bar"
             , ""
@@ -134,7 +163,7 @@ spec = do
       it "only reloads" $ do
         withSession ["Spec.hs"] $ \session -> do
           writeFile "Spec.hs" "module Foo where"
-          (trigger session >> trigger session) `shouldReturn` (True, "Ok, modules loaded: Foo.\n")
+          silence (trigger session >> trigger session) `shouldReturn` (True, modulesLoaded Ok ["Foo"] ++ "\n")
 
     context "with an hspec-meta spec" $ do
       it "reloads and runs spec" $ do
@@ -142,7 +171,7 @@ spec = do
           writeFile "Spec.hs" passingMetaSpec
           result <- silence (trigger session >> trigger session)
           fmap normalize result `shouldBe` (True, [
-              "Ok, modules loaded: Spec."
+              modulesLoaded Ok ["Spec"]
             , ""
             , "foo"
             , "bar"

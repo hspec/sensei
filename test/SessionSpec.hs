@@ -21,7 +21,7 @@ spec = do
   describe "reload" $ do
     it "reloads" $ do
       withSession [] $ \session -> do
-        silence (Session.reload session) `shouldReturn` "Ok, modules loaded: none.\n"
+        silence (Session.reload session) `shouldReturn` (modulesLoaded Ok [] ++ "\n")
 
   describe "hasSpec" $ around_ withSomeSpec $ do
     context "when module contains spec" $ do
