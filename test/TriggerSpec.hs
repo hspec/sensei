@@ -55,6 +55,15 @@ spec = do
         it "detects success" $ do
           reloadedSuccessfully "Ok, 5 modules loaded." `shouldBe` True
 
+    context "with GHC >= 8.2.2" $ do
+      context "with a single module" $ do
+        it "detects success" $ do
+          reloadedSuccessfully "Ok, one module loaded." `shouldBe` True
+
+      context "with multiple modules" $ do
+        it "detects success" $ do
+          reloadedSuccessfully "Ok, four modules loaded." `shouldBe` True
+
   describe "triggerAll" $ around_ withSomeSpec $ do
     it "runs all specs" $ do
       withSession ["Spec.hs", "--no-color"] $ \session -> do

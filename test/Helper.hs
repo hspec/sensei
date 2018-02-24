@@ -80,6 +80,19 @@ modulesLoaded status xs = show status ++ ", modules loaded: " ++ mods ++ "."
     mods = case xs of
       [] -> "none"
       _ -> intercalate ", " xs
+#elif MIN_VERSION_base(4,10,1)
+modulesLoaded status xs = show status ++ ", " ++ mods ++ " loaded."
+  where
+    n = length xs
+    mods
+      | n == 0 = "no modules"
+      | n == 1 = "one module"
+      | n == 2 = "two modules"
+      | n == 3 = "three modules"
+      | n == 4 = "four modules"
+      | n == 5 = "five modules"
+      | n == 6 = "six modules"
+      | otherwise = show n ++ " modules"
 #else
 modulesLoaded status xs = show status ++ ", " ++ show n ++ " " ++ mods ++ " loaded."
   where

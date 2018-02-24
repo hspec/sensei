@@ -10,7 +10,6 @@ module Trigger (
 import           Prelude ()
 import           Prelude.Compat
 import           Data.List.Compat
-import           Data.Char
 
 import           Session (Session, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
@@ -25,8 +24,9 @@ reloadedSuccessfully = any success . lines
   where
     success :: String -> Bool
     success x = case stripPrefix "Ok, " x of
+      Just "one module loaded." -> True
       Just "1 module loaded." -> True
-      Just xs | " modules loaded." <- dropWhile isNumber xs -> True
+      Just xs | [_number, "modules", "loaded."] <- words xs -> True
       Just xs -> "modules loaded: " `isPrefixOf` xs
       Nothing -> False
 
