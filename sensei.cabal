@@ -1,9 +1,11 @@
--- This file has been generated from package.yaml by hpack version 0.18.0.
+-- This file has been generated from package.yaml by hpack version 0.26.0.
 --
 -- see: https://github.com/sol/hpack
+--
+-- hash: 1c99e15f659870947cd1d509837f537a52ef65ed0b14cf82f2ea563482748657
 
 name:           sensei
-version:        0.3.0
+version:        0.4.0
 synopsis:       Automatically run Hspec tests on file modifications
 category:       Development
 homepage:       https://github.com/hspec/sensei#readme
@@ -26,23 +28,23 @@ executable seito
       driver
   ghc-options: -Wall
   build-depends:
-      base >= 4.7 && < 5
-    , base-compat >= 0.8
-    , process
+      ansi-terminal
+    , base >=4.7 && <5
+    , base-compat >=0.8
+    , bytestring
+    , directory
+    , filepath
     , fsnotify
-    , time
-    , wai
-    , warp
+    , http-client >=0.5.0
     , http-types
+    , network
+    , process
     , stm
     , text
-    , network
-    , ansi-terminal
-    , directory
-    , http-client >= 0.5.0
-    , bytestring
-    , filepath
+    , time
     , unix
+    , wai
+    , warp
   other-modules:
       Client
       EventQueue
@@ -53,6 +55,7 @@ executable seito
       Trigger
       Util
       Language.Haskell.GhciWrapper
+      Paths_sensei
   default-language: Haskell2010
 
 executable sensei
@@ -63,23 +66,23 @@ executable sensei
       driver
   ghc-options: -Wall
   build-depends:
-      base >= 4.7 && < 5
-    , base-compat >= 0.8
-    , process
+      ansi-terminal
+    , base >=4.7 && <5
+    , base-compat >=0.8
+    , bytestring
+    , directory
+    , filepath
     , fsnotify
-    , time
-    , wai
-    , warp
+    , http-client >=0.5.0
     , http-types
+    , network
+    , process
     , stm
     , text
-    , network
-    , ansi-terminal
-    , directory
-    , http-client >= 0.5.0
-    , bytestring
-    , filepath
+    , time
     , unix
+    , wai
+    , warp
   other-modules:
       Client
       EventQueue
@@ -90,6 +93,7 @@ executable sensei
       Trigger
       Util
       Language.Haskell.GhciWrapper
+      Paths_sensei
   default-language: Haskell2010
 
 executable sensei-web
@@ -100,23 +104,23 @@ executable sensei-web
       driver
   ghc-options: -Wall
   build-depends:
-      base >= 4.7 && < 5
-    , base-compat >= 0.8
-    , process
+      ansi-terminal
+    , base >=4.7 && <5
+    , base-compat >=0.8
+    , bytestring
+    , directory
+    , filepath
     , fsnotify
-    , time
-    , wai
-    , warp
+    , http-client >=0.5.0
     , http-types
+    , network
+    , process
     , stm
     , text
-    , network
-    , ansi-terminal
-    , directory
-    , http-client >= 0.5.0
-    , bytestring
-    , filepath
+    , time
     , unix
+    , wai
+    , warp
   other-modules:
       Client
       EventQueue
@@ -127,6 +131,7 @@ executable sensei-web
       Trigger
       Util
       Language.Haskell.GhciWrapper
+      Paths_sensei
   default-language: Haskell2010
 
 test-suite spec
@@ -139,29 +144,29 @@ test-suite spec
   ghc-options: -Wall
   cpp-options: -DTEST
   build-depends:
-      base >= 4.7 && < 5
-    , base-compat >= 0.8
-    , process
-    , fsnotify
-    , time
-    , wai
-    , warp
-    , http-types
-    , stm
-    , text
-    , network
-    , ansi-terminal
-    , directory
-    , http-client >= 0.5.0
+      ansi-terminal
+    , base >=4.7 && <5
+    , base-compat >=0.8
     , bytestring
+    , directory
     , filepath
-    , unix
-    , hspec >= 2.2.1
+    , fsnotify
+    , hspec >=2.2.1
     , hspec-meta
     , hspec-wai
-    , mockery
-    , silently
+    , http-client >=0.5.0
+    , http-types
     , interpolate
+    , mockery
+    , network
+    , process
+    , silently
+    , stm
+    , text
+    , time
+    , unix
+    , wai
+    , warp
   other-modules:
       Client
       EventQueue
@@ -179,4 +184,5 @@ test-suite spec
       SessionSpec
       TriggerSpec
       UtilSpec
+      Paths_sensei
   default-language: Haskell2010
