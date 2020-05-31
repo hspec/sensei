@@ -1,8 +1,8 @@
--- This file has been generated from package.yaml by hpack version 0.26.0.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.1.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 1c99e15f659870947cd1d509837f537a52ef65ed0b14cf82f2ea563482748657
 
 name:           sensei
 version:        0.4.0
@@ -14,7 +14,6 @@ maintainer:     Simon Hengel <sol@typeful.net>
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
 
 source-repository head
   type: git

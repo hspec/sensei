@@ -4,7 +4,6 @@ module Client (client) where
 import           Prelude ()
 import           Prelude.Compat
 import           Control.Monad.Compat
-import           Data.Monoid.Compat
 import           Control.Exception
 import           Data.String
 import           System.IO.Error

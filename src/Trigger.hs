@@ -10,6 +10,7 @@ module Trigger (
 import           Prelude ()
 import           Prelude.Compat
 import           Data.List.Compat
+import           System.Console.ANSI
 
 import           Session (Session, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
@@ -34,8 +35,16 @@ trigger :: Session -> IO (Bool, String)
 trigger session = do
   xs <- Session.reload session
   fmap (xs ++) <$> if reloadedSuccessfully xs
-    then hspec
-    else return (False, "")
+    then do
+      setSGR [SetColor Foreground Dull Green]
+      putStrLn "RELOADING SUCCEED"
+      setSGR [Reset]
+      hspec
+    else do
+      setSGR [SetColor Foreground Dull Red]
+      putStrLn "RELOADING FAILED"
+      setSGR [Reset]
+      return (False, "")
   where
     hspec = do
       mRun <- Session.getRunSpec session
