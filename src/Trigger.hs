@@ -37,7 +37,7 @@ trigger session = do
   fmap (xs ++) <$> if reloadedSuccessfully xs
     then do
       setSGR [SetColor Foreground Dull Green]
-      putStrLn "RELOADING SUCCEED"
+      putStrLn "RELOADING SUCCEEDED"
       setSGR [Reset]
       hspec
     else do
