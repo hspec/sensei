@@ -32,6 +32,7 @@ options = map ($ "") [
   , Option []  ["qc-max-discard"]   (ReqArg (const ()) "N")
   , Option []  ["seed"]             (ReqArg (const ()) "N")
   , Option []  ["print-cpu-time"]   (NoArg ())
+  , Option []  ["focused-only"]     (NoArg ())
   , Option []  ["dry-run"]          (NoArg ())
   , Option []  ["fail-fast"]        (NoArg ())
   , Option "r" ["rerun"]            (NoArg ())
