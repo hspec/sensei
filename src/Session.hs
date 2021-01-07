@@ -56,6 +56,7 @@ new args = do
   let (ghciArgs, hspecArgs) = splitArgs args
   ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False} ghciArgs
   _ <- eval ghci (":set prompt " ++ show "")
+  _ <- eval ghci ":set -XNoOverloadedStrings"
   _ <- eval ghci ("import qualified System.Environment")
   _ <- eval ghci ("import qualified Test.Hspec.Runner")
   _ <- eval ghci ("import qualified Test.Hspec.Meta")
