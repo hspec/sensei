@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Run where
+{-# LANGUAGE LambdaCase #-}
+module Run (run, runWeb) where
 import           Prelude ()
 import           Prelude.Compat
 
@@ -14,6 +15,7 @@ import qualified HTTP
 import qualified Session
 import           Session (Session)
 
+import           Options
 import           EventQueue
 import           Trigger
 import           Util
@@ -21,10 +23,10 @@ import           Util
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
 
-watchFiles :: EventQueue -> IO ()
-watchFiles queue = void . forkIO $ do
+watchFiles :: EventQueue -> (FilePath -> Bool) -> IO ()
+watchFiles queue p = void . forkIO $ do
   withManager $ \manager -> do
-    _ <- watchTree manager "." (not . isBoring . eventPath) (\event -> emitModified (eventPath event) queue)
+    _ <- watchTree manager "." (p . eventPath) (\event -> emitModified (eventPath event) queue)
     waitForever
 
 watchInput :: EventQueue -> IO ()
@@ -34,11 +36,16 @@ watchInput queue = void . forkIO $ do
     emitTriggerAll queue
   emitDone queue
 
+getWatchPredicate :: IO (FilePath -> Bool)
+getWatchPredicate = getWatchMode >>= \ case
+  WatchHaskell -> return isHaskellSource
+  WatchAll -> return (not . isBoring)
+
 run :: [String] -> IO ()
 run args = do
   withSession args $ \session -> do
     queue <- newQueue
-    watchFiles queue
+    getWatchPredicate >>= watchFiles queue
     watchInput queue
     lastOutput <- newMVar (True, "")
     HTTP.withServer (readMVar lastOutput) $ do

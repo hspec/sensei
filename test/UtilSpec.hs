@@ -11,6 +11,19 @@ import           Util
 
 spec :: Spec
 spec = do
+  describe "isHaskellSource" $ do
+    it "accepts .hs files" $ do
+      isHaskellSource "src/Foo.hs" `shouldBe` True
+
+    it "accepts .lhs files" $ do
+      isHaskellSource "src/Foo.lhs" `shouldBe` True
+
+    it "rejects dot-files" $ do
+      isHaskellSource "src/.Foo.lhs" `shouldBe` False
+
+    it "rejects other files" $ do
+      isHaskellSource "src/Foo.java" `shouldBe` False
+
   describe "isBoring" $ do
     it "ignores files in .git/" $ do
       isBoring "/foo/bar/.git/baz/foo.txt" `shouldBe` True

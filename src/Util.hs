@@ -2,6 +2,7 @@
 module Util (
   withInfoColor
 , isBoring
+, isHaskellSource
 , filterGitIgnoredFiles
 , normalizeTypeSignatures
 , dotGhciWritableByOthers
@@ -37,6 +38,14 @@ isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
   where
     dirs = splitDirectories p
     isEmacsAutoSave = isPrefixOf ".#" . takeFileName
+
+isHaskellSource :: FilePath -> Bool
+isHaskellSource (takeFileName -> name) =
+     not (isDotFile name)
+  && takeExtension name `elem` [".hs", ".lhs"]
+
+isDotFile :: FilePath -> Bool
+isDotFile = isPrefixOf "."
 
 filterGitIgnoredFiles :: [FilePath] -> IO [FilePath]
 filterGitIgnoredFiles files = do
