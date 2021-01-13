@@ -1,0 +1,56 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: ${{ matrix.os }} / GHC ${{ matrix.ghc }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        ghc:
+          - '8.6'
+          - '8.8'
+          - '8.10'
+        include:
+          - os: macos-latest
+            ghc: latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - uses: actions/setup-haskell@v1
+        with:
+          ghc-version: ${{ matrix.ghc }}
+
+      - shell: bash
+        run: cabal update
+
+      - shell: bash
+        run: cabal configure --enable-tests --enable-benchmarks
+
+      - shell: bash
+        run: cabal build all
+
+      - shell: bash
+        run: cabal exec "${PWD}/$(find dist-newstyle/ -name spec -type f)"
+        env:
+          HSPEC_OPTIONS: --color
+
+  success:
+    needs: build
+    runs-on: ubuntu-latest
+    if: always() # this is required as GitHub considers "skipped" jobs as "passed" when checking branch protection rules
+
+    steps:
+      - run: false
+        if: needs.build.result != 'success'
