@@ -57,3 +57,4 @@ tests:
       - silently
       - interpolate
     cpp-options: -DTEST
+    build-tools: hspec-discover
