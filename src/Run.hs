@@ -5,8 +5,7 @@ import           Prelude.Compat
 
 import           Control.Concurrent
 import           Control.Exception
-import           Control.Monad (void, forever, when)
-import           Data.Foldable
+import           Control.Monad
 import           System.Exit
 import           System.FSNotify
 
@@ -24,7 +23,9 @@ waitForever = forever $ threadDelay 10000000
 watchFiles :: EventQueue -> IO ()
 watchFiles queue = void . forkIO $ do
   withManager $ \manager -> do
-    _ <- watchTree manager "." (not . isBoring . eventPath) (\event -> emitModified (eventPath event) queue)
+    _ <- watchTree manager "." (not . isBoring . eventPath) $ \ event -> do
+      unless (eventIsDirectory event) $ do
+        emitModified (eventPath event) queue
     waitForever
 
 watchInput :: EventQueue -> IO ()
