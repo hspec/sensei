@@ -25,15 +25,15 @@ watchFiles queue = void . forkIO $ do
   withManager $ \manager -> do
     _ <- watchTree manager "." (not . isBoring . eventPath) $ \ event -> do
       unless (eventIsDirectory event) $ do
-        emitModified (eventPath event) queue
+        emitEvent queue (FileEvent $ eventPath event)
     waitForever
 
 watchInput :: EventQueue -> IO ()
 watchInput queue = void . forkIO $ do
   input <- getContents
   forM_ (lines input) $ \_ -> do
-    emitTriggerAll queue
-  emitDone queue
+    emitEvent queue TriggerAll
+  emitEvent queue Done
 
 run :: [String] -> IO ()
 run args = do
