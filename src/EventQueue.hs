@@ -64,8 +64,9 @@ processQueue chan triggerAll trigger = go
           triggerAll
           go
         events -> do
-          let files = (nub . sort) [p | Modified p <- events]
-          withInfoColor $ do
-            mapM_ putStrLn (map ("--> " ++) files)
-          trigger
+          files <- filterGitIgnoredFiles $ (nub . sort) [p | Modified p <- events]
+          unless (null files) $ do
+            withInfoColor $ do
+              mapM_ putStrLn (map ("--> " ++) files)
+            trigger
           go

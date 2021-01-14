@@ -5,6 +5,7 @@ import           Helper
 
 import           System.Posix.Files
 import           System.Process
+import           System.Console.ANSI
 
 import           Util
 
@@ -23,6 +24,18 @@ spec = do
 
     it "replaces unicode characters" $ do
       normalizeTypeSignatures "head ∷ [a] → a" `shouldBe` "head :: [a] -> a"
+
+  describe "filterGitIgnoredFiles_" $ do
+    around_ inTempDirectory $ do
+      it "discards files that are ignored by git" $ do
+        _ <- readProcess "git" ["init"] ""
+        writeFile ".gitignore" "foo"
+        filterGitIgnoredFiles_ ["foo", "bar"] `shouldReturn` (Nothing, ["bar"])
+
+      context "when used outside of a git repository" $ do
+        it "returns all files" $ do
+          let feedback = Just (Cyan, "warning: not a git repository - .gitignore support not available\n")
+          filterGitIgnoredFiles_ ["foo", "bar"] `shouldReturn` (feedback, ["foo", "bar"])
 
   describe "dotGhciWritableByOthers" $ do
     around_ inTempDirectory $ do
