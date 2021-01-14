@@ -2,9 +2,10 @@
 module EventQueue (
   EventQueue
 , newQueue
-, emitTriggerAll
-, emitModified
-, emitDone
+
+, Event(..)
+, emitEvent
+
 , processQueue
 ) where
 
@@ -21,20 +22,14 @@ import           Util
 
 type EventQueue = TChan Event
 
-data Event = TriggerAll | Modified FilePath | Done
+data Event = TriggerAll | FileEvent FilePath | Done
   deriving Eq
 
 newQueue :: IO EventQueue
 newQueue = atomically $ newTChan
 
-emitTriggerAll :: EventQueue -> IO ()
-emitTriggerAll chan = atomically $ writeTChan chan TriggerAll
-
-emitModified :: FilePath -> EventQueue -> IO ()
-emitModified path chan = atomically $ writeTChan chan (Modified path)
-
-emitDone :: EventQueue -> IO ()
-emitDone chan = atomically $ writeTChan chan Done
+emitEvent :: EventQueue -> Event -> IO ()
+emitEvent chan = atomically . writeTChan chan
 
 readEvents :: EventQueue -> IO [Event]
 readEvents chan = do
@@ -64,7 +59,7 @@ processQueue chan triggerAll trigger = go
           triggerAll
           go
         events -> do
-          files <- filterGitIgnoredFiles $ (nub . sort) [p | Modified p <- events]
+          files <- filterGitIgnoredFiles $ (nub . sort) [p | FileEvent p <- events]
           unless (null files) $ do
             withInfoColor $ do
               mapM_ putStrLn (map ("--> " ++) files)
