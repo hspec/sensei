@@ -1,7 +1,27 @@
-module Options (splitArgs) where
+module Options (
+  WatchMode(..)
+, getWatchMode
+, splitArgs
+) where
 
+import           Data.Char
 import           Data.List
+import           Data.Maybe
+import           Control.Exception
+import           System.Environment.Blank
 import           System.Console.GetOpt
+
+data WatchMode = WatchHaskell | WatchAll
+  deriving (Eq, Show)
+
+getWatchMode :: IO WatchMode
+getWatchMode = do
+  mode <- fromMaybe "haskell" <$> getEnv "SENSEI_WATCH_MODE"
+  case map toLower mode of
+    "" -> return WatchHaskell
+    "haskell" -> return WatchHaskell
+    "all" -> return WatchAll
+    unknown -> throwIO . ErrorCall $ "SENSEI_WATCH_MODE: unknown value " <> show unknown
 
 splitArgs :: [String] -> ([String], [String])
 splitArgs args = case break (== "--") $ reverse args of
