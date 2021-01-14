@@ -1,5 +1,15 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase #-}
-module Util where
+{-# LANGUAGE OverloadedStrings, LambdaCase, RecordWildCards, ViewPatterns #-}
+module Util (
+  withInfoColor
+, isBoring
+, filterGitIgnoredFiles
+, normalizeTypeSignatures
+, dotGhciWritableByOthers
+
+-- exported for testing
+, filterGitIgnoredFiles_
+, writableByOthers
+) where
 
 import           Prelude ()
 import           Prelude.Compat
@@ -8,13 +18,18 @@ import           Control.Exception
 import           Data.List.Compat
 import           System.Console.ANSI
 import           System.FilePath
+import           System.Process
 import           System.Posix.Files
 import           System.Posix.Types
+import qualified Data.Text as T
 
 withInfoColor :: IO a -> IO a
-withInfoColor = bracket_ set reset
+withInfoColor = withColor Magenta
+
+withColor :: Color -> IO a -> IO a
+withColor c = bracket_ set reset
   where
-    set = setSGR [SetColor Foreground Dull Magenta]
+    set = setSGR [SetColor Foreground Dull c]
     reset = setSGR []
 
 isBoring :: FilePath -> Bool
@@ -22,6 +37,32 @@ isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
   where
     dirs = splitDirectories p
     isEmacsAutoSave = isPrefixOf ".#" . takeFileName
+
+filterGitIgnoredFiles :: [FilePath] -> IO [FilePath]
+filterGitIgnoredFiles files = do
+  (feedback, ignoredFiles) <- filterGitIgnoredFiles_ files
+  printFeedback feedback
+  return $ ignoredFiles
+  where
+    printFeedback :: Feedback -> IO ()
+    printFeedback = mapM_ $ \ (color, err) -> withColor color $ putStrLn ('\n' : err)
+
+type Feedback = Maybe (Color, String)
+
+filterGitIgnoredFiles_ :: [FilePath] -> IO (Feedback, [FilePath])
+filterGitIgnoredFiles_ files = fmap (files \\) <$> gitCheckIgnore files
+
+gitCheckIgnore :: [FilePath] -> IO (Feedback, [FilePath])
+gitCheckIgnore files = do
+  (_, ignoredFiles, err) <- readProcessWithExitCode "git" ["check-ignore", "--stdin", "-z"] $ join_ files
+  return (feedback err, split ignoredFiles)
+  where
+    join_ = intercalate "\0"
+    split = map T.unpack . T.split (== '\0') . T.pack
+    feedback err
+      | err == "fatal: not a git repository (or any of the parent directories): .git\n" = Just (Cyan, "warning: not a git repository - .gitignore support not available\n")
+      | err == "" = Nothing
+      | otherwise = Just (Red, err)
 
 normalizeTypeSignatures :: String -> String
 normalizeTypeSignatures = normalize . concatMap replace
