@@ -24,7 +24,12 @@ how they look:
 
     sensei -isrc -itest test/Spec.hs -- --no-color --match foo
 
-## Using `sensei` with Cabal sandboxes
+### Boring files
+
+When `sensei` is used inside a Git repository it ignores modifications to
+[files that are ignored by `git`](https://git-scm.com/docs/gitignore).
+
+### Using `sensei` with Cabal sandboxes
 
     cabal exec sensei test/Spec.hs
 
