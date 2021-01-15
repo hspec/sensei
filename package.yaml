@@ -7,8 +7,7 @@ github: hspec/sensei
 category: Development
 
 dependencies:
-  - base >= 4.8 && < 5
-  - base-compat >= 0.8
+  - base >= 4.11 && < 5
   - process
   - fsnotify
   - time

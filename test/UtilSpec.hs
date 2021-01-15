@@ -4,8 +4,6 @@ module UtilSpec (spec) where
 import           Helper
 
 import           System.Posix.Files
-import           System.Process
-import           System.Console.ANSI
 
 import           Util
 

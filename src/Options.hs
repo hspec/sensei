@@ -1,6 +1,7 @@
 module Options (splitArgs) where
 
-import           Data.List
+import           Imports
+
 import           System.Console.GetOpt
 
 splitArgs :: [String] -> ([String], [String])

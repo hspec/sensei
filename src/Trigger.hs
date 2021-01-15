@@ -7,11 +7,10 @@ module Trigger (
 #endif
 ) where
 
-import           Prelude ()
-import           Prelude.Compat
-import           Data.List.Compat
-import           System.Console.ANSI
+import           Imports
 
+
+import           Util
 import           Session (Session, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
 
@@ -36,14 +35,10 @@ trigger session = do
   xs <- Session.reload session
   fmap (xs ++) <$> if reloadedSuccessfully xs
     then do
-      setSGR [SetColor Foreground Dull Green]
-      putStrLn "RELOADING SUCCEEDED"
-      setSGR [Reset]
+      withColor Green $ putStrLn "RELOADING SUCCEEDED"
       hspec
     else do
-      setSGR [SetColor Foreground Dull Red]
-      putStrLn "RELOADING FAILED"
-      setSGR [Reset]
+      withColor Red $ putStrLn "RELOADING FAILED"
       return (False, "")
   where
     hspec = do

@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module HTTPSpec (spec) where
 
-import           Test.Hspec
+import           Helper
+
 import           Test.Hspec.Wai
 
 import           HTTP
