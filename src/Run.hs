@@ -23,10 +23,10 @@ waitForever = forever $ threadDelay 10000000
 watchFiles :: EventQueue -> IO ()
 watchFiles queue = do
   watch $ emitEvent queue . \ case
-    Added file _ _ -> FileEvent file
-    Removed file _ _ -> FileEvent file
-    Modified file _ _ -> FileEvent file
-    Unknown file _ _ -> FileEvent file
+    Added file _ _ -> FileEvent FileAdded file
+    Removed file _ _ -> FileEvent FileRemoved file
+    Modified file _ _ -> FileEvent FileModified file
+    Unknown file _ _ -> FileEvent FileModified file
   where
     isInteresting = (&&) <$> not . eventIsDirectory <*> not . isBoring . eventPath
 
@@ -53,12 +53,18 @@ run args = do
     let
       saveOutput :: IO (Bool, String) -> IO ()
       saveOutput action = modifyMVar_ lastOutput $ \_ -> action
-    withSession args $ \ session -> do
-      let
-        triggerAction = saveOutput (trigger session)
-        triggerAllAction = saveOutput (triggerAll session)
-      triggerAction
-      processQueue queue triggerAllAction triggerAction
+
+      go = do
+        status <- withSession args $ \ session -> do
+          let
+            triggerAction = saveOutput (trigger session)
+            triggerAllAction = saveOutput (triggerAll session)
+          triggerAction
+          processQueue queue triggerAllAction triggerAction
+        case status of
+          Reload -> go
+          Terminate -> return ()
+    go
 
 runWeb :: [String] -> IO ()
 runWeb args = do
