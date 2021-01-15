@@ -179,6 +179,7 @@ test-suite spec
       Util
       Language.Haskell.GhciWrapper
       ClientSpec
+      EventQueueSpec
       Helper
       HTTPSpec
       OptionsSpec
