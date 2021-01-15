@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module Run (
   run
 , runWeb
@@ -20,12 +21,20 @@ waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
 
 watchFiles :: EventQueue -> IO ()
-watchFiles queue = void . forkIO $ do
-  withManager $ \manager -> do
-    _ <- watchTree manager "." (not . isBoring . eventPath) $ \ event -> do
-      unless (eventIsDirectory event) $ do
-        emitEvent queue (FileEvent $ eventPath event)
-    waitForever
+watchFiles queue = do
+  watch $ emitEvent queue . \ case
+    Added file _ _ -> FileEvent file
+    Removed file _ _ -> FileEvent file
+    Modified file _ _ -> FileEvent file
+    Unknown file _ _ -> FileEvent file
+  where
+    isInteresting = (&&) <$> not . eventIsDirectory <*> not . isBoring . eventPath
+
+    watch action = void . forkIO $ do
+      withManager $ \ manager -> do
+        _stopListening <- watchTree manager "." isInteresting action
+        waitForever
+
 
 watchInput :: EventQueue -> IO ()
 watchInput queue = void . forkIO $ do
@@ -36,16 +45,18 @@ watchInput queue = void . forkIO $ do
 
 run :: [String] -> IO ()
 run args = do
-  withSession args $ \session -> do
-    queue <- newQueue
-    watchFiles queue
-    watchInput queue
-    lastOutput <- newMVar (True, "")
-    HTTP.withServer (readMVar lastOutput) $ do
-      let saveOutput :: IO (Bool, String) -> IO ()
-          saveOutput action = modifyMVar_ lastOutput $ \_ -> action
-          triggerAction = saveOutput (trigger session)
-          triggerAllAction = saveOutput (triggerAll session)
+  queue <- newQueue
+  watchFiles queue
+  watchInput queue
+  lastOutput <- newMVar (True, "")
+  HTTP.withServer (readMVar lastOutput) $ do
+    let
+      saveOutput :: IO (Bool, String) -> IO ()
+      saveOutput action = modifyMVar_ lastOutput $ \_ -> action
+    withSession args $ \ session -> do
+      let
+        triggerAction = saveOutput (trigger session)
+        triggerAllAction = saveOutput (triggerAll session)
       triggerAction
       processQueue queue triggerAllAction triggerAction
 
@@ -57,7 +68,7 @@ runWeb args = do
     HTTP.withServer (withMVar lock $ \() -> trigger session) $ do
       waitForever
 
-withSession :: [String] -> (Session -> IO ()) -> IO ()
+withSession :: [String] -> (Session -> IO a) -> IO a
 withSession args action = do
   check <- dotGhciWritableByOthers
   when check $ do
