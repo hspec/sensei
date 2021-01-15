@@ -7,6 +7,10 @@ module EventQueue (
 , emitEvent
 
 , processQueue
+
+-- exported for testing
+, Action(..)
+, processEvents
 ) where
 
 import           Prelude ()
@@ -49,19 +53,28 @@ readEvents chan = do
         Nothing -> return []
         Just e -> (e :) <$> emptyQueue
 
+data Action = NoneAction | TriggerAction | TriggerAllAction | DoneAction
+  deriving (Eq, Show)
+
+processEvents :: [Event] -> IO Action
+processEvents = \ case
+  events | Done `elem` events -> return DoneAction
+  events | TriggerAll `elem` events -> do
+    return TriggerAllAction
+  events -> do
+    files <- filterGitIgnoredFiles $ (nub . sort) [p | FileEvent p <- events]
+    if (not $ null files) then do
+      withInfoColor $ do
+        mapM_ putStrLn (map ("--> " ++) files)
+      return TriggerAction
+    else do
+      return NoneAction
+
 processQueue :: EventQueue -> IO () -> IO () -> IO ()
 processQueue chan triggerAll trigger = go
   where
-    go = do
-      readEvents chan >>= \case
-        events | Done `elem` events -> return ()
-        events | TriggerAll `elem` events -> do
-          triggerAll
-          go
-        events -> do
-          files <- filterGitIgnoredFiles $ (nub . sort) [p | FileEvent p <- events]
-          unless (null files) $ do
-            withInfoColor $ do
-              mapM_ putStrLn (map ("--> " ++) files)
-            trigger
-          go
+    go = readEvents chan >>= processEvents >>= \ case
+      NoneAction -> go
+      TriggerAction -> trigger >> go
+      TriggerAllAction -> triggerAll >> go
+      DoneAction -> return ()
