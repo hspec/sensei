@@ -1,6 +1,6 @@
 module OptionsSpec (main, spec) where
 
-import           Test.Hspec
+import           Helper
 
 import           Options
 

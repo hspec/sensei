@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 module EventQueue (
   EventQueue
@@ -8,19 +9,16 @@ module EventQueue (
 
 , processQueue
 
--- exported for testing
+#ifdef TEST
 , Action(..)
 , processEvents
+#endif
 ) where
 
-import           Prelude ()
-import           Prelude.Compat
+import           Imports
 
-import           Control.Monad.Compat
-import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.STM.TChan
 import           Control.Monad.STM
-import           Data.List.Compat
+import           Control.Concurrent.STM.TChan
 
 import           Util
 

@@ -1,21 +1,21 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase, RecordWildCards, ViewPatterns #-}
+{-# LANGUAGE CPP, OverloadedStrings, LambdaCase, RecordWildCards, ViewPatterns #-}
 module Util (
-  withInfoColor
+  Color(..)
+, withColor
+, withInfoColor
 , isBoring
 , filterGitIgnoredFiles
 , normalizeTypeSignatures
 , dotGhciWritableByOthers
 
--- exported for testing
+#ifdef TEST
 , filterGitIgnoredFiles_
 , writableByOthers
+#endif
 ) where
 
-import           Prelude ()
-import           Prelude.Compat
+import           Imports
 
-import           Control.Exception
-import           Data.List.Compat
 import           System.Console.ANSI
 import           System.FilePath
 import           System.Process

@@ -1,8 +1,6 @@
 module TriggerSpec (spec) where
 
 import           Helper
-import           Data.List.Compat
-import           Data.Char
 
 import           Trigger
 

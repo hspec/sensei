@@ -1,11 +1,11 @@
 {-# LANGUAGE RecordWildCards #-}
 module SessionSpec (spec) where
 
-import           Language.Haskell.GhciWrapper (eval)
-import           System.Environment.Compat
-
 import           Helper
 
+import           System.Environment.Blank (setEnv)
+
+import           Language.Haskell.GhciWrapper (eval)
 import qualified Session
 import           Session (Session(..), Summary(..), hspecFailureEnvName, hspecPreviousSummary, hspecCommand)
 
@@ -13,7 +13,7 @@ spec :: Spec
 spec = do
   describe "new" $ do
     it "unsets HSPEC_FAILURES" $ do
-      setEnv hspecFailureEnvName "foo"
+      setEnv hspecFailureEnvName "foo" True
       withSession [] $ \Session{..} -> do
         _ <- eval sessionInterpreter "import System.Environment"
         eval sessionInterpreter ("lookupEnv " ++ show hspecFailureEnvName) `shouldReturn` "Nothing\n"

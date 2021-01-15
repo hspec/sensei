@@ -1,10 +1,6 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 module Helper (
-  module Test.Hspec
-, module Test.Mockery.Directory
-, module Control.Applicative
-, module System.IO.Silently
+  module Imports
 , withSession
 , withSomeSpec
 , passingSpec
@@ -14,15 +10,13 @@ module Helper (
 , modulesLoaded
 ) where
 
-import           Control.Applicative
-import           Control.Exception
+import           Imports
+
 import           Data.String.Interpolate
-#if __GLASGOW_HASKELL__ < 802
-import           Data.List.Compat
-#endif
-import           System.IO.Silently
-import           Test.Hspec
-import           Test.Mockery.Directory
+import           System.IO.Silently as Imports
+import           System.Process as Imports (readProcess, callCommand)
+import           Test.Hspec as Imports
+import           Test.Mockery.Directory as Imports
 
 import           Run ()
 import qualified Session
@@ -74,13 +68,6 @@ data Status = Ok | Failed
   deriving (Eq, Show)
 
 modulesLoaded :: Status -> [String] -> String
-#if __GLASGOW_HASKELL__ < 802
-modulesLoaded status xs = show status ++ ", modules loaded: " ++ mods ++ "."
-  where
-    mods = case xs of
-      [] -> "none"
-      _ -> intercalate ", " xs
-#elif MIN_VERSION_base(4,10,1)
 modulesLoaded status xs = show status ++ ", " ++ mods ++ " loaded."
   where
     n = length xs
@@ -93,11 +80,3 @@ modulesLoaded status xs = show status ++ ", " ++ mods ++ " loaded."
       | n == 5 = "five modules"
       | n == 6 = "six modules"
       | otherwise = show n ++ " modules"
-#else
-modulesLoaded status xs = show status ++ ", " ++ show n ++ " " ++ mods ++ " loaded."
-  where
-    n = length xs
-    mods
-      | n == 1 = "module"
-      | otherwise = "modules"
-#endif

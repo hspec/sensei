@@ -23,12 +23,9 @@ module Session (
 #endif
 ) where
 
+import           Imports
+
 import           Data.IORef
-import           Data.List.Compat
-import           Data.Maybe (listToMaybe, catMaybes)
-import           Prelude ()
-import           Prelude.Compat
-import           Text.Read.Compat
 
 import qualified Language.Haskell.GhciWrapper as GhciWrapper
 import           Language.Haskell.GhciWrapper hiding (new, close)

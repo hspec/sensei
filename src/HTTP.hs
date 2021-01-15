@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 module HTTP (
   withServer
@@ -5,18 +6,13 @@ module HTTP (
 , newSocket
 , socketAddr
 
--- exported for testing
+#ifdef TEST
 , app
+#endif
 ) where
 
-import           Prelude ()
-import           Prelude.Compat
-import           Data.String
-import           Data.Text.Lazy.Encoding (encodeUtf8)
-import           Control.Exception
-import           Control.Monad
-import           Control.Concurrent
-import           System.IO.Error
+import           Imports
+
 import           System.Directory
 import           Network.Wai
 import           Network.HTTP.Types

@@ -1,12 +1,8 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Client (client) where
 
-import           Prelude ()
-import           Prelude.Compat
-import           Control.Monad.Compat
-import           Control.Exception
-import           Data.String
-import           System.IO.Error
+import           Imports
+
 import           Network.HTTP.Client
 import           Network.HTTP.Client.Internal (Response(..))
 import           Network.HTTP.Types
