@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           sensei
-version:        0.4.0
+version:        0.5.0
 synopsis:       Automatically run Hspec tests on file modifications
 category:       Development
 homepage:       https://github.com/hspec/sensei#readme
