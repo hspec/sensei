@@ -19,7 +19,8 @@ jobs:
           prefix: null
 
       - run: cabal sdist
-      - uses: sol/hackage-publish@v1.1
+
+      - uses: haskell-actions/hackage-publish@v1.1
         with:
           hackageToken: ${{ secrets.HACKAGE_AUTH_TOKEN }}
           publish: true
