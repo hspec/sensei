@@ -1,11 +1,11 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.3.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 
 name:           sensei
-version:        0.5.0
+version:        0.6.0
 synopsis:       Automatically run Hspec tests on file modifications
 category:       Development
 homepage:       https://github.com/hspec/sensei#readme
