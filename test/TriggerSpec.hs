@@ -70,8 +70,8 @@ spec = do
         normalize xs `shouldBe` [
             modulesLoaded Ok ["Spec"]
           , ""
-          , "foo"
-          , "bar FAILED [1]"
+          , "foo [✔]"
+          , "bar [✘]"
           , ""
           , "Failures:"
           , ""
@@ -94,8 +94,8 @@ spec = do
         fmap normalize result `shouldBe` (True, [
             modulesLoaded Ok ["Spec"]
           , ""
-          , "foo"
-          , "bar"
+          , "foo [✔]"
+          , "bar [✔]"
           , ""
           , "Finished in ..."
           , "2 examples, 0 failures"
@@ -129,7 +129,7 @@ spec = do
           normalize xs `shouldBe` [
               modulesLoaded Ok ["Spec"]
             , ""
-            , "bar FAILED [1]"
+            , "bar [✘]"
             , ""
             , "Failures:"
             , ""
@@ -156,14 +156,14 @@ spec = do
               "[1 of 1] Compiling Spec             ( Spec.hs, interpreted )"
             , modulesLoaded Ok ["Spec"]
             , ""
-            , "bar"
+            , "bar [✔]"
             , ""
             , "Finished in ..."
             , "1 example, 0 failures"
             , "Summary {summaryExamples = 1, summaryFailures = 0}"
             , ""
-            , "foo"
-            , "bar"
+            , "foo [✔]"
+            , "bar [✔]"
             , ""
             , "Finished in ..."
             , "2 examples, 0 failures"
@@ -178,14 +178,14 @@ spec = do
 
     context "with an hspec-meta spec" $ do
       it "reloads and runs spec" $ do
-        withSession ["Spec.hs", "--no-color"] $ \session -> do
+        withSession ["-package hspec-meta", "Spec.hs", "--no-color"] $ \session -> do
           writeFile "Spec.hs" passingMetaSpec
           result <- silence (trigger session >> trigger session)
           fmap normalize result `shouldBe` (True, [
               modulesLoaded Ok ["Spec"]
             , ""
-            , "foo"
-            , "bar"
+            , "foo [✔]"
+            , "bar [✔]"
             , ""
             , "Finished in ..."
             , "2 examples, 0 failures"
