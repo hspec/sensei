@@ -27,10 +27,11 @@ jobs:
         #   - os: macos-latest
         #     ghc: latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
-      - uses: haskell/actions/setup@v1
+
+      - uses: hspec/setup-haskell@v1
         with:
           ghc-version: ${{ matrix.ghc }}
 
