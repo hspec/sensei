@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.34.5.
 --
 -- see: https://github.com/sol/hpack
 
@@ -151,8 +151,7 @@ test-suite spec
     , directory
     , filepath
     , fsnotify
-    , hspec >=2.2.1
-    , hspec-meta
+    , hspec >=2.9.0
     , hspec-wai
     , http-client >=0.5.0
     , http-types

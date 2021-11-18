@@ -49,8 +49,7 @@ tests:
     source-dirs:
       - test
     dependencies:
-      - hspec >= 2.2.1
-      - hspec-meta
+      - hspec >= 2.9.0
       - hspec-wai
       - mockery
       - silently
