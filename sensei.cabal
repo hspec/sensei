@@ -155,7 +155,6 @@ test-suite spec
     , hspec-wai
     , http-client >=0.5.0
     , http-types
-    , interpolate
     , mockery
     , network
     , process

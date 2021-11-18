@@ -12,7 +12,6 @@ module Helper (
 
 import           Imports
 
-import           Data.String.Interpolate
 import           System.IO.Silently as Imports
 import           System.Process as Imports (readProcess, callCommand)
 import           Test.Hspec as Imports
@@ -29,40 +28,40 @@ withSomeSpec :: IO a -> IO a
 withSomeSpec = (inTempDirectory .  (writeFile "Spec.hs" passingSpec >>))
 
 passingSpec :: String
-passingSpec = [i|
-module Spec (spec) where
-
-import           Test.Hspec
-
-spec :: Spec
-spec = do
-  it "foo" True
-  it "bar" True
-|]
+passingSpec = unlines [
+    "module Spec (spec) where"
+  , ""
+  , "import           Test.Hspec"
+  , ""
+  , "spec :: Spec"
+  , "spec = do"
+  , "  it \"foo\" True"
+  , "  it \"bar\" True"
+  ]
 
 passingMetaSpec :: String
-passingMetaSpec = [i|
-module Spec (spec) where
-
-import           Test.Hspec.Meta
-
-spec :: Spec
-spec = do
-  it "foo" True
-  it "bar" True
-|]
+passingMetaSpec = unlines [
+    "module Spec (spec) where"
+  , ""
+  , "import           Test.Hspec.Meta"
+  , ""
+  , "spec :: Spec"
+  , "spec = do"
+  , "  it \"foo\" True"
+  , "  it \"bar\" True"
+  ]
 
 failingSpec :: String
-failingSpec = [i|
-module Spec (spec) where
-
-import           Test.Hspec
-
-spec :: Spec
-spec = do
-  it "foo" True
-  it "bar" False
-|]
+failingSpec = unlines [
+    "module Spec (spec) where"
+  , ""
+  , "import           Test.Hspec"
+  , ""
+  , "spec :: Spec"
+  , "spec = do"
+  , "  it \"foo\" True"
+  , "  it \"bar\" False"
+  ]
 
 data Status = Ok | Failed
   deriving (Eq, Show)
