@@ -22,14 +22,9 @@ normalize = normalizeErrors . normalizeTiming . normalizeSeed . lines . stripAns
 
     normalizeErrors :: [String] -> [String]
     normalizeErrors xs = case xs of
-      y : ys | "Spec.hs:" `isPrefixOf` y -> "Spec.hs:..." : normalizeErrors (removeErrorDetails ys)
+      y : ys | "Spec.hs:" `isPrefixOf` y -> "Spec.hs:..." : normalizeErrors ys
       y : ys -> y : normalizeErrors ys
       [] -> []
-
-    removeErrorDetails :: [String] -> [String]
-    removeErrorDetails xs = case xs of
-      (_ : _ : ' ' : '|' : _) : ys -> removeErrorDetails ys
-      _ -> xs
 
     stripAnsiColors xs = case xs of
       '\ESC' : '[' : ';' : ys | 'm' : zs <- dropWhile isNumber ys -> stripAnsiColors zs
@@ -75,7 +70,7 @@ spec = do
           , ""
           , "Failures:"
           , ""
-          , "  Spec.hs:9:3: "
+          , "  Spec.hs:8:3: "
           , "  1) bar"
           , ""
           , "  To rerun use: --match \"/bar/\""
@@ -104,7 +99,7 @@ spec = do
 
     context "with a module that does not compile" $ do
       it "stops after reloading" $ do
-        withSession ["Spec.hs"] $ \session -> do
+        withSession ["-fno-diagnostics-show-caret", "Spec.hs"] $ \session -> do
           writeFile "Spec.hs" (passingSpec ++ "foo = bar")
           (False, xs) <- silence (trigger session >> trigger session)
           normalize xs `shouldBe` [
@@ -133,7 +128,7 @@ spec = do
             , ""
             , "Failures:"
             , ""
-            , "  Spec.hs:9:3: "
+            , "  Spec.hs:8:3: "
             , "  1) bar"
             , ""
             , "  To rerun use: --match \"/bar/\""

@@ -53,6 +53,5 @@ tests:
       - hspec-wai
       - mockery
       - silently
-      - interpolate
     cpp-options: -DTEST
     build-tools: hspec-discover
