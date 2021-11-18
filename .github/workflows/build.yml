@@ -23,9 +23,9 @@ jobs:
           - '8.6'
           - '8.8'
           - '8.10'
-        include:
-          - os: macos-latest
-            ghc: latest
+        # include:
+        #   - os: macos-latest
+        #     ghc: latest
     steps:
       - uses: actions/checkout@v2
         with:
