@@ -59,8 +59,10 @@ gitCheckIgnore files = do
   where
     join_ = intercalate "\0"
     split = map T.unpack . T.split (== '\0') . T.pack
+    notGitWarning = Just (Cyan, "warning: not a git repository - .gitignore support not available\n")
     feedback err
-      | err == "fatal: not a git repository (or any of the parent directories): .git\n" = Just (Cyan, "warning: not a git repository - .gitignore support not available\n")
+      | err == "fatal: not a git repository (or any of the parent directories): .git\n" = notGitWarning
+      | "fatal: not a git repository (or any parent up to mount point " `isPrefixOf` err = notGitWarning
       | err == "" = Nothing
       | otherwise = Just (Red, err)
 
