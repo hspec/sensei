@@ -1,1 +1,0 @@
-:set -DTEST -isrc -itest -idoctest/ghci-wrapper/src -hide-packagebase-compat-batteries
