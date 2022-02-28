@@ -10,6 +10,7 @@ module Util (
 
 #ifdef TEST
 , filterGitIgnoredFiles_
+, gitCheckIgnoreFeedback
 , writableByOthers
 #endif
 ) where
@@ -55,16 +56,19 @@ filterGitIgnoredFiles_ files = fmap (files \\) <$> gitCheckIgnore files
 gitCheckIgnore :: [FilePath] -> IO (Feedback, [FilePath])
 gitCheckIgnore files = do
   (_, ignoredFiles, err) <- readProcessWithExitCode "git" ["check-ignore", "--stdin", "-z"] $ join_ files
-  return (feedback err, split ignoredFiles)
+  return (gitCheckIgnoreFeedback err, split ignoredFiles)
   where
     join_ = intercalate "\0"
     split = map T.unpack . T.split (== '\0') . T.pack
+
+gitCheckIgnoreFeedback :: String -> Feedback
+gitCheckIgnoreFeedback err
+  | err == "fatal: not a git repository (or any of the parent directories): .git\n" = notGitWarning
+  | "fatal: not a git repository (or any parent up to mount point " `isPrefixOf` err = notGitWarning
+  | err == "" = Nothing
+  | otherwise = Just (Red, err)
+  where
     notGitWarning = Just (Cyan, "warning: not a git repository - .gitignore support not available\n")
-    feedback err
-      | err == "fatal: not a git repository (or any of the parent directories): .git\n" = notGitWarning
-      | "fatal: not a git repository (or any parent up to mount point " `isPrefixOf` err = notGitWarning
-      | err == "" = Nothing
-      | otherwise = Just (Red, err)
 
 normalizeTypeSignatures :: String -> String
 normalizeTypeSignatures = normalize . concatMap replace
