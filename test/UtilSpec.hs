@@ -23,6 +23,8 @@ spec = do
     it "replaces unicode characters" $ do
       normalizeTypeSignatures "head ∷ [a] → a" `shouldBe` "head :: [a] -> a"
 
+  let gitlessFeedback = Just (Cyan, "warning: not a git repository - .gitignore support not available\n")
+
   describe "filterGitIgnoredFiles_" $ do
     around_ inTempDirectory $ do
       it "discards files that are ignored by git" $ do
@@ -32,8 +34,27 @@ spec = do
 
       context "when used outside of a git repository" $ do
         it "returns all files" $ do
-          let feedback = Just (Cyan, "warning: not a git repository - .gitignore support not available\n")
-          filterGitIgnoredFiles_ ["foo", "bar"] `shouldReturn` (feedback, ["foo", "bar"])
+          filterGitIgnoredFiles_ ["foo", "bar"] `shouldReturn` (gitlessFeedback, ["foo", "bar"])
+
+  describe "gitCheckIgnoreFeedback" $ do
+    context "when git reports no repository" $ do
+      it "returns gitless warning" $ do
+        let err = "fatal: not a git repository (or any of the parent directories): .git\n"
+        gitCheckIgnoreFeedback err `shouldBe` gitlessFeedback
+
+    context "when git stops at a filesystem boundary" $ do
+      it "returns gitless warning" $ do
+        let err = "fatal: not a git repository (or any parent up to mount point /)\nStopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\n"
+        gitCheckIgnoreFeedback err `shouldBe` gitlessFeedback
+
+    context "when git reports no error" $ do
+      it "returns Nothing" $ do
+        gitCheckIgnoreFeedback "" `shouldBe` Nothing
+
+    context "when git reports any other error" $ do
+      it "returns the error" $ do
+        let err = "fatal: Unable to do such and such"
+        gitCheckIgnoreFeedback err `shouldBe` Just (Red, err)
 
   describe "dotGhciWritableByOthers" $ do
     around_ inTempDirectory $ do
