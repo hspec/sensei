@@ -73,7 +73,7 @@ normalizeTypeSignatures :: String -> String
 normalizeTypeSignatures = normalize . concatMap replace
   where
     normalize = \case
-      xs | "\n  :: " `isPrefixOf` xs -> normalizeTypeSignatures (drop 2 xs)
+      '\n' : ' ' : ' ' : xs -> normalizeTypeSignatures (' ' : dropWhile (== ' ') xs)
       x : xs -> x : normalizeTypeSignatures xs
       [] -> []
 
