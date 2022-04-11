@@ -1,5 +1,5 @@
 name: sensei
-version: 0.6.1
+version: 0.6.2
 synopsis: Automatically run Hspec tests on file modifications
 maintainer: Simon Hengel <sol@typeful.net>
 license: MIT
