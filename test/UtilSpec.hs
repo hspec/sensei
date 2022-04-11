@@ -18,7 +18,8 @@ spec = do
 
   describe "normalizeTypeSignatures" $ do
     it "removes newlines from type signatures" $ do
-      normalizeTypeSignatures "foo\n  :: Int" `shouldBe` "foo :: Int"
+      let signature = "foo\n  :: IO\n       Int\n"
+      normalizeTypeSignatures signature `shouldBe` "foo :: IO Int\n"
 
     it "replaces unicode characters" $ do
       normalizeTypeSignatures "head ∷ [a] → a" `shouldBe` "head :: [a] -> a"
