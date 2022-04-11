@@ -63,8 +63,7 @@ gitCheckIgnore files = do
 
 gitCheckIgnoreFeedback :: String -> Feedback
 gitCheckIgnoreFeedback err
-  | err == "fatal: not a git repository (or any of the parent directories): .git\n" = notGitWarning
-  | "fatal: not a git repository (or any parent up to mount point " `isPrefixOf` err = notGitWarning
+  | "fatal: not a git repository (or any " `isPrefixOf` err = notGitWarning
   | err == "" = Nothing
   | otherwise = Just (Red, err)
   where
