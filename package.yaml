@@ -28,7 +28,6 @@ ghc-options: -Wall
 
 source-dirs:
   - src
-  - doctest/ghci-wrapper/src/
 
 executables:
   sensei:
