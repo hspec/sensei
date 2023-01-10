@@ -22,19 +22,24 @@ waitForever = forever $ threadDelay 10000000
 
 watchFiles :: EventQueue -> IO ()
 watchFiles queue = do
-  watch $ emitEvent queue . \ case
-    Added file _ _ -> FileEvent FileAdded file
-    Removed file _ _ -> FileEvent FileRemoved file
-    Modified file _ _ -> FileEvent FileModified file
-    Unknown file _ _ -> FileEvent FileModified file
+  watch $ \ case
+    Added file _ _ -> emit $ FileEvent FileAdded file
+    Modified file _ _ -> emit $ FileEvent FileModified file
+    ModifiedAttributes _file _ _ -> pass
+    Removed file _ _ -> emit $ FileEvent FileRemoved file
+    WatchedDirectoryRemoved _file _ _ -> pass
+    CloseWrite file _ _ -> emit $ FileEvent FileModified file
+    Unknown file _ _ _ -> emit $ FileEvent FileModified file
   where
-    isInteresting = (&&) <$> not . eventIsDirectory <*> not . isBoring . eventPath
+    emit = emitEvent queue
 
     watch action = void . forkIO $ do
       withManager $ \ manager -> do
         _stopListening <- watchTree manager "." isInteresting action
         waitForever
-
+      where
+        isInteresting = (&&) <$> isFile <*> not . isBoring . eventPath
+        isFile = eventIsDirectory >>> (== IsFile)
 
 watchInput :: EventQueue -> IO ()
 watchInput queue = void . forkIO $ do

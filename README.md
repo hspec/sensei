@@ -2,8 +2,6 @@ __THIS IS EXPERIMENTAL STUFF! USE AT YOUR OWN RISK!__
 
 # 先生 (*rōmaji*: sensei)
 
-(`sensei` is Japanese for 'teacher'.)
-
 In it's simplest form, you run `sensei` with the `Main` module of your test
 suite as an argument:
 
@@ -34,8 +32,6 @@ When `sensei` is used inside a Git repository it ignores modifications to
     cabal exec sensei test/Spec.hs
 
 ## 生徒 (*rōmaji*: seito): Accessing result on the command-line
-
-(`seito` is Japanese for 'student'.)
 
 You can access the results of the last test run with `seito`:
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module TriggerSpec (spec) where
 
 import           Helper
@@ -148,7 +149,11 @@ spec = do
           writeFile "Spec.hs" passingSpec
           (True, xs) <- silence (trigger session)
           normalize xs `shouldBe` [
+#if __GLASGOW_HASKELL__ < 904
               "[1 of 1] Compiling Spec             ( Spec.hs, interpreted )"
+#else
+              "[1 of 1] Compiling Spec             ( Spec.hs, interpreted ) [Source file changed]"
+#endif
             , modulesLoaded Ok ["Spec"]
             , ""
             , "bar [✔]"

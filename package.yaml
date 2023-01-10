@@ -9,7 +9,7 @@ category: Development
 dependencies:
   - base >= 4.11 && < 5
   - process
-  - fsnotify
+  - fsnotify == 0.4.*
   - time
   - wai
   - warp
