@@ -54,14 +54,8 @@ new Config{..} args_ = do
 
   -- The buffering of stdout and stderr is NoBuffering
   evalThrow interpreter "GHC.IO.Handle.hDuplicateTo System.IO.stdout System.IO.stderr"
-  -- Now the buffering of stderr is BlockBuffering Nothing
-  -- In this situation, GHC 7.7 does not flush the buffer even when
-  -- error happens.
   evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stdout GHC.IO.Handle.LineBuffering"
   evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stderr GHC.IO.Handle.LineBuffering"
-
-  -- this is required on systems that don't use utf8 as default encoding (e.g.
-  -- Windows)
   evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stdout GHC.IO.Encoding.utf8"
   evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stderr GHC.IO.Encoding.utf8"
 

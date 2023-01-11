@@ -38,6 +38,10 @@ spec = do
     it "evaluates simple expressions" $ withInterpreter $ \ghci -> do
       ghci "23 + 42" `shouldReturn` "65\n"
 
+    it "uses LineBuffering for stdout and stderr" $ withInterpreter $ \ghci -> do
+      ghci "GHC.IO.Handle.hGetBuffering System.IO.stdout" `shouldReturn` "LineBuffering\n"
+      ghci "GHC.IO.Handle.hGetBuffering System.IO.stderr" `shouldReturn` "LineBuffering\n"
+
     it "supports let bindings" $ withInterpreter $ \ghci -> do
       ghci "let x = 10" `shouldReturn` ""
       ghci "x" `shouldReturn` "10\n"
