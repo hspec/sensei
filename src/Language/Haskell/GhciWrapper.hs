@@ -16,14 +16,12 @@ import           System.Exit
 
 data Config = Config {
   configGhci :: String
-, configVerbose :: Bool
 , configIgnoreDotGhci :: Bool
 } deriving (Eq, Show)
 
 defaultConfig :: Config
 defaultConfig = Config {
   configGhci = "ghci"
-, configVerbose = False
 , configIgnoreDotGhci = True
 }
 
@@ -52,6 +50,8 @@ new Config{..} args_ = do
   setMode stdout_
   let interpreter = Interpreter {hIn = stdin_, hOut = stdout_, process = processHandle}
 
+  _ <- eval interpreter (":set prompt " ++ show "")
+
   -- The buffering of stdout and stderr is NoBuffering
   evalThrow interpreter "GHC.IO.Handle.hDuplicateTo System.IO.stdout System.IO.stderr"
   evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stdout GHC.IO.Handle.LineBuffering"
@@ -63,7 +63,6 @@ new Config{..} args_ = do
   where
     args = args_ ++ catMaybes [
         if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
-      , if configVerbose then Nothing else Just "-v0"
       ]
     setMode h = do
       hSetBinaryMode h False
@@ -73,7 +72,7 @@ new Config{..} args_ = do
     evalThrow :: Interpreter -> String -> IO ()
     evalThrow interpreter expr = do
       output <- eval interpreter expr
-      unless (null output || configVerbose) $ do
+      unless (null output) $ do
         close interpreter
         throwIO (ErrorCall output)
 

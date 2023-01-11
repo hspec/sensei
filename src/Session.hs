@@ -51,8 +51,7 @@ hspecPreviousSummary Session{..} = readIORef sessionHspecPreviousSummary
 new :: [String] -> IO Session
 new args = do
   let (ghciArgs, hspecArgs) = splitArgs args
-  ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False} ghciArgs
-  _ <- eval ghci (":set prompt " ++ show "")
+  ghci <- GhciWrapper.new defaultConfig{configIgnoreDotGhci = False} ghciArgs
   _ <- eval ghci ("System.Environment.unsetEnv " ++ show hspecFailureEnvName)
   ref <- newIORef (Just $ Summary 0 0)
   return (Session ghci hspecArgs ref)

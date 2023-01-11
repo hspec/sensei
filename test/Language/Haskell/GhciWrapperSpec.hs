@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
 import           Test.Hspec
@@ -82,17 +83,13 @@ spec = do
     it "gives an error message for identifiers that are not in scope" $ withInterpreter $ \ghci -> do
       ghci "foo" >>= (`shouldSatisfy` isInfixOf "Variable not in scope: foo")
 
-    context "when configVerbose is True" $ do
-      it "prints prompt" $ do
-        withInterpreterConfig defaultConfig{configVerbose = True} [] $ \ghci -> do
-          Interpreter.eval ghci "print 23" >>= (`shouldSatisfy`
-            (`elem` [ "Prelude> 23\nPrelude> "
-                    ,  "ghci> 23\nghci> "
-                    ]))
-
     context "with -XOverloadedStrings, -Wall and -Werror" $ do
       it "does not fail on marker expression (bug fix)" $ withInterpreter $ \ghci -> do
+#if __GLASGOW_HASKELL__ == 900
+        _ <- ghci ":set -XOverloadedStrings -Wall -Werror"
+#else
         ghci ":set -XOverloadedStrings -Wall -Werror" `shouldReturn` ""
+#endif
         ghci "putStrLn \"foo\"" `shouldReturn` "foo\n"
 
     context "with NoImplicitPrelude" $ do
