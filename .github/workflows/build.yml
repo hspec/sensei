@@ -1,9 +1,10 @@
 name: build
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
@@ -31,9 +32,6 @@ jobs:
             ghc: system
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: true
-
       - uses: hspec/setup-haskell@v1
         with:
           ghc-version: ${{ matrix.ghc }}
@@ -63,3 +61,7 @@ jobs:
     steps:
       - run: false
         if: needs.build.result != 'success'
+
+      - uses: actions/checkout@v3
+      - name: Check for trailing whitespace
+        run: '! git grep -I "\s\+$"'

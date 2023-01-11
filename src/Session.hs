@@ -53,9 +53,6 @@ new args = do
   let (ghciArgs, hspecArgs) = splitArgs args
   ghci <- GhciWrapper.new defaultConfig{configVerbose = True, configIgnoreDotGhci = False} ghciArgs
   _ <- eval ghci (":set prompt " ++ show "")
-  _ <- eval ghci ("import qualified System.Environment")
-  _ <- eval ghci ("import qualified Test.Hspec.Runner")
-  _ <- eval ghci ("import qualified Test.Hspec.Meta")
   _ <- eval ghci ("System.Environment.unsetEnv " ++ show hspecFailureEnvName)
   ref <- newIORef (Just $ Summary 0 0)
   return (Session ghci hspecArgs ref)
