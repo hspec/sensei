@@ -22,10 +22,10 @@ import qualified Session
 import           Session (Session)
 
 withSession :: [String] -> (Session -> IO a) -> IO a
-withSession args action = bracket (Session.new $ "-ignore-dot-ghci" : args) Session.close action
+withSession args = bracket (Session.new $ "-ignore-dot-ghci" : args) Session.close
 
 withSomeSpec :: IO a -> IO a
-withSomeSpec = (inTempDirectory .  (writeFile "Spec.hs" passingSpec >>))
+withSomeSpec = inTempDirectory .  (writeFile "Spec.hs" passingSpec >>)
 
 passingSpec :: String
 passingSpec = unlines [

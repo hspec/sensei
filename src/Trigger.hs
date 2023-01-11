@@ -41,12 +41,14 @@ trigger session = do
       withColor Red $ putStrLn "RELOADING FAILED"
       return (False, "")
   where
+    hspec :: IO (Bool, String)
     hspec = do
       mRun <- Session.getRunSpec session
       case mRun of
         Just run -> runSpecs run
         Nothing -> return (True, "")
 
+    runSpecs :: IO String -> IO (Bool, String)
     runSpecs run = do
       failedPreviously <- isFailure <$> hspecPreviousSummary session
       (success, xs) <- runSpec run
@@ -54,6 +56,7 @@ trigger session = do
         then runSpec run
         else return (success, "")
 
+    runSpec :: IO a -> IO (Bool, a)
     runSpec run = do
       xs <- run
       success <- isSuccess <$> hspecPreviousSummary session
