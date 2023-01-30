@@ -1,11 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
-import           Test.Hspec
-import           System.IO.Silently
-
-import           Control.Exception
-import           Data.List (isInfixOf)
+import           Helper
 
 import           Language.Haskell.GhciWrapper (Interpreter, Config(..), defaultConfig)
 import qualified Language.Haskell.GhciWrapper as Interpreter
