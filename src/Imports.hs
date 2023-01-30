@@ -9,6 +9,7 @@ import           Data.Char as Imports
 import           Data.List as Imports
 import           Data.Maybe as Imports
 import           Data.String as Imports
+import           Data.ByteString.Char8 as Imports (ByteString, pack, unpack)
 import           Data.Text.Lazy.Encoding as Imports (encodeUtf8)
 import           Data.Tuple as Imports
 import           System.IO.Error as Imports (isDoesNotExistError)

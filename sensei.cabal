@@ -51,6 +51,7 @@ executable seito
       Imports
       Language.Haskell.GhciWrapper
       Options
+      ReadHandle
       Run
       Session
       Trigger
@@ -88,6 +89,7 @@ executable sensei
       Imports
       Language.Haskell.GhciWrapper
       Options
+      ReadHandle
       Run
       Session
       Trigger
@@ -125,6 +127,7 @@ executable sensei-web
       Imports
       Language.Haskell.GhciWrapper
       Options
+      ReadHandle
       Run
       Session
       Trigger
@@ -143,13 +146,15 @@ test-suite spec
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:
-      ansi-terminal
+      QuickCheck
+    , ansi-terminal
     , base >=4.11 && <5
     , bytestring
     , directory
     , filepath
     , fsnotify ==0.4.*
     , hspec >=2.9.0
+    , hspec-contrib >=0.5.2
     , hspec-wai
     , http-client >=0.5.0
     , http-types
@@ -170,6 +175,7 @@ test-suite spec
       Imports
       Language.Haskell.GhciWrapper
       Options
+      ReadHandle
       Run
       Session
       Trigger
@@ -180,6 +186,7 @@ test-suite spec
       HTTPSpec
       Language.Haskell.GhciWrapperSpec
       OptionsSpec
+      ReadHandleSpec
       SessionSpec
       TriggerSpec
       UtilSpec

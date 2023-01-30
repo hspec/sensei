@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Language.Haskell.GhciWrapper (
   Interpreter
 , Config(..)
@@ -9,10 +10,18 @@ module Language.Haskell.GhciWrapper (
 ) where
 
 import           Imports
+
+import qualified Data.ByteString as B
+import           Data.Text.Encoding (decodeUtf8)
+import qualified Data.Text as T
 import           System.IO hiding (stdin, stdout, stderr)
+import qualified System.IO as System
 import           System.Directory (doesFileExist)
 import           System.Process
 import           System.Exit (ExitCode(..))
+
+import qualified ReadHandle
+import           ReadHandle (ReadHandle, toReadHandle)
 
 data Config = Config {
   configIgnoreDotGhci :: Bool
@@ -20,17 +29,10 @@ data Config = Config {
 , configStartupFile :: FilePath
 } deriving (Eq, Show)
 
--- | Truly random marker, used to separate expressions.
---
--- IMPORTANT: This module relies upon the fact that this marker is unique.  It
--- has been obtained from random.org.  Do not expect this module to work
--- properly, if you reuse it for any purpose!
-marker :: String
-marker = show "dcbd2a1e20ae519a1c7714df2859f1890581d57fac96ba3f499412b2f5c928a1"
-
 data Interpreter = Interpreter {
   hIn  :: Handle
 , hOut :: Handle
+, readHandle :: ReadHandle
 , process :: ProcessHandle
 }
 
@@ -47,11 +49,14 @@ new Config{..} args_ = do
   , std_out = CreatePipe
   , std_err = Inherit
   }
+
   setMode stdin_
-  setMode stdout_
+  readHandle <- toReadHandle stdout_ 1024
+
   let
     interpreter = Interpreter {
       hIn = stdin_
+    , readHandle
     , hOut = stdout_
     , process = processHandle
     }
@@ -110,29 +115,16 @@ close repl = do
 putExpression :: Interpreter -> String -> IO ()
 putExpression Interpreter{hIn = stdin} e = do
   hPutStrLn stdin e
-  hPutStrLn stdin (marker ++ " :: Data.String.String")
+  hPutStrLn stdin (ReadHandle.markerString ++ " :: Data.String.String")
   hFlush stdin
 
 getResult :: Bool -> Interpreter -> IO String
-getResult echoMode Interpreter{hOut = stdout} = go
+getResult echoMode Interpreter{readHandle = h} = T.unpack . decodeUtf8 <$> ReadHandle.getResult h echo
   where
-    go = do
-      line <- hGetLine stdout
-      if marker `isSuffixOf` line
-        then do
-          let xs = stripMarker line
-          echo xs
-          return xs
-        else do
-          echo (line ++ "\n")
-          result <- go
-          return (line ++ "\n" ++ result)
-    stripMarker l = take (length l - length marker) l
-
-    echo :: String -> IO ()
-    echo
-      | echoMode = putStr
-      | otherwise = \ _ -> return ()
+    echo :: ByteString -> IO ()
+    echo string
+      | echoMode = B.putStr string >> hFlush System.stdout
+      | otherwise = return ()
 
 -- | Evaluate an expression
 eval :: Interpreter -> String -> IO String

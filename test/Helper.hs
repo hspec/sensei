@@ -16,6 +16,7 @@ import           System.IO.Silently as Imports
 import           System.Process as Imports (readProcess, callCommand)
 import           Test.Hspec as Imports
 import           Test.Mockery.Directory as Imports
+import           Test.Hspec.Contrib.Mocks.V1 as Imports
 
 import           Run ()
 import qualified Session
