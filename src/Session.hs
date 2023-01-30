@@ -2,6 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module Session (
   Session(..)
+, Config(..)
 , new
 , close
 , reload
@@ -48,10 +49,10 @@ resetSummary Session{..} = writeIORef sessionHspecPreviousSummary (Just $ Summar
 hspecPreviousSummary :: Session -> IO (Maybe Summary)
 hspecPreviousSummary Session{..} = readIORef sessionHspecPreviousSummary
 
-new :: [String] -> IO Session
-new args = do
+new :: Config -> [String] -> IO Session
+new config args = do
   let (ghciArgs, hspecArgs) = splitArgs args
-  ghci <- GhciWrapper.new defaultConfig{configIgnoreDotGhci = False} ghciArgs
+  ghci <- GhciWrapper.new config ghciArgs
   _ <- eval ghci ("System.Environment.unsetEnv " ++ show hspecFailureEnvName)
   ref <- newIORef (Just $ Summary 0 0)
   return (Session ghci hspecArgs ref)

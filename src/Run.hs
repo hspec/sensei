@@ -11,7 +11,7 @@ import           System.FSNotify
 
 import qualified HTTP
 import qualified Session
-import           Session (Session)
+import           Session (Session, Config(..))
 
 import           EventQueue
 import           Trigger
@@ -48,8 +48,8 @@ watchInput queue = void . forkIO $ do
     emitEvent queue TriggerAll
   emitEvent queue Done
 
-run :: [String] -> IO ()
-run args = do
+run :: FilePath -> [String] -> IO ()
+run startupFile args = do
   queue <- newQueue
   watchFiles queue
   watchInput queue
@@ -60,7 +60,7 @@ run args = do
       saveOutput action = modifyMVar_ lastOutput $ \_ -> action
 
       go = do
-        status <- withSession args $ \ session -> do
+        status <- withSession startupFile args $ \ session -> do
           let
             triggerAction = saveOutput (trigger session)
             triggerAllAction = saveOutput (triggerAll session)
@@ -71,16 +71,16 @@ run args = do
           Terminate -> return ()
     go
 
-runWeb :: [String] -> IO ()
-runWeb args = do
-  withSession args $ \session -> do
+runWeb :: FilePath -> [String] -> IO ()
+runWeb startupFile args = do
+  withSession startupFile args $ \session -> do
     _ <- trigger session
     lock <- newMVar ()
     HTTP.withServer (withMVar lock $ \() -> trigger session) $ do
       waitForever
 
-withSession :: [String] -> (Session -> IO a) -> IO a
-withSession args action = do
+withSession :: FilePath -> [String] -> (Session -> IO a) -> IO a
+withSession startupFile args action = do
   check <- dotGhciWritableByOthers
   when check $ do
     putStrLn ".ghci is writable by others, you can fix this with:"
@@ -88,4 +88,11 @@ withSession args action = do
     putStrLn "    chmod go-w .ghci ."
     putStrLn ""
     exitFailure
-  bracket (Session.new args) Session.close action
+  bracket (Session.new config args) Session.close action
+  where
+    config :: Config
+    config = Config {
+      configIgnoreDotGhci = False
+    , configVerbose = True
+    , configStartupFile = startupFile
+    }

@@ -6,6 +6,8 @@ license: MIT
 github: hspec/sensei
 category: Development
 
+data-files: startup.ghci
+
 dependencies:
   - base >= 4.11 && < 5
   - process

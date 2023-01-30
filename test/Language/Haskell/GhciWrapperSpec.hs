@@ -3,17 +3,17 @@ module Language.Haskell.GhciWrapperSpec (main, spec) where
 
 import           Helper
 
-import           Language.Haskell.GhciWrapper (Interpreter, Config(..), defaultConfig)
+import           Language.Haskell.GhciWrapper (Interpreter)
 import qualified Language.Haskell.GhciWrapper as Interpreter
 
 main :: IO ()
 main = hspec spec
 
-withInterpreterConfig :: Config -> [String] -> (Interpreter -> IO a) -> IO a
-withInterpreterConfig config args = bracket (Interpreter.new config args) Interpreter.close
+withInterpreterSession :: [String] -> (Interpreter -> IO a) -> IO a
+withInterpreterSession args = bracket (Interpreter.new ghciConfig args) Interpreter.close
 
 withInterpreterArgs :: [String] -> ((String -> IO String) -> IO a) -> IO a
-withInterpreterArgs args action = withInterpreterConfig defaultConfig args $ action . Interpreter.eval
+withInterpreterArgs args action = withInterpreterSession args $ action . Interpreter.eval
 
 withInterpreter :: ((String -> IO String) -> IO a) -> IO a
 withInterpreter = withInterpreterArgs []
@@ -22,7 +22,7 @@ spec :: Spec
 spec = do
   describe "evalEcho" $ do
     it "prints result to stdout" $ do
-      withInterpreterConfig defaultConfig [] $ \ghci -> do
+      withInterpreterSession [] $ \ghci -> do
         capture (Interpreter.evalEcho ghci $ "putStr" ++ show "foo\nbar") `shouldReturn` ("foo\nbar", "foo\nbar")
 
   describe "eval" $ do
