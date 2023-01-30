@@ -1,5 +1,6 @@
 module Helper (
   module Imports
+, ghciConfig
 , withSession
 , withSomeSpec
 , passingSpec
@@ -19,12 +20,28 @@ import           Test.Mockery.Directory as Imports
 import           Run ()
 import qualified Session
 import           Session (Session)
+import           Language.Haskell.GhciWrapper (Config(..))
+
+startupFile :: FilePath
+startupFile = "startup.ghci"
+
+ghciConfig :: Config
+ghciConfig = Config {
+  configIgnoreDotGhci = True
+, configVerbose = False
+, configStartupFile = startupFile
+}
 
 withSession :: [String] -> (Session -> IO a) -> IO a
-withSession args = bracket (Session.new $ "-ignore-dot-ghci" : args) Session.close
+withSession args = bracket (Session.new ghciConfig $ "-ignore-dot-ghci" : args) Session.close
 
 withSomeSpec :: IO a -> IO a
-withSomeSpec = inTempDirectory .  (writeFile "Spec.hs" passingSpec >>)
+withSomeSpec action = do
+  startup <- readFile startupFile
+  inTempDirectory $ do
+    writeFile startupFile startup
+    writeFile "Spec.hs" passingSpec
+    action
 
 passingSpec :: String
 passingSpec = unlines [

@@ -2,7 +2,6 @@
 module Language.Haskell.GhciWrapper (
   Interpreter
 , Config(..)
-, defaultConfig
 , new
 , close
 , eval
@@ -11,19 +10,15 @@ module Language.Haskell.GhciWrapper (
 
 import           Imports
 import           System.IO hiding (stdin, stdout, stderr)
+import           System.Directory (doesFileExist)
 import           System.Process
-import           System.Exit
+import           System.Exit (ExitCode(..))
 
 data Config = Config {
-  configGhci :: String
-, configIgnoreDotGhci :: Bool
+  configIgnoreDotGhci :: Bool
+, configVerbose :: Bool
+, configStartupFile :: FilePath
 } deriving (Eq, Show)
-
-defaultConfig :: Config
-defaultConfig = Config {
-  configGhci = "ghci"
-, configIgnoreDotGhci = True
-}
 
 -- | Truly random marker, used to separate expressions.
 --
@@ -39,9 +34,15 @@ data Interpreter = Interpreter {
 , process :: ProcessHandle
 }
 
+die :: String -> IO a
+die = throwIO . ErrorCall
+
 new :: Config -> [String] -> IO Interpreter
 new Config{..} args_ = do
-  (Just stdin_, Just stdout_, Nothing, processHandle ) <- createProcess (proc configGhci args) {
+
+  requireFile configStartupFile
+
+  (Just stdin_, Just stdout_, Nothing, processHandle ) <- createProcess (proc "ghci" args) {
     std_in  = CreatePipe
   , std_out = CreatePipe
   , std_err = Inherit
@@ -55,7 +56,7 @@ new Config{..} args_ = do
     , process = processHandle
     }
 
-  _ <- eval interpreter (":set prompt " ++ show "")
+  _ <- printStartupMessages interpreter
 
   -- The buffering of stdout and stderr is NoBuffering
   evalThrow interpreter "GHC.IO.Handle.hDuplicateTo System.IO.stdout System.IO.stderr"
@@ -66,20 +67,30 @@ new Config{..} args_ = do
 
   return interpreter
   where
-    args = args_ ++ catMaybes [
+    requireFile name = do
+      exists <- doesFileExist name
+      unless exists $ do
+        die $ "Required file " <> show name <> " does not exist!"
+
+    args = "-ghci-script" : configStartupFile : args_ ++ catMaybes [
         if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
       ]
+
     setMode h = do
       hSetBinaryMode h False
       hSetBuffering h LineBuffering
       hSetEncoding h utf8
+
+    printStartupMessages interpreter
+      | configVerbose = evalEcho interpreter ""
+      | otherwise = eval interpreter ""
 
     evalThrow :: Interpreter -> String -> IO ()
     evalThrow interpreter expr = do
       output <- eval interpreter expr
       unless (null output) $ do
         close interpreter
-        throwIO (ErrorCall output)
+        die output
 
 close :: Interpreter -> IO ()
 close repl = do

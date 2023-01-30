@@ -1,2 +1,5 @@
 packages:
   sensei.cabal
+
+package sensei
+  ghc-options: -Werror
