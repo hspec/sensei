@@ -48,7 +48,12 @@ new Config{..} args_ = do
   }
   setMode stdin_
   setMode stdout_
-  let interpreter = Interpreter {hIn = stdin_, hOut = stdout_, process = processHandle}
+  let
+    interpreter = Interpreter {
+      hIn = stdin_
+    , hOut = stdout_
+    , process = processHandle
+    }
 
   _ <- eval interpreter (":set prompt " ++ show "")
 
