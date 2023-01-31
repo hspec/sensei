@@ -1,10 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 module Session (
-  Session(..)
-, Config(..)
-, new
-, close
+  Config(..)
+, Session(..)
+, withSession
 , reload
 
 , Summary(..)
@@ -28,8 +27,7 @@ import           Imports
 
 import           Data.IORef
 
-import qualified Language.Haskell.GhciWrapper as GhciWrapper
-import           Language.Haskell.GhciWrapper hiding (new, close)
+import           Language.Haskell.GhciWrapper
 
 import           Util
 import           Options
@@ -49,16 +47,14 @@ resetSummary Session{..} = writeIORef sessionHspecPreviousSummary (Just $ Summar
 hspecPreviousSummary :: Session -> IO (Maybe Summary)
 hspecPreviousSummary Session{..} = readIORef sessionHspecPreviousSummary
 
-new :: Config -> [String] -> IO Session
-new config args = do
-  let (ghciArgs, hspecArgs) = splitArgs args
-  ghci <- GhciWrapper.new config ghciArgs
-  _ <- eval ghci ("System.Environment.unsetEnv " ++ show hspecFailureEnvName)
-  ref <- newIORef (Just $ Summary 0 0)
-  return (Session ghci hspecArgs ref)
-
-close :: Session -> IO ()
-close = GhciWrapper.close . sessionInterpreter
+withSession :: Config -> [String] -> (Session -> IO r) -> IO r
+withSession config args action = do
+  withInterpreter config ghciArgs $ \ ghci -> do
+    _ <- eval ghci ("System.Environment.unsetEnv " ++ show hspecFailureEnvName)
+    ref <- newIORef (Just $ Summary 0 0)
+    action (Session ghci hspecArgs ref)
+  where
+    (ghciArgs, hspecArgs) = splitArgs args
 
 reload :: Session -> IO String
 reload Session{..} = evalEcho sessionInterpreter ":reload"

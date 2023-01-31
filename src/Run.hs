@@ -88,7 +88,7 @@ withSession startupFile args action = do
     putStrLn "    chmod go-w .ghci ."
     putStrLn ""
     exitFailure
-  bracket (Session.new config args) Session.close action
+  Session.withSession config args action
   where
     config :: Config
     config = Config {
