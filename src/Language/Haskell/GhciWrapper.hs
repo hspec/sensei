@@ -109,7 +109,7 @@ close echo Interpreter{..} = do
 putExpression :: Interpreter -> String -> IO ()
 putExpression Interpreter{hIn = stdin} e = do
   hPutStrLn stdin e
-  hPutStrLn stdin (ReadHandle.markerString ++ " :: Data.String.String")
+  B.hPut stdin ReadHandle.marker
   hFlush stdin
 
 getResult :: Interpreter -> (ByteString -> IO ()) -> IO String

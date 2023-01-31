@@ -83,15 +83,6 @@ spec = do
     it "gives an error message for identifiers that are not in scope" $ withGhci $ \ ghci -> do
       ghci "foo" >>= (`shouldSatisfy` isInfixOf "Variable not in scope: foo")
 
-    context "with -XOverloadedStrings, -Wall and -Werror" $ do
-      it "does not fail on marker expression (bug fix)" $ withGhci $ \ ghci -> do
-#if __GLASGOW_HASKELL__ == 900
-        _ <- ghci ":set -XOverloadedStrings -Wall -Werror"
-#else
-        ghci ":set -XOverloadedStrings -Wall -Werror" `shouldReturn` ""
-#endif
-        ghci "putStrLn \"foo\"" `shouldReturn` "foo\n"
-
     context "with NoImplicitPrelude" $ do
       it "works" $ withInterpreter ["-XNoImplicitPrelude"] $ \ ghci -> do
         Interpreter.eval ghci "putStrLn \"foo\"" >>= (`shouldContain` "Variable not in scope: putStrLn")

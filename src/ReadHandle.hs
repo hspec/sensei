@@ -7,12 +7,11 @@
 module ReadHandle (
   ReadHandle(..)
 , toReadHandle
+, marker
 , getResult
-, markerString
 , drain
 #ifdef TEST
 , newEmptyBuffer
-, marker
 #endif
 ) where
 
@@ -38,11 +37,8 @@ dropEnd n ps@(B.PS x offset len)
 -- IMPORTANT: This module relies upon the fact that this marker is unique.  It
 -- has been obtained from random.org.  Do not expect this module to work
 -- properly, if you reuse it for any purpose!
-markerString :: String
-markerString = show @String "be77d2c8427d29cd1d62b7612d8e98cc"
-
 marker :: ByteString
-marker = pack markerString <> "\n"
+marker = pack (show @String "be77d2c8427d29cd1d62b7612d8e98cc") <> "\n"
 
 partialMarkers :: [ByteString]
 partialMarkers = reverse . drop 1 . init $ B.inits marker

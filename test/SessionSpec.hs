@@ -7,16 +7,27 @@ import           System.Environment.Blank (setEnv)
 
 import           Language.Haskell.GhciWrapper (eval)
 import qualified Session
-import           Session (Session(..), Summary(..), hspecFailureEnvName, hspecPreviousSummary, hspecCommand)
+import           Session (Config(..), Session(..), Summary(..), hspecFailureEnvName, hspecPreviousSummary, hspecCommand)
 
 spec :: Spec
 spec = do
-  describe "new" $ do
+  describe "withSession" $ do
     it "unsets HSPEC_FAILURES" $ do
       setEnv hspecFailureEnvName "foo" True
-      withSession [] $ \Session{..} -> do
-        _ <- eval sessionInterpreter "import System.Environment"
-        eval sessionInterpreter ("lookupEnv " ++ show hspecFailureEnvName) `shouldReturn` "Nothing\n"
+      withSession [] $ \ Session{..} -> do
+        eval sessionInterpreter ("System.Environment.lookupEnv " ++ show hspecFailureEnvName) `shouldReturn` "Nothing\n"
+
+    context "with `:set +t +s`" $ do
+      it "works just fine" $ do
+        withSomeSpec $ do
+          writeFile ".ghci" ":set +t +s"
+          Session.withSession ghciConfig {configIgnoreDotGhci = False} [] $ \ Session{..} -> do
+            eval sessionInterpreter "23" `shouldReturn` "23\n"
+
+    context "with -XOverloadedStrings" $ do
+      it "works just fine" $ do
+        withSession ["-XOverloadedStrings", "-Wall", "-Werror"] $ \ Session{..} -> do
+          eval sessionInterpreter "23 :: Int" `shouldReturn` "23\n"
 
   describe "reload" $ do
     it "reloads" $ do
