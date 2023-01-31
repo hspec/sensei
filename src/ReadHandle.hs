@@ -51,6 +51,11 @@ data ReadHandle = ReadHandle {
 , buffer :: IORef Buffer
 }
 
+mkBufferChunk :: ByteString -> Buffer
+mkBufferChunk chunk
+  | B.null chunk = BufferEmpty
+  | otherwise = BufferChunk chunk
+
 data Buffer =
     BufferEOF
   | BufferEmpty
@@ -124,11 +129,6 @@ nextChunk ReadHandle {..} = go
           else do
             return (Chunk prefix)
         Nothing -> return (Chunk chunk)
-
-mkBufferChunk :: ByteString -> Buffer
-mkBufferChunk chunk
-  | B.null chunk = BufferEmpty
-  | otherwise = BufferChunk chunk
 
 splitPartialMarker :: ByteString -> Maybe (ByteString, ByteString)
 splitPartialMarker chunk = split <$> findPartialMarker chunk

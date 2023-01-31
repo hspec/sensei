@@ -1,10 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Language.Haskell.GhciWrapper (
-  Interpreter
-, Config(..)
-, new
-, close
+  Config(..)
+, Interpreter
+, withInterpreter
 , eval
 , evalEcho
 ) where
@@ -38,6 +37,9 @@ data Interpreter = Interpreter {
 
 die :: String -> IO a
 die = throwIO . ErrorCall
+
+withInterpreter :: Config -> [String] -> (Interpreter -> IO r) -> IO r
+withInterpreter config args = bracket (new config args) close
 
 new :: Config -> [String] -> IO Interpreter
 new Config{..} args_ = do
@@ -118,22 +120,20 @@ putExpression Interpreter{hIn = stdin} e = do
   hPutStrLn stdin (ReadHandle.markerString ++ " :: Data.String.String")
   hFlush stdin
 
-getResult :: Bool -> Interpreter -> IO String
-getResult echoMode Interpreter{readHandle = h} = T.unpack . decodeUtf8 <$> ReadHandle.getResult h echo
-  where
-    echo :: ByteString -> IO ()
-    echo string
-      | echoMode = B.putStr string >> hFlush System.stdout
-      | otherwise = return ()
+getResult :: Interpreter -> (ByteString -> IO ()) -> IO String
+getResult Interpreter{readHandle = h} = fmap (T.unpack . decodeUtf8) . ReadHandle.getResult h
+
+echo :: ByteString -> IO ()
+echo string = B.putStr string >> hFlush System.stdout
 
 -- | Evaluate an expression
 eval :: Interpreter -> String -> IO String
 eval repl expr = do
   putExpression repl expr
-  getResult False repl
+  getResult repl (const pass)
 
 -- | Evaluate an expression
 evalEcho :: Interpreter -> String -> IO String
 evalEcho repl expr = do
   putExpression repl expr
-  getResult True repl
+  getResult repl echo

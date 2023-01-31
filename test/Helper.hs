@@ -34,7 +34,7 @@ ghciConfig = Config {
 }
 
 withSession :: [String] -> (Session -> IO a) -> IO a
-withSession args = bracket (Session.new ghciConfig $ "-ignore-dot-ghci" : args) Session.close
+withSession = Session.withSession ghciConfig
 
 withSomeSpec :: IO a -> IO a
 withSomeSpec action = do
