@@ -17,10 +17,10 @@ withGhci action = withInterpreter [] $ action . Interpreter.eval
 
 spec :: Spec
 spec = do
-  describe "evalEcho" $ do
-    it "prints result to stdout" $ do
+  describe "evalVerbose" $ do
+    it "echos result to stdout" $ do
       withInterpreter [] $ \ ghci -> do
-        capture (Interpreter.evalEcho ghci $ "putStr" ++ show "foo\nbar") `shouldReturn` ("foo\nbar", "foo\nbar")
+        capture (Interpreter.evalVerbose ghci $ "putStr" ++ show "foo\nbar") `shouldReturn` ("foo\nbar", "foo\nbar")
 
   describe "eval" $ do
     it "shows literals" $ withGhci $ \ ghci -> do

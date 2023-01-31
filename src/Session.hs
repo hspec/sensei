@@ -57,7 +57,7 @@ withSession config args action = do
     (ghciArgs, hspecArgs) = splitArgs args
 
 reload :: Session -> IO String
-reload Session{..} = evalEcho sessionInterpreter ":reload"
+reload Session{..} = evalVerbose sessionInterpreter ":reload"
 
 data Summary = Summary {
   summaryExamples :: Int
@@ -96,7 +96,7 @@ runSpec :: String -> Session -> IO String
 runSpec command session@Session{..} = do
   failedPreviously <- isFailure <$> hspecPreviousSummary session
   let args = "--color" : (if failedPreviously then addRerun else id) sessionHspecArgs
-  r <- evalEcho sessionInterpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ command
+  r <- evalVerbose sessionInterpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ command
   writeIORef sessionHspecPreviousSummary (parseSummary r)
   return r
   where
