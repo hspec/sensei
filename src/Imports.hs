@@ -1,9 +1,10 @@
 module Imports (module Imports) where
 
-import           Control.Arrow as Imports ((>>>))
+import           Control.Arrow as Imports ((>>>), (&&&))
 import           Control.Concurrent as Imports
 import           Control.Exception as Imports
 import           Control.Monad as Imports
+import           Data.Functor as Imports
 import           Data.Bifunctor as Imports
 import           Data.Char as Imports
 import           Data.List as Imports
@@ -17,3 +18,12 @@ import           Text.Read as Imports (readMaybe)
 
 pass :: Applicative m => m ()
 pass = pure ()
+
+while :: Monad m => m Bool -> m () -> m ()
+while p action = go
+  where
+    go = do
+      notDone <- p
+      when notDone $ do
+        action
+        go

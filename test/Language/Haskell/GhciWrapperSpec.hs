@@ -3,7 +3,7 @@ module Language.Haskell.GhciWrapperSpec (main, spec) where
 
 import           Helper
 
-import           Language.Haskell.GhciWrapper (Interpreter)
+import           Language.Haskell.GhciWrapper (Config(..), Interpreter)
 import qualified Language.Haskell.GhciWrapper as Interpreter
 
 main :: IO ()
@@ -17,6 +17,13 @@ withGhci action = withInterpreter [] $ action . Interpreter.eval
 
 spec :: Spec
 spec = do
+  describe "withInterpreter" $ do
+    context "on shutdown" $ do
+      it "drains `stdout` of the `ghci` process" $ do
+        result <- capture_ $ Interpreter.withInterpreter ghciConfig {configVerbose = True} [] $ \ _ghci -> do
+          pass
+        last (lines result) `shouldBe` "Leaving GHCi."
+
   describe "evalVerbose" $ do
     it "echos result to stdout" $ do
       withInterpreter [] $ \ ghci -> do

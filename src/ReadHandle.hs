@@ -9,6 +9,7 @@ module ReadHandle (
 , toReadHandle
 , getResult
 , markerString
+, drain
 #ifdef TEST
 , newEmptyBuffer
 , marker
@@ -19,7 +20,7 @@ import           Imports
 
 import qualified Data.ByteString.Char8 as B
 import           Data.IORef
-import           System.IO hiding (stdin, stdout, stderr)
+import           System.IO hiding (stdin, stdout, stderr, isEOF)
 
 #if MIN_VERSION_bytestring(0,11,0)
 import           Data.ByteString (dropEnd)
@@ -50,6 +51,26 @@ data ReadHandle = ReadHandle {
   getChunk :: IO ByteString
 , buffer :: IORef Buffer
 }
+
+drain :: ReadHandle -> (ByteString -> IO ()) -> IO ()
+drain h echo = while (not <$> isEOF h) $ do
+  _ <- getResult h echo
+  pass
+
+isEOF :: ReadHandle -> IO Bool
+isEOF ReadHandle{..} = do
+  readIORef buffer <&> \ case
+    BufferEOF -> True
+    BufferEmpty -> False
+    BufferPartialMarker {}  -> False
+    BufferChunk {} -> False
+
+emptyBuffer :: Buffer -> Buffer
+emptyBuffer old = case old of
+  BufferEOF -> BufferEOF
+  BufferEmpty -> BufferEmpty
+  BufferPartialMarker {}  -> BufferEmpty
+  BufferChunk {} -> BufferEmpty
 
 mkBufferChunk :: ByteString -> Buffer
 mkBufferChunk chunk
@@ -85,7 +106,7 @@ nextChunk :: ReadHandle -> IO Chunk
 nextChunk ReadHandle {..} = go
   where
     takeBuffer :: IO Buffer
-    takeBuffer = atomicModifyIORef' buffer $ (,) BufferEmpty
+    takeBuffer = atomicModifyIORef' buffer (emptyBuffer &&& id)
 
     putBuffer :: Buffer -> IO ()
     putBuffer = writeIORef buffer

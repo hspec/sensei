@@ -39,7 +39,7 @@ die :: String -> IO a
 die = throwIO . ErrorCall
 
 withInterpreter :: Config -> [String] -> (Interpreter -> IO r) -> IO r
-withInterpreter config args = bracket (new config args) close
+withInterpreter config args = bracket (new config args) (close $ verbosity config)
 
 new :: Config -> [String] -> IO Interpreter
 new config@Config{..} args_ = do
@@ -94,21 +94,15 @@ new config@Config{..} args_ = do
     evalThrow interpreter expr = do
       output <- eval interpreter expr
       unless (null output) $ do
-        close interpreter
+        close (verbosity config) interpreter
         die output
 
-close :: Interpreter -> IO ()
-close repl = do
-  hClose $ hIn repl
-
-  -- It is crucial not to close `hOut` before calling `waitForProcess`,
-  -- otherwise ghci may not cleanly terminate on SIGINT (ctrl-c) and hang
-  -- around consuming 100% CPU.  This happens when ghci tries to print
-  -- something to stdout in its signal handler (e.g. when it is blocked in
-  -- threadDelay it writes "Interrupted." on SIGINT).
-  e <- waitForProcess $ process repl
-  hClose $ hOut repl
-
+close :: (ByteString -> IO ()) -> Interpreter -> IO ()
+close echo Interpreter{..} = do
+  hClose hIn
+  ReadHandle.drain readHandle echo
+  hClose hOut
+  e <- waitForProcess process
   when (e /= ExitSuccess) $ do
     throwIO (userError $ "Language.Haskell.GhciWrapper.close: Interpreter exited with an error (" ++ show e ++ ")")
 
