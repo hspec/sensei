@@ -38,6 +38,11 @@ partialMarker = B.take 5 marker
 
 spec :: Spec
 spec = do
+  describe "drain" $ do
+    it "drains all remaining input" $ do
+      h <- fakeHandle ["foo", marker, "bar", marker, "baz", marker, ""]
+      withSpy (drain h) `shouldReturn` ["foo", "bar", "baz"]
+
   describe "getResult" $ do
     context "with a single result" $ do
       let input = ["foo", "bar", "baz", marker]
