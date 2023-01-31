@@ -5,7 +5,7 @@ module Language.Haskell.GhciWrapper (
 , Interpreter
 , withInterpreter
 , eval
-, evalEcho
+, evalVerbose
 ) where
 
 import           Imports
@@ -42,7 +42,7 @@ withInterpreter :: Config -> [String] -> (Interpreter -> IO r) -> IO r
 withInterpreter config args = bracket (new config args) close
 
 new :: Config -> [String] -> IO Interpreter
-new Config{..} args_ = do
+new config@Config{..} args_ = do
 
   requireFile configStartupFile
 
@@ -88,9 +88,7 @@ new Config{..} args_ = do
       hSetBuffering h LineBuffering
       hSetEncoding h utf8
 
-    printStartupMessages interpreter
-      | configVerbose = evalEcho interpreter ""
-      | otherwise = eval interpreter ""
+    printStartupMessages interpreter = evalWith (verbosity config) interpreter ""
 
     evalThrow :: Interpreter -> String -> IO ()
     evalThrow interpreter expr = do
@@ -123,17 +121,24 @@ putExpression Interpreter{hIn = stdin} e = do
 getResult :: Interpreter -> (ByteString -> IO ()) -> IO String
 getResult Interpreter{readHandle = h} = fmap (T.unpack . decodeUtf8) . ReadHandle.getResult h
 
-echo :: ByteString -> IO ()
-echo string = B.putStr string >> hFlush System.stdout
+verbosity :: Config -> ByteString -> IO ()
+verbosity config
+  | configVerbose config = verbose
+  | otherwise = silent
 
--- | Evaluate an expression
-eval :: Interpreter -> String -> IO String
-eval repl expr = do
-  putExpression repl expr
-  getResult repl (const pass)
+verbose :: ByteString -> IO ()
+verbose string = B.putStr string >> hFlush System.stdout
 
--- | Evaluate an expression
-evalEcho :: Interpreter -> String -> IO String
-evalEcho repl expr = do
+silent :: ByteString -> IO ()
+silent _ = pass
+
+evalWith :: (ByteString -> IO ()) -> Interpreter -> String -> IO String
+evalWith echo repl expr = do
   putExpression repl expr
   getResult repl echo
+
+eval :: Interpreter -> String -> IO String
+eval = evalWith silent
+
+evalVerbose :: Interpreter -> String -> IO String
+evalVerbose = evalWith verbose
