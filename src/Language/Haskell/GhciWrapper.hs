@@ -65,10 +65,13 @@ new config@Config{..} args_ = do
 
   _ <- printStartupMessages interpreter
 
-  -- The buffering of stdout and stderr is NoBuffering
   evalThrow interpreter "GHC.IO.Handle.hDuplicateTo System.IO.stdout System.IO.stderr"
+
+  -- GHCi uses NoBuffering for stdout and stderr by default:
+  -- https://downloads.haskell.org/ghc/9.4.4/docs/users_guide/ghci.html
   evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stdout GHC.IO.Handle.LineBuffering"
   evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stderr GHC.IO.Handle.LineBuffering"
+
   evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stdout GHC.IO.Encoding.utf8"
   evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stderr GHC.IO.Encoding.utf8"
 
