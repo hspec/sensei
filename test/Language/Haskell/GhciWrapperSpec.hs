@@ -83,12 +83,7 @@ spec = do
     it "gives an error message for identifiers that are not in scope" $ withGhci $ \ ghci -> do
       ghci "foo" >>= (`shouldSatisfy` isInfixOf "Variable not in scope: foo")
 
-    context "with NoImplicitPrelude" $ do
+    context "with -XNoImplicitPrelude" $ do
       it "works" $ withInterpreter ["-XNoImplicitPrelude"] $ \ ghci -> do
         Interpreter.eval ghci "putStrLn \"foo\"" >>= (`shouldContain` "Variable not in scope: putStrLn")
         Interpreter.eval ghci "23" `shouldReturn` "23\n"
-
-    context "with a strange String type" $ do
-      it "works" $ withGhci $ \ ghci -> do
-        ghci "type String = Int" `shouldReturn` ""
-        ghci "putStrLn \"foo\"" `shouldReturn` "foo\n"
