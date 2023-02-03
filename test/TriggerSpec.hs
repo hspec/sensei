@@ -104,7 +104,7 @@ spec = do
           writeFile "Spec.hs" (passingSpec ++ "foo = bar")
           (False, xs) <- silence (trigger session >> trigger session)
           normalize xs `shouldBe` [
-              "[1 of 1] Compiling Spec             ( Spec.hs, interpreted )"
+              "[1 of 1] Compiling Spec"
             , ""
             , "Spec.hs:..."
             , modulesLoaded Failed []
@@ -150,9 +150,9 @@ spec = do
           (True, xs) <- silence (trigger session)
           normalize xs `shouldBe` [
 #if __GLASGOW_HASKELL__ < 904
-              "[1 of 1] Compiling Spec             ( Spec.hs, interpreted )"
+              "[1 of 1] Compiling Spec"
 #else
-              "[1 of 1] Compiling Spec             ( Spec.hs, interpreted ) [Source file changed]"
+              "[1 of 1] Compiling Spec [Source file changed]"
 #endif
             , modulesLoaded Ok ["Spec"]
             , ""

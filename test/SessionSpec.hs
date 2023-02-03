@@ -19,9 +19,16 @@ spec = do
 
     context "with `:set +t +s`" $ do
       it "works just fine" $ do
-        withSomeSpec $ do
-          writeFile ".ghci" ":set +t +s"
-          Session.withSession ghciConfig {configIgnoreDotGhci = False} [] $ \ Session{..} -> do
+        withTempDirectory $ \ dir -> do
+          startupFile <- makeAbsolute "startup.ghci"
+          let
+            config = ghciConfig {
+              configIgnoreDotGhci = False
+            , configStartupFile = startupFile
+            , configWorkingDirectory = Just dir
+            }
+          writeFile (dir </> ".ghci") ":set +t +s"
+          Session.withSession config [] $ \ Session{..} -> do
             eval sessionInterpreter "23" `shouldReturn` "23\n"
 
     context "with -XOverloadedStrings" $ do
