@@ -11,7 +11,7 @@ import           Imports
 
 
 import           Util
-import           Session (Session, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
+import           Session (Session, echo, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
 
 triggerAll :: Session -> IO (Bool, String)
@@ -35,10 +35,10 @@ trigger session = do
   xs <- Session.reload session
   fmap (xs ++) <$> if reloadedSuccessfully xs
     then do
-      withColor Green $ putStrLn "RELOADING SUCCEEDED"
+      echo session $ withColor Green "RELOADING SUCCEEDED"
       hspec
     else do
-      withColor Red $ putStrLn "RELOADING FAILED"
+      echo session $ withColor Red "RELOADING FAILED"
       return (False, "")
   where
     hspec :: IO (Bool, String)

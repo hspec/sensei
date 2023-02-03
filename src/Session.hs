@@ -3,6 +3,7 @@
 module Session (
   Config(..)
 , Session(..)
+, echo
 , withSession
 , reload
 
@@ -26,8 +27,11 @@ module Session (
 import           Imports
 
 import           Data.IORef
+import qualified Data.Text as T
+import           Data.Text.Encoding (encodeUtf8)
 
-import           Language.Haskell.GhciWrapper
+import           Language.Haskell.GhciWrapper hiding (echo)
+import qualified Language.Haskell.GhciWrapper as Interpreter
 
 import           Util
 import           Options
@@ -40,6 +44,9 @@ data Session = Session {
 , sessionHspecArgs :: [String]
 , sessionHspecPreviousSummary :: IORef (Maybe Summary)
 }
+
+echo :: Session -> String -> IO ()
+echo session = Interpreter.echo (sessionInterpreter session) . encodeUtf8 . T.pack
 
 resetSummary :: Session -> IO ()
 resetSummary Session{..} = writeIORef sessionHspecPreviousSummary (Just $ Summary 0 0)
