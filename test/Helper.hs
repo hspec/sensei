@@ -2,6 +2,7 @@ module Helper (
   module Imports
 , ghciConfig
 , withSession
+, withTempDirectory
 , withSomeSpec
 , passingSpec
 , passingMetaSpec
@@ -12,7 +13,10 @@ module Helper (
 
 import           Imports
 
+import           System.Directory as Imports
+import           System.IO.Temp (withSystemTempDirectory)
 import           System.IO.Silently as Imports
+import           System.FilePath as Imports ((</>))
 import           System.Process as Imports (readProcess, callCommand)
 import           Test.Hspec as Imports
 import           Test.Mockery.Directory as Imports
@@ -31,10 +35,14 @@ ghciConfig = Config {
   configIgnoreDotGhci = True
 , configVerbose = False
 , configStartupFile = startupFile
+, configWorkingDirectory = Nothing
 }
 
 withSession :: [String] -> (Session -> IO a) -> IO a
-withSession = Session.withSession ghciConfig
+withSession args = Session.withSession ghciConfig $ "-fhide-source-paths" : args
+
+withTempDirectory :: (FilePath -> IO a) -> IO a
+withTempDirectory = withSystemTempDirectory "hspec"
 
 withSomeSpec :: IO a -> IO a
 withSomeSpec action = do

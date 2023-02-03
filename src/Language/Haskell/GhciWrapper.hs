@@ -24,8 +24,9 @@ import           ReadHandle (ReadHandle, toReadHandle)
 
 data Config = Config {
   configIgnoreDotGhci :: Bool
-, configVerbose :: Bool
 , configStartupFile :: FilePath
+, configVerbose :: Bool
+, configWorkingDirectory :: Maybe FilePath
 } deriving (Eq, Show)
 
 data Interpreter = Interpreter {
@@ -50,6 +51,7 @@ new config@Config{..} args_ = do
     std_in  = CreatePipe
   , std_out = CreatePipe
   , std_err = Inherit
+  , cwd = configWorkingDirectory
   }
 
   setMode stdin_

@@ -93,6 +93,7 @@ withSession startupFile args action = do
     config :: Config
     config = Config {
       configIgnoreDotGhci = False
-    , configVerbose = True
     , configStartupFile = startupFile
+    , configVerbose = True
+    , configWorkingDirectory = Nothing
     }

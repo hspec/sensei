@@ -52,6 +52,7 @@ tests:
     dependencies:
       - hspec >= 2.9.0
       - hspec-contrib >= 0.5.2
+      - temporary
       - QuickCheck
       - hspec-wai
       - mockery
