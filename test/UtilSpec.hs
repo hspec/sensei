@@ -7,6 +7,16 @@ import           System.Posix.Files
 
 import           Util
 
+withDotGhci :: (FilePath -> IO a) -> IO a
+withDotGhci action = withTempDirectory $ \ dir -> do
+  let dotGhci = dir </> ".ghci"
+  writeFile dotGhci ""
+  chmod "go-w" dotGhci
+  action dotGhci
+
+chmod :: String -> FilePath -> IO ()
+chmod mode file = callProcess "chmod" [mode, file]
+
 spec :: Spec
 spec = do
   describe "isBoring" $ do
@@ -27,15 +37,16 @@ spec = do
   let gitlessFeedback = Just (Cyan, "warning: not a git repository - .gitignore support not available\n")
 
   describe "filterGitIgnoredFiles_" $ do
-    around_ inTempDirectory $ do
-      it "discards files that are ignored by git" $ do
-        _ <- readProcess "git" ["init"] ""
-        writeFile ".gitignore" "foo"
-        filterGitIgnoredFiles_ ["foo", "bar"] `shouldReturn` (Nothing, ["bar"])
+    it "discards files that are ignored by git" $ do
+      withTempDirectory $ \ dir -> do
+        _ <- readProcess "git" ["-C", dir, "init"] ""
+        writeFile (dir </> ".gitignore") "foo"
+        filterGitIgnoredFiles_ dir ["foo", "bar"] `shouldReturn` (Nothing, ["bar"])
 
-      context "when used outside of a git repository" $ do
-        it "returns all files" $ do
-          filterGitIgnoredFiles_ ["foo", "bar"] `shouldReturn` (gitlessFeedback, ["foo", "bar"])
+    context "when used outside of a git repository" $ do
+      it "returns all files" $ do
+        withTempDirectory $ \ dir -> do
+          filterGitIgnoredFiles_ dir ["foo", "bar"] `shouldReturn` (gitlessFeedback, ["foo", "bar"])
 
   describe "gitCheckIgnoreFeedback" $ do
     context "when git reports no repository" $ do
@@ -57,30 +68,34 @@ spec = do
         let err = "fatal: Unable to do such and such"
         gitCheckIgnoreFeedback err `shouldBe` Just (Red, err)
 
-  describe "dotGhciWritableByOthers" $ do
-    around_ inTempDirectory $ do
-      before_ (touch ".ghci" >> callCommand "chmod go-w .ghci") $ do
-        it "returns False" $ do
-          dotGhciWritableByOthers `shouldReturn` False
+  describe "isWritableByOthers" $ do
+    it "returns False" $ do
+      withDotGhci $ \ dotGhci -> do
+        isWritableByOthers dotGhci `shouldReturn` False
 
-        context "when writable by group" $ do
-          it "returns True" $ do
-            callCommand "chmod g+w .ghci"
-            dotGhciWritableByOthers `shouldReturn` True
+    context "when writable by group" $ do
+      it "returns True" $ do
+        withDotGhci $ \ dotGhci -> do
+          chmod "g+w" dotGhci
+          isWritableByOthers dotGhci `shouldReturn` True
 
-        context "when writable by others" $ do
-          it "returns True" $ do
-            callCommand "chmod o+w .ghci"
-            dotGhciWritableByOthers `shouldReturn` True
+    context "when writable by others" $ do
+      it "returns True" $ do
+        withDotGhci $ \ dotGhci -> do
+          chmod "o+w" dotGhci
+          isWritableByOthers dotGhci `shouldReturn` True
 
-        context "when directory is writable by group" $ do
-          it "returns True" $ do
-            callCommand "chmod g+w ."
-            dotGhciWritableByOthers `shouldReturn` True
+    context "when directory is writable by group" $ do
+      it "returns True" $ do
+        withDotGhci $ \ dotGhci -> do
+          chmod "g+w" (takeDirectory dotGhci)
+          isWritableByOthers dotGhci `shouldReturn` True
 
-      context "when .ghci does not exist" $ do
-        it "returns False" $ do
-          dotGhciWritableByOthers `shouldReturn` False
+    context "when .ghci does not exist" $ do
+      it "returns False" $ do
+        withTempDirectory $ \ dir -> do
+          let dotGhci = dir </> ".ghci"
+          isWritableByOthers dotGhci `shouldReturn` False
 
   describe "writableByOthers" $ do
     it "returns False for owner" $ do

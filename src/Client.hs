@@ -11,11 +11,11 @@ import qualified Data.ByteString.Lazy as L
 
 import           HTTP (newSocket, socketAddr, socketName)
 
-client :: IO (Bool, L.ByteString)
-client = either (const $ connectError) id <$> tryJust p go
+client :: FilePath -> IO (Bool, L.ByteString)
+client dir = fromRight connectError <$> tryJust p go
   where
     connectError :: (Bool, L.ByteString)
-    connectError = (False, "could not connect to " <> fromString socketName <> "\n")
+    connectError = (False, "could not connect to " <> fromString (socketName dir) <> "\n")
 
     p :: HttpException -> Maybe ()
     p e = case e of
@@ -32,5 +32,5 @@ client = either (const $ connectError) id <$> tryJust p go
 
     newConnection _ _ _ = do
       sock <- newSocket
-      connect sock socketAddr
+      connect sock $ socketAddr dir
       socketConnection sock 8192

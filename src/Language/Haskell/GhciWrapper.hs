@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Language.Haskell.GhciWrapper (
   Config(..)
-, Interpreter
+, Interpreter(echo)
 , withInterpreter
 , eval
 , evalVerbose
@@ -14,8 +14,7 @@ import qualified Data.ByteString as B
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text as T
 import           System.IO hiding (stdin, stdout, stderr)
-import qualified System.IO as System
-import           System.Directory (doesFileExist)
+import           System.Directory (doesFileExist, makeAbsolute)
 import           System.Process
 import           System.Exit (ExitCode(..))
 
@@ -25,27 +24,34 @@ import           ReadHandle (ReadHandle, toReadHandle)
 data Config = Config {
   configIgnoreDotGhci :: Bool
 , configStartupFile :: FilePath
-, configVerbose :: Bool
 , configWorkingDirectory :: Maybe FilePath
-} deriving (Eq, Show)
+, configEcho :: ByteString -> IO ()
+}
 
 data Interpreter = Interpreter {
   hIn  :: Handle
 , hOut :: Handle
 , readHandle :: ReadHandle
 , process :: ProcessHandle
+, echo :: ByteString -> IO ()
 }
 
 die :: String -> IO a
 die = throwIO . ErrorCall
 
 withInterpreter :: Config -> [String] -> (Interpreter -> IO r) -> IO r
-withInterpreter config args = bracket (new config args) (close $ verbosity config)
+withInterpreter config args = bracket (new config args) close
 
 new :: Config -> [String] -> IO Interpreter
-new config@Config{..} args_ = do
+new Config{..} args_ = do
 
   requireFile configStartupFile
+  startupFile <- makeAbsolute configStartupFile
+
+  let
+    args = "-ghci-script" : startupFile : args_ ++ catMaybes [
+        if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
+      ]
 
   (Just stdin_, Just stdout_, Nothing, processHandle ) <- createProcess (proc "ghci" args) {
     std_in  = CreatePipe
@@ -63,6 +69,7 @@ new config@Config{..} args_ = do
     , readHandle
     , hOut = stdout_
     , process = processHandle
+    , echo = configEcho
     }
 
   _ <- printStartupMessages interpreter
@@ -84,26 +91,22 @@ new config@Config{..} args_ = do
       unless exists $ do
         die $ "Required file " <> show name <> " does not exist!"
 
-    args = "-ghci-script" : configStartupFile : args_ ++ catMaybes [
-        if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
-      ]
-
     setMode h = do
       hSetBinaryMode h False
       hSetBuffering h LineBuffering
       hSetEncoding h utf8
 
-    printStartupMessages interpreter = evalWith (verbosity config) interpreter ""
+    printStartupMessages interpreter = evalVerbose interpreter ""
 
     evalThrow :: Interpreter -> String -> IO ()
     evalThrow interpreter expr = do
       output <- eval interpreter expr
       unless (null output) $ do
-        close (verbosity config) interpreter
+        close interpreter
         die output
 
-close :: (ByteString -> IO ()) -> Interpreter -> IO ()
-close echo Interpreter{..} = do
+close :: Interpreter -> IO ()
+close Interpreter{..} = do
   hClose hIn
   ReadHandle.drain readHandle echo
   hClose hOut
@@ -117,27 +120,14 @@ putExpression Interpreter{hIn = stdin} e = do
   B.hPut stdin ReadHandle.marker
   hFlush stdin
 
-getResult :: Interpreter -> (ByteString -> IO ()) -> IO String
-getResult Interpreter{readHandle = h} = fmap (T.unpack . decodeUtf8) . ReadHandle.getResult h
-
-verbosity :: Config -> ByteString -> IO ()
-verbosity config
-  | configVerbose config = verbose
-  | otherwise = silent
-
-verbose :: ByteString -> IO ()
-verbose string = B.putStr string >> hFlush System.stdout
+getResult :: Interpreter -> IO String
+getResult Interpreter{..} = T.unpack . decodeUtf8 <$> ReadHandle.getResult readHandle echo
 
 silent :: ByteString -> IO ()
 silent _ = pass
 
-evalWith :: (ByteString -> IO ()) -> Interpreter -> String -> IO String
-evalWith echo repl expr = do
-  putExpression repl expr
-  getResult repl echo
-
 eval :: Interpreter -> String -> IO String
-eval = evalWith silent
+eval ghci = evalVerbose ghci {echo = silent}
 
 evalVerbose :: Interpreter -> String -> IO String
-evalVerbose = evalWith verbose
+evalVerbose ghci expr = putExpression ghci expr >> getResult ghci

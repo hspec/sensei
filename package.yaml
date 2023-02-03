@@ -26,7 +26,7 @@ dependencies:
   - filepath
   - unix
 
-ghc-options: -Wall
+ghc-options: -Wall -threaded
 
 source-dirs:
   - src
@@ -56,6 +56,5 @@ tests:
       - QuickCheck
       - hspec-wai
       - mockery
-      - silently
     cpp-options: -DTEST
     build-tools: hspec-discover

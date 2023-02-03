@@ -7,12 +7,13 @@ import           Control.Monad as Imports
 import           Data.Functor as Imports
 import           Data.Bifunctor as Imports
 import           Data.Char as Imports
+import           Data.Either as Imports
 import           Data.List as Imports
 import           Data.Maybe as Imports
 import           Data.String as Imports
 import           Data.ByteString.Char8 as Imports (ByteString, pack, unpack)
-import           Data.Text.Lazy.Encoding as Imports (encodeUtf8)
 import           Data.Tuple as Imports
+import           System.FilePath as Imports hiding (combine)
 import           System.IO.Error as Imports (isDoesNotExistError)
 import           Text.Read as Imports (readMaybe)
 

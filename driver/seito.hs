@@ -8,6 +8,6 @@ import           Client
 
 main :: IO ()
 main = do
-  (success, output) <- client
+  (success, output) <- client ""
   L.putStr output
   unless success exitFailure

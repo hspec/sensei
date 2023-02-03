@@ -1,9 +1,11 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
 import           Helper
+import qualified Data.ByteString.Char8 as B
 
-import           Language.Haskell.GhciWrapper (Config(..), Interpreter)
+import           Language.Haskell.GhciWrapper (Config(..), Interpreter(..))
 import qualified Language.Haskell.GhciWrapper as Interpreter
 
 main :: IO ()
@@ -20,16 +22,25 @@ spec = do
   describe "withInterpreter" $ do
     context "on shutdown" $ do
       it "drains `stdout` of the `ghci` process" $ do
-        result <- capture_ $ Interpreter.withInterpreter ghciConfig {configVerbose = True} [] $ \ _ghci -> do
-          pass
-        last (lines result) `shouldBe` "Leaving GHCi."
+        result <- withSpy $ \ spy -> do
+          Interpreter.withInterpreter ghciConfig {configEcho = spy} [] $ \ _ghci -> do
+            pass
+        last (B.lines $ mconcat result) `shouldBe` "Leaving GHCi."
 
   describe "evalVerbose" $ do
-    it "echos result to stdout" $ do
-      withInterpreter [] $ \ ghci -> do
-        capture (Interpreter.evalVerbose ghci $ "putStr" ++ show "foo\nbar") `shouldReturn` ("foo\nbar", "foo\nbar")
+    it "echos result" $ do
+      fmap mconcat . withSpy $ \ spy -> do
+        withInterpreter [] $ \ ghci -> do
+          Interpreter.evalVerbose ghci {echo = spy} "23" `shouldReturn` "23\n"
+      `shouldReturn` "23\n"
 
   describe "eval" $ do
+    it "does not echo result" $ do
+      fmap mconcat . withSpy $ \ spy -> do
+        withInterpreter [] $ \ ghci -> do
+          Interpreter.eval ghci {echo = spy} "23" `shouldReturn` "23\n"
+      `shouldReturn` ""
+
     it "shows literals" $ withGhci $ \ ghci -> do
       ghci "23" `shouldReturn` "23\n"
 

@@ -14,36 +14,37 @@ module HTTP (
 import           Imports
 
 import           System.Directory
+import           Data.Text.Lazy.Encoding (encodeUtf8)
 import           Network.Wai
 import           Network.HTTP.Types
 import           Network.Wai.Handler.Warp (runSettingsSocket, defaultSettings)
 import           Network.Socket
 
-socketName :: String
-socketName = ".sensei.sock"
+socketName :: FilePath -> String
+socketName dir = dir </> ".sensei.sock"
 
-socketAddr :: SockAddr
-socketAddr = SockAddrUnix socketName
+socketAddr :: FilePath -> SockAddr
+socketAddr = SockAddrUnix . socketName
 
 newSocket :: IO Socket
 newSocket = socket AF_UNIX Stream 0
 
 withSocket :: (Socket -> IO a) -> IO a
-withSocket action = bracket newSocket close action
+withSocket = bracket newSocket close
 
-withServer :: IO (Bool, String) -> IO a -> IO a
-withServer trigger = withApplication (app trigger)
+withServer :: FilePath -> IO (Bool, String) -> IO a -> IO a
+withServer dir trigger = withApplication dir (app trigger)
 
-withApplication :: Application -> IO a -> IO a
-withApplication application action = do
-  removeSocketFile
-  withSocket $ \sock -> do
-    bracket_ (bind sock socketAddr) removeSocketFile $ do
+withApplication :: FilePath -> Application -> IO a -> IO a
+withApplication dir application action = do
+  removeSocketFile dir
+  withSocket $ \ sock -> do
+    bracket_ (bind sock $ socketAddr dir) (removeSocketFile dir) $ do
       listen sock maxListenQueue
       withThread (runSettingsSocket defaultSettings sock application) action
 
-removeSocketFile :: IO ()
-removeSocketFile = void $ tryJust (guard . isDoesNotExistError) (removeFile socketName)
+removeSocketFile :: FilePath -> IO ()
+removeSocketFile dir = void $ tryJust (guard . isDoesNotExistError) (removeFile $ socketName dir)
 
 withThread :: IO () -> IO a -> IO a
 withThread asyncAction action = do

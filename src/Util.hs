@@ -1,4 +1,6 @@
-{-# LANGUAGE CPP, OverloadedStrings, LambdaCase, RecordWildCards, ViewPatterns #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Util (
   Color(..)
 , withColor
@@ -7,6 +9,7 @@ module Util (
 , filterGitIgnoredFiles
 , normalizeTypeSignatures
 , dotGhciWritableByOthers
+, isWritableByOthers
 
 #ifdef TEST
 , filterGitIgnoredFiles_
@@ -18,20 +21,19 @@ module Util (
 import           Imports
 
 import           System.Console.ANSI
-import           System.FilePath
 import           System.Process
 import           System.Posix.Files
 import           System.Posix.Types
 import qualified Data.Text as T
 
-withInfoColor :: IO a -> IO a
+withInfoColor :: String -> String
 withInfoColor = withColor Magenta
 
-withColor :: Color -> IO a -> IO a
-withColor c = bracket_ set reset
+withColor :: Color -> String -> String
+withColor c string =  set <> string <> reset
   where
-    set = setSGR [SetColor Foreground Dull c]
-    reset = setSGR []
+    set = setSGRCode [SetColor Foreground Dull c]
+    reset = setSGRCode []
 
 isBoring :: FilePath -> Bool
 isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
@@ -39,23 +41,23 @@ isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
     dirs = splitDirectories p
     isEmacsAutoSave = isPrefixOf ".#" . takeFileName
 
-filterGitIgnoredFiles :: [FilePath] -> IO [FilePath]
-filterGitIgnoredFiles files = do
-  (feedback, ignoredFiles) <- filterGitIgnoredFiles_ files
+filterGitIgnoredFiles :: FilePath -> [FilePath] -> IO [FilePath]
+filterGitIgnoredFiles dir files = do
+  (feedback, ignoredFiles) <- filterGitIgnoredFiles_ dir files
   printFeedback feedback
-  return $ ignoredFiles
+  return ignoredFiles
   where
     printFeedback :: Feedback -> IO ()
-    printFeedback = mapM_ $ \ (color, err) -> withColor color $ putStrLn ('\n' : err)
+    printFeedback = mapM_ $ \ (color, err) -> putStrLn ('\n' : withColor color err)
 
 type Feedback = Maybe (Color, String)
 
-filterGitIgnoredFiles_ :: [FilePath] -> IO (Feedback, [FilePath])
-filterGitIgnoredFiles_ files = fmap (files \\) <$> gitCheckIgnore files
+filterGitIgnoredFiles_ :: FilePath -> [FilePath] -> IO (Feedback, [FilePath])
+filterGitIgnoredFiles_ dir files = fmap (files \\) <$> gitCheckIgnore dir files
 
-gitCheckIgnore :: [FilePath] -> IO (Feedback, [FilePath])
-gitCheckIgnore files = do
-  (_, ignoredFiles, err) <- readProcessWithExitCode "git" ["check-ignore", "--stdin", "-z"] $ join_ files
+gitCheckIgnore :: FilePath -> [FilePath] -> IO (Feedback, [FilePath])
+gitCheckIgnore dir files = do
+  (_, ignoredFiles, err) <- readProcessWithExitCode "git" ["-C", dir, "check-ignore", "--stdin", "-z"] $ join_ files
   return (gitCheckIgnoreFeedback err, split ignoredFiles)
   where
     join_ = intercalate "\0"
@@ -83,11 +85,14 @@ normalizeTypeSignatures = normalize . concatMap replace
       _ -> [c]
 
 dotGhciWritableByOthers :: IO Bool
-dotGhciWritableByOthers = do
-  exists <- fileExist ".ghci"
+dotGhciWritableByOthers = isWritableByOthers ".ghci"
+
+isWritableByOthers :: FilePath -> IO Bool
+isWritableByOthers name = do
+  exists <- fileExist name
   if exists then do
-    mode <- fileMode <$> getFileStatus ".ghci"
-    dirMode <- fileMode <$> getFileStatus "."
+    mode <- fileMode <$> getFileStatus name
+    dirMode <- fileMode <$> getFileStatus (takeDirectory name)
     return (writableByOthers mode || writableByOthers dirMode)
   else
     return False

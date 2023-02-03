@@ -1,7 +1,6 @@
 module Helper (
   module Imports
 , ghciConfig
-, withSession
 , withTempDirectory
 , withSomeSpec
 , passingSpec
@@ -15,42 +14,29 @@ import           Imports
 
 import           System.Directory as Imports
 import           System.IO.Temp (withSystemTempDirectory)
-import           System.IO.Silently as Imports
-import           System.FilePath as Imports ((</>))
-import           System.Process as Imports (readProcess, callCommand)
+import           System.Process as Imports (readProcess, callProcess, callCommand)
 import           Test.Hspec as Imports
-import           Test.Mockery.Directory as Imports
 import           Test.Hspec.Contrib.Mocks.V1 as Imports
 
 import           Run ()
-import qualified Session
-import           Session (Session)
 import           Language.Haskell.GhciWrapper (Config(..))
-
-startupFile :: FilePath
-startupFile = "startup.ghci"
 
 ghciConfig :: Config
 ghciConfig = Config {
   configIgnoreDotGhci = True
-, configVerbose = False
-, configStartupFile = startupFile
+, configStartupFile = "startup.ghci"
 , configWorkingDirectory = Nothing
+, configEcho = \ _ -> pass
 }
-
-withSession :: [String] -> (Session -> IO a) -> IO a
-withSession args = Session.withSession ghciConfig $ "-fhide-source-paths" : args
 
 withTempDirectory :: (FilePath -> IO a) -> IO a
 withTempDirectory = withSystemTempDirectory "hspec"
 
-withSomeSpec :: IO a -> IO a
-withSomeSpec action = do
-  startup <- readFile startupFile
-  inTempDirectory $ do
-    writeFile startupFile startup
-    writeFile "Spec.hs" passingSpec
-    action
+withSomeSpec :: (FilePath -> IO a) -> IO a
+withSomeSpec action = withTempDirectory $ \ dir -> do
+  let name = dir </> "Spec.hs"
+  writeFile name passingSpec
+  action name
 
 passingSpec :: String
 passingSpec = unlines [

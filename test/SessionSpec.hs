@@ -9,6 +9,9 @@ import           Language.Haskell.GhciWrapper (eval)
 import qualified Session
 import           Session (Config(..), Session(..), Summary(..), hspecFailureEnvName, hspecPreviousSummary, hspecCommand)
 
+withSession :: [String] -> (Session -> IO a) -> IO a
+withSession = Session.withSession ghciConfig
+
 spec :: Spec
 spec = do
   describe "withSession" $ do
@@ -20,11 +23,9 @@ spec = do
     context "with `:set +t +s`" $ do
       it "works just fine" $ do
         withTempDirectory $ \ dir -> do
-          startupFile <- makeAbsolute "startup.ghci"
           let
             config = ghciConfig {
               configIgnoreDotGhci = False
-            , configStartupFile = startupFile
             , configWorkingDirectory = Just dir
             }
           writeFile (dir </> ".ghci") ":set +t +s"
@@ -39,20 +40,20 @@ spec = do
   describe "reload" $ do
     it "reloads" $ do
       withSession [] $ \session -> do
-        silence (Session.reload session) `shouldReturn` (modulesLoaded Ok [] ++ "\n")
+        Session.reload session `shouldReturn` (modulesLoaded Ok [] ++ "\n")
 
-  describe "hasSpec" $ around_ withSomeSpec $ do
+  describe "hasSpec" $ around withSomeSpec $ do
     context "when module contains spec" $ do
-      it "returns True" $ do
-        withSession ["Spec.hs"] $ \session -> do
-          _ <- silence (Session.reload session)
+      it "returns True" $ \ name -> do
+        withSession [name] $ \session -> do
+          _ <- Session.reload session
           Session.hasSpec hspecCommand session `shouldReturn` True
 
     context "when module does not contain spec" $ do
-      it "returns False" $ do
-        withSession ["Spec.hs"] $ \session -> do
-          writeFile "Spec.hs" "module Main where"
-          _ <- silence (Session.reload session)
+      it "returns False" $ \ name -> do
+        withSession [name] $ \session -> do
+          writeFile name "module Main where"
+          _ <- Session.reload session
           Session.hasSpec hspecCommand session `shouldReturn` False
 
   describe "hasHspecCommandSignature" $ do
@@ -77,16 +78,16 @@ spec = do
       it "returns False" $ do
         Session.hasHspecCommandSignature hspecCommand "foo" `shouldBe` False
 
-  describe "runSpec" $ around_ withSomeSpec $ do
+  describe "runSpec" $ around withSomeSpec $ do
     let runSpec = Session.runSpec hspecCommand
-    it "stores summary of spec run" $ do
-      withSession ["Spec.hs"] $ \session -> do
-        _ <- silence (runSpec session >> runSpec session)
+    it "stores summary of spec run" $ \ name -> do
+      withSession [name] $ \session -> do
+        _ <- runSpec session >> runSpec session
         hspecPreviousSummary session `shouldReturn` Just (Summary 2 0)
 
-    it "accepts Hspec args" $ do
-      withSession ["Spec.hs", "--no-color", "-m", "foo"] $ \session -> do
-        _ <- silence (runSpec session >> runSpec session)
+    it "accepts Hspec args" $ \ name -> do
+      withSession [name, "--no-color", "-m", "foo"] $ \session -> do
+        _ <- runSpec session >> runSpec session
         hspecPreviousSummary session `shouldReturn` Just (Summary 1 0)
 
   describe "parseSummary" $ do

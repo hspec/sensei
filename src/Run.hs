@@ -6,8 +6,10 @@ module Run (
 
 import           Imports
 
+import qualified Data.ByteString as B
+import           System.IO
 import           System.Exit
-import           System.FSNotify
+import qualified System.FSNotify as FSNotify
 
 import qualified HTTP
 import qualified Session
@@ -20,26 +22,31 @@ import           Util
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
 
-watchFiles :: EventQueue -> IO ()
-watchFiles queue = do
+watchFiles :: FilePath -> EventQueue -> IO ()
+watchFiles dir queue = do
   watch $ \ case
-    Added file _ _ -> emit $ FileEvent FileAdded file
-    Modified file _ _ -> emit $ FileEvent FileModified file
-    ModifiedAttributes _file _ _ -> pass
-    Removed file _ _ -> emit $ FileEvent FileRemoved file
-    WatchedDirectoryRemoved _file _ _ -> pass
-    CloseWrite file _ _ -> emit $ FileEvent FileModified file
-    Unknown file _ _ _ -> emit $ FileEvent FileModified file
+    FSNotify.Added file _ _ -> emit $ FileEvent FileAdded file
+    FSNotify.Modified file _ _ -> emit $ FileEvent FileModified file
+    FSNotify.ModifiedAttributes _file _ _ -> pass
+    FSNotify.Removed file _ _ -> emit $ FileEvent FileRemoved file
+    FSNotify.WatchedDirectoryRemoved _file _ _ -> pass
+    FSNotify.CloseWrite file _ _ -> emit $ FileEvent FileModified file
+    FSNotify.Unknown file _ _ _ -> emit $ FileEvent FileModified file
   where
+    emit :: EventQueue.Event -> IO ()
     emit = emitEvent queue
 
+    watch :: FSNotify.Action -> IO ()
     watch action = void . forkIO $ do
-      withManager $ \ manager -> do
-        _stopListening <- watchTree manager "." isInteresting action
+      FSNotify.withManager $ \ manager -> do
+        _stopListening <- FSNotify.watchTree manager dir isInteresting action
         waitForever
-      where
-        isInteresting = (&&) <$> isFile <*> not . isBoring . eventPath
-        isFile = eventIsDirectory >>> (== IsFile)
+
+    isInteresting :: FSNotify.Event -> Bool
+    isInteresting = (&&) <$> isFile <*> not . isBoring . FSNotify.eventPath
+
+    isFile :: FSNotify.Event -> Bool
+    isFile = FSNotify.eventIsDirectory >>> (== FSNotify.IsFile)
 
 watchInput :: EventQueue -> IO ()
 watchInput queue = void . forkIO $ do
@@ -48,13 +55,13 @@ watchInput queue = void . forkIO $ do
     emitEvent queue TriggerAll
   emitEvent queue Done
 
-run :: FilePath -> [String] -> IO ()
-run startupFile args = do
+run :: FilePath -> FilePath -> [String] -> IO ()
+run dir startupFile args = do
   queue <- newQueue
-  watchFiles queue
+  watchFiles dir queue
   watchInput queue
   lastOutput <- newMVar (True, "")
-  HTTP.withServer (readMVar lastOutput) $ do
+  HTTP.withServer dir (readMVar lastOutput) $ do
     let
       saveOutput :: IO (Bool, String) -> IO ()
       saveOutput action = modifyMVar_ lastOutput $ \_ -> action
@@ -65,7 +72,7 @@ run startupFile args = do
             triggerAction = saveOutput (trigger session)
             triggerAllAction = saveOutput (triggerAll session)
           triggerAction
-          processQueue queue triggerAllAction triggerAction
+          processQueue dir queue triggerAllAction triggerAction
         case status of
           Reload -> go
           Terminate -> return ()
@@ -76,7 +83,7 @@ runWeb startupFile args = do
   withSession startupFile args $ \session -> do
     _ <- trigger session
     lock <- newMVar ()
-    HTTP.withServer (withMVar lock $ \() -> trigger session) $ do
+    HTTP.withServer "" (withMVar lock $ \() -> trigger session) $ do
       waitForever
 
 withSession :: FilePath -> [String] -> (Session -> IO a) -> IO a
@@ -94,6 +101,6 @@ withSession startupFile args action = do
     config = Config {
       configIgnoreDotGhci = False
     , configStartupFile = startupFile
-    , configVerbose = True
     , configWorkingDirectory = Nothing
+    , configEcho = \ string -> B.putStr string >> hFlush stdout
     }

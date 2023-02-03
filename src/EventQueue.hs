@@ -36,7 +36,7 @@ data FileEventType = FileAdded | FileRemoved | FileModified
   deriving (Eq, Show)
 
 newQueue :: IO EventQueue
-newQueue = atomically $ newTChan
+newQueue = atomically newTChan
 
 emitEvent :: EventQueue -> Event -> IO ()
 emitEvent chan = atomically . writeTChan chan
@@ -61,10 +61,10 @@ readEvents chan = do
 
 data Status = Terminate | Reload
 
-processQueue :: EventQueue -> IO () -> IO () -> IO Status
-processQueue chan triggerAll trigger = go
+processQueue :: FilePath -> EventQueue -> IO () -> IO () -> IO Status
+processQueue dir chan triggerAll trigger = go
   where
-    go = readEvents chan >>= processEvents >>= \ case
+    go = readEvents chan >>= processEvents dir >>= \ case
       NoneAction -> do
         go
       TriggerAction files -> do
@@ -81,14 +81,14 @@ processQueue chan triggerAll trigger = go
         return Terminate
 
     output :: [String] -> IO ()
-    output = withInfoColor . mapM_ (putStrLn . mappend "--> ")
+    output = mapM_ (putStrLn . withInfoColor . mappend "--> ")
 
 data Action = NoneAction | TriggerAction [FilePath] | TriggerAllAction | ReloadAction FilePath FileEventType | DoneAction
   deriving (Eq, Show)
 
-processEvents :: [Event] -> IO Action
-processEvents events = do
-  files <- fileEvents events
+processEvents :: FilePath -> [Event] -> IO Action
+processEvents dir events = do
+  files <- fileEvents dir events
   return $ if
     | Done `elem` events -> DoneAction
     | (file, t) : _ <- filter shouldReload files -> ReloadAction file t
@@ -102,11 +102,11 @@ shouldReload (name, event) = "Spec.hs" `isSuffixOf` name && case event of
   FileRemoved -> True
   FileModified -> False
 
-fileEvents :: [Event] -> IO [(FilePath, FileEventType)]
-fileEvents events = filterGitIgnored $ combineFileEvents [(p, e) | FileEvent e p <- events]
+fileEvents :: FilePath -> [Event] -> IO [(FilePath, FileEventType)]
+fileEvents dir events = filterGitIgnored dir $ combineFileEvents [(p, e) | FileEvent e p <- events]
 
-filterGitIgnored :: [(FilePath, FileEventType)] -> IO [(FilePath, FileEventType)]
-filterGitIgnored events = map f <$> filterGitIgnoredFiles (map fst events)
+filterGitIgnored :: FilePath -> [(FilePath, FileEventType)] -> IO [(FilePath, FileEventType)]
+filterGitIgnored dir events = map f <$> filterGitIgnoredFiles dir (map fst events)
   where
     f :: FilePath -> (FilePath, FileEventType)
     f p = (p, fromJust $ lookup p events)
