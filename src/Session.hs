@@ -17,7 +17,6 @@ module Session (
 #ifdef TEST
 , runSpec
 , hasSpec
-, hspecFailureEnvName
 , hasHspecCommandSignature
 , hspecCommand
 , parseSummary
@@ -35,9 +34,6 @@ import qualified Language.Haskell.GhciWrapper as Interpreter
 
 import           Util
 import           Options
-
-hspecFailureEnvName :: String
-hspecFailureEnvName = "HSPEC_FAILURES"
 
 data Session = Session {
   sessionInterpreter :: Interpreter
@@ -57,7 +53,6 @@ hspecPreviousSummary Session{..} = readIORef sessionHspecPreviousSummary
 withSession :: Config -> [String] -> (Session -> IO r) -> IO r
 withSession config args action = do
   withInterpreter config ghciArgs $ \ ghci -> do
-    _ <- eval ghci ("System.Environment.unsetEnv " ++ show hspecFailureEnvName)
     ref <- newIORef (Just $ Summary 0 0)
     action (Session ghci hspecArgs ref)
   where

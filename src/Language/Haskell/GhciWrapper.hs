@@ -15,6 +15,7 @@ import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text as T
 import           System.IO hiding (stdin, stdout, stderr)
 import           System.Directory (doesFileExist, makeAbsolute)
+import           System.Environment (getEnvironment)
 import           System.Process
 import           System.Exit (ExitCode(..))
 
@@ -42,22 +43,29 @@ die = throwIO . ErrorCall
 withInterpreter :: Config -> [String] -> (Interpreter -> IO r) -> IO r
 withInterpreter config args = bracket (new config args) close
 
+sanitizeEnv :: [(String, String)] -> [(String, String)]
+sanitizeEnv = filter p
+  where
+    p ("HSPEC_FAILURES", _) = False
+    p _ = True
+
 new :: Config -> [String] -> IO Interpreter
 new Config{..} args_ = do
 
   requireFile configStartupFile
   startupFile <- makeAbsolute configStartupFile
-
+  env <- sanitizeEnv <$> getEnvironment
   let
     args = "-ghci-script" : startupFile : args_ ++ catMaybes [
         if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
       ]
 
   (Just stdin_, Just stdout_, Nothing, processHandle ) <- createProcess (proc "ghci" args) {
-    std_in  = CreatePipe
+    cwd = configWorkingDirectory
+  , env = Just env
+  , std_in  = CreatePipe
   , std_out = CreatePipe
   , std_err = Inherit
-  , cwd = configWorkingDirectory
   }
 
   setMode stdin_

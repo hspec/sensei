@@ -7,7 +7,7 @@ import           System.Environment.Blank (setEnv)
 
 import           Language.Haskell.GhciWrapper (eval)
 import qualified Session
-import           Session (Config(..), Session(..), Summary(..), hspecFailureEnvName, hspecPreviousSummary, hspecCommand)
+import           Session (Config(..), Session(..), Summary(..), hspecPreviousSummary, hspecCommand)
 
 withSession :: [String] -> (Session -> IO a) -> IO a
 withSession = Session.withSession ghciConfig
@@ -16,9 +16,9 @@ spec :: Spec
 spec = do
   describe "withSession" $ do
     it "unsets HSPEC_FAILURES" $ do
-      setEnv hspecFailureEnvName "foo" True
+      setEnv "HSPEC_FAILURES" "foo" True
       withSession [] $ \ Session{..} -> do
-        eval sessionInterpreter ("System.Environment.lookupEnv " ++ show hspecFailureEnvName) `shouldReturn` "Nothing\n"
+        eval sessionInterpreter "System.Environment.lookupEnv \"HSPEC_FAILURES\"" `shouldReturn` "Nothing\n"
 
     context "with `:set +t +s`" $ do
       it "works just fine" $ do
