@@ -36,10 +36,13 @@ withSession specPath args = do
     (dir, file) = splitFileName specPath
 
 trigger :: Session -> IO (Result, [String])
-trigger session = fmap normalize <$> Trigger.trigger session
+trigger session = triggerWithHooks session defaultHooks
+
+triggerWithHooks :: Session -> Hooks -> IO (Result, [String])
+triggerWithHooks session hooks = fmap normalize <$> Trigger.trigger session hooks
 
 triggerAll :: Session -> IO (Result, [String])
-triggerAll session = fmap normalize <$> Trigger.triggerAll session
+triggerAll session = fmap normalize <$> Trigger.triggerAll session defaultHooks
 
 requiresHspecMeta :: IO () -> IO ()
 requiresHspecMeta action = try action >>= \ case
@@ -52,6 +55,18 @@ requiresHspecMeta action = try action >>= \ case
     ]
   Left err -> throwIO err
   Right () -> pass
+
+data HookExecuted = BeforeReloadSucceeded | AfterReloadSucceeded
+  deriving (Eq, Show)
+
+withHooks :: (Hooks -> IO ()) -> IO [HookExecuted]
+withHooks action = withSpy $ \ spy -> action defaultHooks {
+  beforeReload = spy BeforeReloadSucceeded >> return HookSuccess
+, afterReload = spy AfterReloadSucceeded >> return HookSuccess
+}
+
+failingHook :: Hook
+failingHook = return $ HookFailure "hook failed"
 
 spec :: Spec
 spec = do
@@ -130,6 +145,43 @@ spec = do
           , "2 examples, 0 failures"
           , "Summary {summaryExamples = 2, summaryFailures = 0}"
           ])
+
+    context "with hooks" $ do
+      it "executes hooks" $ \ name -> do
+        withHooks $ \ hooks -> do
+          withSession name [] $ \ session -> do
+            triggerWithHooks session hooks `shouldReturn` (Success, [
+                modulesLoaded Ok ["Spec"]
+              , withColor Green "RELOADING SUCCEEDED"
+              , ""
+              , "foo [✔]"
+              , "bar [✔]"
+              , ""
+              , "Finished in ..."
+              , "2 examples, 0 failures"
+              , "Summary {summaryExamples = 2, summaryFailures = 0}"
+              ])
+        `shouldReturn` [BeforeReloadSucceeded, AfterReloadSucceeded]
+
+      context "when the before-reload hook fails" $ do
+        it "cancels the reload cycle" $ \ name -> do
+          withHooks $ \ hooks -> do
+            withSession name [] $ \ session -> do
+              triggerWithHooks session hooks { beforeReload = failingHook } `shouldReturn` (HookFailed, [
+                  "hook failed"
+                ])
+          `shouldReturn` []
+
+      context "when the after-reload hook fails" $ do
+        it "cancels the reload cycle" $ \ name -> do
+          withHooks $ \ hooks -> do
+            withSession name [] $ \ session -> do
+              triggerWithHooks session hooks { afterReload = failingHook } `shouldReturn` (HookFailed, [
+                  modulesLoaded Ok ["Spec"]
+                , withColor Green "RELOADING SUCCEEDED"
+                , "hook failed"
+                ])
+          `shouldReturn` [BeforeReloadSucceeded]
 
     context "with a module that does not compile" $ do
       it "stops after reloading" $ \ name -> do

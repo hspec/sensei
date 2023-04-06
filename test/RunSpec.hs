@@ -11,7 +11,7 @@ import qualified Run
 defaultRunArgs :: IO RunArgs
 defaultRunArgs = do
   args <- Run.defaultRunArgs "startup.ghci"
-  return args { sessionConfig = args.sessionConfig { configEcho = silent } }
+  return args { ignoreConfig = True, sessionConfig = args.sessionConfig { configEcho = silent } }
 
 spec :: Spec
 spec = do

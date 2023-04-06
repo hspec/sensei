@@ -63,5 +63,6 @@ app trigger _ respond = trigger >>= textPlain
     textPlain (result, xs) = respond $ responseLBS status [(hContentType, "text/plain")] (encodeUtf8 . fromString $ xs)
       where
         status = case result of
+          Trigger.HookFailed -> internalServerError500
           Trigger.Failure -> internalServerError500
           Trigger.Success -> ok200

@@ -6,7 +6,7 @@ import           System.Environment.Blank (setEnv)
 
 import           Language.Haskell.GhciWrapper (eval)
 import qualified Session
-import           Session (Config(..), Session(..), Summary(..), hspecPreviousSummary, hspecCommand)
+import           Session hiding (withSession, runSpec)
 
 withSession :: [String] -> (Session -> IO a) -> IO a
 withSession = Session.withSession ghciConfig

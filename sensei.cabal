@@ -23,6 +23,22 @@ source-repository head
 
 executable seito
   main-is: seito.hs
+  other-modules:
+      Client
+      Config
+      EventQueue
+      HTTP
+      Imports
+      Input
+      Language.Haskell.GhciWrapper
+      Options
+      Pager
+      ReadHandle
+      Run
+      Session
+      Trigger
+      Util
+      Paths_sensei
   hs-source-dirs:
       src
       driver
@@ -38,10 +54,12 @@ executable seito
       NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
-      ansi-terminal
+      aeson
+    , ansi-terminal
     , async
     , base >=4.11 && <5
     , bytestring
+    , casing
     , containers
     , directory
     , filepath
@@ -58,25 +76,27 @@ executable seito
     , unix
     , wai
     , warp
-  other-modules:
-      Client
-      EventQueue
-      HTTP
-      Imports
-      Input
-      Language.Haskell.GhciWrapper
-      Options
-      Pager
-      ReadHandle
-      Run
-      Session
-      Trigger
-      Util
-      Paths_sensei
+    , yaml
   default-language: GHC2021
 
 executable sensei
   main-is: sensei.hs
+  other-modules:
+      Client
+      Config
+      EventQueue
+      HTTP
+      Imports
+      Input
+      Language.Haskell.GhciWrapper
+      Options
+      Pager
+      ReadHandle
+      Run
+      Session
+      Trigger
+      Util
+      Paths_sensei
   hs-source-dirs:
       src
       driver
@@ -92,10 +112,12 @@ executable sensei
       NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
-      ansi-terminal
+      aeson
+    , ansi-terminal
     , async
     , base >=4.11 && <5
     , bytestring
+    , casing
     , containers
     , directory
     , filepath
@@ -112,25 +134,27 @@ executable sensei
     , unix
     , wai
     , warp
-  other-modules:
-      Client
-      EventQueue
-      HTTP
-      Imports
-      Input
-      Language.Haskell.GhciWrapper
-      Options
-      Pager
-      ReadHandle
-      Run
-      Session
-      Trigger
-      Util
-      Paths_sensei
+    , yaml
   default-language: GHC2021
 
 executable sensei-web
   main-is: sensei-web.hs
+  other-modules:
+      Client
+      Config
+      EventQueue
+      HTTP
+      Imports
+      Input
+      Language.Haskell.GhciWrapper
+      Options
+      Pager
+      ReadHandle
+      Run
+      Session
+      Trigger
+      Util
+      Paths_sensei
   hs-source-dirs:
       src
       driver
@@ -146,10 +170,12 @@ executable sensei-web
       NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
-      ansi-terminal
+      aeson
+    , ansi-terminal
     , async
     , base >=4.11 && <5
     , bytestring
+    , casing
     , containers
     , directory
     , filepath
@@ -166,26 +192,41 @@ executable sensei-web
     , unix
     , wai
     , warp
-  other-modules:
-      Client
-      EventQueue
-      HTTP
-      Imports
-      Input
-      Language.Haskell.GhciWrapper
-      Options
-      Pager
-      ReadHandle
-      Run
-      Session
-      Trigger
-      Util
-      Paths_sensei
+    , yaml
   default-language: GHC2021
 
 test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
+  other-modules:
+      Client
+      Config
+      EventQueue
+      HTTP
+      Imports
+      Input
+      Language.Haskell.GhciWrapper
+      Options
+      Pager
+      ReadHandle
+      Run
+      Session
+      Trigger
+      Util
+      ClientSpec
+      ConfigSpec
+      EventQueueSpec
+      Helper
+      HTTPSpec
+      Language.Haskell.GhciWrapperSpec
+      OptionsSpec
+      ReadHandleSpec
+      RunSpec
+      SessionSpec
+      SpecHook
+      TriggerSpec
+      UtilSpec
+      Paths_sensei
   hs-source-dirs:
       src
       test
@@ -205,10 +246,12 @@ test-suite spec
       hspec-discover:hspec-discover
   build-depends:
       QuickCheck
+    , aeson
     , ansi-terminal
     , async
     , base >=4.11 && <5
     , bytestring
+    , casing
     , containers
     , directory
     , filepath
@@ -230,31 +273,5 @@ test-suite spec
     , unix
     , wai
     , warp
-  other-modules:
-      Client
-      EventQueue
-      HTTP
-      Imports
-      Input
-      Language.Haskell.GhciWrapper
-      Options
-      Pager
-      ReadHandle
-      Run
-      Session
-      Trigger
-      Util
-      ClientSpec
-      EventQueueSpec
-      Helper
-      HTTPSpec
-      Language.Haskell.GhciWrapperSpec
-      OptionsSpec
-      ReadHandleSpec
-      RunSpec
-      SessionSpec
-      SpecHook
-      TriggerSpec
-      UtilSpec
-      Paths_sensei
+    , yaml
   default-language: GHC2021
