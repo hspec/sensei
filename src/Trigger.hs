@@ -1,6 +1,10 @@
 {-# LANGUAGE CPP #-}
 module Trigger (
-  Result(..)
+  Hook
+, HookResult(..)
+, Hooks(..)
+, defaultHooks
+, Result(..)
 , trigger
 , triggerAll
 #ifdef TEST
@@ -21,16 +25,28 @@ import           Control.Monad.Writer.Strict hiding (pass)
 import           Control.Monad.Except
 
 import           Util
+import           Config (Hook, HookResult(..))
 import           Session (Session, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
 
-data Result = Failure | Success
+data Hooks = Hooks {
+  beforeReload :: Hook
+, afterReload :: Hook
+}
+
+defaultHooks :: Hooks
+defaultHooks = Hooks {
+  beforeReload = return HookSuccess
+, afterReload = return HookSuccess
+}
+
+data Result = HookFailed | Failure | Success
   deriving (Eq, Show)
 
-triggerAll :: Session -> IO (Result, String)
-triggerAll session = do
+triggerAll :: Session -> Hooks -> IO (Result, String)
+triggerAll session hooks = do
   resetSummary session
-  trigger session
+  trigger session hooks
 
 reloadedSuccessfully :: String -> Bool
 reloadedSuccessfully = any success . lines
@@ -51,15 +67,16 @@ removeProgress xs = case break (== '\r') xs of
     dropLastLine :: String -> String
     dropLastLine = reverse . dropWhile (/= '\n') . reverse
 
-type Trigger = ExceptT () (WriterT String IO)
+type Trigger = ExceptT Result (WriterT String IO)
 
-trigger :: Session -> IO (Result, String)
-trigger session = runWriterT (runExceptT go) >>= \ case
-  (Left (), output) -> return (Failure, output)
+trigger :: Session -> Hooks -> IO (Result, String)
+trigger session hooks = runWriterT (runExceptT go) >>= \ case
+  (Left result, output) -> return (result, output)
   (Right (), output) -> return (Success, output)
   where
     go :: Trigger ()
     go = do
+      runHook hooks.beforeReload
       output <- Session.reload session
       tell output
       case reloadedSuccessfully output of
@@ -69,12 +86,13 @@ trigger session = runWriterT (runExceptT go) >>= \ case
         True -> do
           echo $ withColor Green "RELOADING SUCCEEDED" <> "\n"
 
+      runHook hooks.afterReload
       getRunSpec >>= \ case
         Just hspec -> rerunAllOnSuccess hspec
         Nothing -> pass
 
     abort :: Trigger a
-    abort = throwError ()
+    abort = throwError Failure
 
     rerunAllOnSuccess :: Trigger () -> Trigger ()
     rerunAllOnSuccess hspec = do
@@ -90,6 +108,11 @@ trigger session = runWriterT (runExceptT go) >>= \ case
       liftIO hspec >>= tell . removeProgress
       result <- hspecPreviousSummary session
       unless (isSuccess result) abort
+
+    runHook :: Hook -> Trigger ()
+    runHook hook = liftIO hook >>= \ case
+      HookSuccess -> pass
+      HookFailure message -> echo message >> throwError HookFailed
 
     echo :: String -> Trigger ()
     echo message = do

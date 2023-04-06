@@ -25,6 +25,7 @@ import           Trigger
 import qualified Input
 import           Pager (pager)
 import           Util
+import           Config
 
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
@@ -86,7 +87,8 @@ defaultRunArgs startupFile = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "")
   return RunArgs {
-    dir = ""
+    ignoreConfig = False
+  , dir = ""
   , args = []
   , lastOutput = lastOutput
   , queue = queue
@@ -95,7 +97,8 @@ defaultRunArgs startupFile = do
   }
 
 data RunArgs = RunArgs {
-  dir :: FilePath
+  ignoreConfig :: Bool
+, dir :: FilePath
 , args :: [String]
 , lastOutput :: MVar (Result, String)
 , queue :: EventQueue
@@ -105,6 +108,9 @@ data RunArgs = RunArgs {
 
 runWith :: RunArgs -> IO ()
 runWith RunArgs {..} = do
+  config <- case ignoreConfig of
+    False -> loadConfig
+    True -> return defaultConfig
   cleanup <- newIORef pass
   let
     runCleanupAction :: IO ()
@@ -118,14 +124,25 @@ runWith RunArgs {..} = do
       runCleanupAction
       result <- modifyMVar lastOutput $ \ _ -> (id &&& id) <$> action
       case result of
-        (Failure, output) -> pager output >>= addCleanupAction
-        (Success, _output) -> pass
+        (HookFailed, _output) -> pass
+        (Failure, output) -> config.senseiHooksOnFailure >>= \ case
+          HookSuccess -> pager output >>= addCleanupAction
+          HookFailure message -> hPutStrLn stderr message
+        (Success, _output) -> config.senseiHooksOnSuccess >>= \ case
+          HookSuccess -> pass
+          HookFailure message -> hPutStrLn stderr message
+
+    hooks :: Hooks
+    hooks = Hooks {
+      beforeReload = config.senseiHooksBeforeReload
+    , afterReload = config.senseiHooksAfterReload
+    }
 
     go extraArgs = do
       status <- withSession sessionConfig (extraArgs <> args) $ \ session -> do
         let
-          triggerAction = saveOutput (trigger session)
-          triggerAllAction = saveOutput (triggerAll session)
+          triggerAction = saveOutput (trigger session hooks)
+          triggerAllAction = saveOutput (triggerAll session hooks)
         triggerAction
         processQueue (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
       case status of
@@ -136,9 +153,9 @@ runWith RunArgs {..} = do
 runWeb :: FilePath -> [String] -> IO ()
 runWeb startupFile args = do
   Session.withSession (defaultSessionConfig startupFile) args $ \session -> do
-    _ <- trigger session
+    _ <- trigger session defaultHooks
     lock <- newMVar ()
-    HTTP.withServer "" (withMVar lock $ \() -> trigger session) $ do
+    HTTP.withServer "" (withMVar lock $ \() -> trigger session defaultHooks) $ do
       waitForever
 
 defaultSessionConfig :: FilePath -> Session.Config

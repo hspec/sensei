@@ -42,6 +42,9 @@ dependencies:
   - containers
   - transformers
   - mtl
+  - aeson
+  - yaml
+  - casing
 
 ghc-options: -Wall -threaded
 
