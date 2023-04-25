@@ -108,7 +108,11 @@ spec = do
           normalize xs `shouldBe` [
               "[1 of 1] Compiling Spec"
             , ""
+#if __GLASGOW_HASKELL__ >= 906
+            , "Spec.hs:9:7: error: [GHC-88464] Variable not in scope: bar"
+#else
             , "Spec.hs:9:7: error: Variable not in scope: bar"
+#endif
             , modulesLoaded Failed []
             ]
 
