@@ -27,6 +27,7 @@ jobs:
           - '9.0'
           - '9.2'
           - '9.4'
+          - '9.6'
         include:
           - os: macos-latest
             ghc: system
@@ -35,6 +36,13 @@ jobs:
       - uses: hspec/setup-haskell@v1
         with:
           ghc-version: ${{ matrix.ghc }}
+
+      - shell: bash
+        # The macOS runner comes with an outdated version of cabal:
+        # https://github.com/actions/runner-images/blob/macOS-12/20230416.1/images/macos/macos-12-Readme.md#tools
+        #
+        # (on Linux this is a noop)
+        run: ghcup install cabal 3.10 --set
 
       - shell: bash
         run: cabal update
