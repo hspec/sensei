@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE LambdaCase #-}
 module Session (
   Config(..)
 , Session(..)
@@ -69,15 +70,21 @@ data Summary = Summary {
 hspecCommand :: String
 hspecCommand = "Test.Hspec.Runner.hspecResult spec"
 
+hspecCoreCommand :: String
+hspecCoreCommand = "Test.Hspec.Core.Runner.hspecResult spec"
+
 hspecMetaCommand :: String
 hspecMetaCommand = "Test.Hspec.Meta.hspecResult spec"
 
 getRunSpec :: Session -> IO (Maybe (IO String))
-getRunSpec session = do
-  r <- getRunSpecWith hspecCommand session
-  case r of
-    Just _  -> return r
-    Nothing -> getRunSpecWith hspecMetaCommand session
+getRunSpec session = go [hspecCommand, hspecCoreCommand, hspecMetaCommand]
+  where
+    go = \ case
+      [] -> return Nothing
+      command : commands -> do
+        getRunSpecWith command session >>= \ case
+          r@Just{} -> return r
+          Nothing -> go commands
 
 getRunSpecWith :: String -> Session -> IO (Maybe (IO String))
 getRunSpecWith command session = do
