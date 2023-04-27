@@ -35,10 +35,10 @@ trigger session = do
   xs <- Session.reload session
   fmap (xs ++) <$> if reloadedSuccessfully xs
     then do
-      echo session $ withColor Green "RELOADING SUCCEEDED"
+      echo session $ withColor Green "RELOADING SUCCEEDED\n"
       hspec
     else do
-      echo session $ withColor Red "RELOADING FAILED"
+      echo session $ withColor Red "RELOADING FAILED\n"
       return (False, "")
   where
     hspec :: IO (Bool, String)
