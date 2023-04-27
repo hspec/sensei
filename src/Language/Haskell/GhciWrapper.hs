@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Language.Haskell.GhciWrapper (
@@ -60,29 +61,33 @@ new Config{..} args_ = do
         if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
       ]
 
-  (Just stdin_, Just stdout_, Nothing, processHandle ) <- createProcess (proc "ghci" args) {
+  (stdoutReadEnd, stdoutWriteEnd) <- createPipe
+
+#if defined(__IO_MANAGER_WINIO__)
+#error Use `associateHandle'` as per https://hackage.haskell.org/package/process-1.6.17.0/docs/System-Process.html#v:createPipe
+#endif
+
+  (Just stdin_, Nothing, Nothing, processHandle ) <- createProcess (proc "ghci" args) {
     cwd = configWorkingDirectory
   , env = Just env
   , std_in  = CreatePipe
-  , std_out = CreatePipe
-  , std_err = Inherit
+  , std_out = UseHandle stdoutWriteEnd
+  , std_err = UseHandle stdoutWriteEnd
   }
 
   setMode stdin_
-  readHandle <- toReadHandle stdout_ 1024
+  readHandle <- toReadHandle stdoutReadEnd 1024
 
   let
     interpreter = Interpreter {
       hIn = stdin_
     , readHandle
-    , hOut = stdout_
+    , hOut = stdoutReadEnd
     , process = processHandle
     , echo = configEcho
     }
 
   _ <- printStartupMessages interpreter
-
-  evalThrow interpreter "GHC.IO.Handle.hDuplicateTo System.IO.stdout System.IO.stderr"
 
   -- GHCi uses NoBuffering for stdout and stderr by default:
   -- https://downloads.haskell.org/ghc/9.4.4/docs/users_guide/ghci.html
