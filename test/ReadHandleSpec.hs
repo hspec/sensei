@@ -1,37 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ViewPatterns #-}
 module ReadHandleSpec (spec) where
 
 import           Helper
-import           Test.QuickCheck
 import qualified Data.ByteString as B
 
 import           ReadHandle
 
-chunkByteString :: (Int, Int) -> ByteString -> Gen [ByteString]
-chunkByteString size = go
-  where
-    go "" = return []
-    go xs = do
-      n <- chooseInt size
-      let (chunk, rest) = B.splitAt n xs
-      (chunk :) <$> go rest
-
 fakeHandle :: [ByteString] -> IO ReadHandle
 fakeHandle chunks = ReadHandle <$> stubAction chunks <*> newEmptyBuffer
 
-data ChunkSizes = SmallChunks | BigChunks
-
 withRandomChunkSizes :: [ByteString] -> (ReadHandle -> Expectation) -> Property
-withRandomChunkSizes (mconcat -> input) action = property $ do
-  chunkSizes <- elements [SmallChunks, BigChunks]
-  let
-    maxChunkSize = case chunkSizes of
-      SmallChunks -> 4
-      BigChunks -> B.length input
-
-  chunks <- chunkByteString (1, maxChunkSize) input
-  return $ fakeHandle chunks >>= action
+withRandomChunkSizes chunks action = forAll (randomChunkSizes $ mconcat chunks) $ fakeHandle >=> action
 
 partialMarker :: ByteString
 partialMarker = B.take 5 marker

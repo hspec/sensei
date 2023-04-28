@@ -34,12 +34,14 @@ executable seito
     , directory
     , filepath
     , fsnotify ==0.4.*
+    , hspec-core
     , http-client >=0.5.0
     , http-types
     , network
     , process
     , stm
-    , text
+    , terminal-size
+    , text >=2
     , time
     , unix
     , wai
@@ -50,6 +52,7 @@ executable seito
       HTTP
       Imports
       Language.Haskell.GhciWrapper
+      LimitErrorOutput
       Options
       ReadHandle
       Run
@@ -72,12 +75,14 @@ executable sensei
     , directory
     , filepath
     , fsnotify ==0.4.*
+    , hspec-core
     , http-client >=0.5.0
     , http-types
     , network
     , process
     , stm
-    , text
+    , terminal-size
+    , text >=2
     , time
     , unix
     , wai
@@ -88,6 +93,7 @@ executable sensei
       HTTP
       Imports
       Language.Haskell.GhciWrapper
+      LimitErrorOutput
       Options
       ReadHandle
       Run
@@ -110,12 +116,14 @@ executable sensei-web
     , directory
     , filepath
     , fsnotify ==0.4.*
+    , hspec-core
     , http-client >=0.5.0
     , http-types
     , network
     , process
     , stm
-    , text
+    , terminal-size
+    , text >=2
     , time
     , unix
     , wai
@@ -126,6 +134,7 @@ executable sensei-web
       HTTP
       Imports
       Language.Haskell.GhciWrapper
+      LimitErrorOutput
       Options
       ReadHandle
       Run
@@ -155,15 +164,18 @@ test-suite spec
     , fsnotify ==0.4.*
     , hspec >=2.9.0
     , hspec-contrib >=0.5.2
+    , hspec-core
     , hspec-wai
     , http-client >=0.5.0
     , http-types
     , mockery
     , network
     , process
+    , random
     , stm
     , temporary
-    , text
+    , terminal-size
+    , text >=2
     , time
     , unix
     , wai
@@ -174,6 +186,7 @@ test-suite spec
       HTTP
       Imports
       Language.Haskell.GhciWrapper
+      LimitErrorOutput
       Options
       ReadHandle
       Run
@@ -185,6 +198,7 @@ test-suite spec
       Helper
       HTTPSpec
       Language.Haskell.GhciWrapperSpec
+      LimitErrorOutputSpec
       OptionsSpec
       ReadHandleSpec
       SessionSpec

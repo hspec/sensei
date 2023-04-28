@@ -29,12 +29,14 @@ import           Imports
 import           Data.IORef
 import qualified Data.Text as T
 import           Data.Text.Encoding (encodeUtf8)
+import qualified System.Console.Terminal.Size as Terminal
 
 import           Language.Haskell.GhciWrapper hiding (echo)
 import qualified Language.Haskell.GhciWrapper as Interpreter
 
 import           Util
 import           Options
+import           LimitErrorOutput (Lines(..), Columns(..), limitToTerminalSize)
 
 data Session = Session {
   sessionInterpreter :: Interpreter
@@ -60,7 +62,21 @@ withSession config args action = do
     (ghciArgs, hspecArgs) = splitArgs args
 
 reload :: Session -> IO String
-reload Session{..} = evalVerbose sessionInterpreter ":reload"
+reload Session{..} = evalVerboseWithErrorOutputLimitedToTerminalSize sessionInterpreter ":reload"
+
+evalVerboseWithErrorOutputLimitedToTerminalSize :: Interpreter -> String -> IO String
+evalVerboseWithErrorOutputLimitedToTerminalSize interpreter command = do
+  withErrorOutputLimitedToTerminalSize interpreter >>= (`evalVerbose` command)
+
+getTerminalSize :: IO (Maybe (Lines, Columns))
+getTerminalSize = fmap (Lines . Terminal.height &&& Columns . Terminal.width) <$> Terminal.size
+
+withErrorOutputLimitedToTerminalSize :: Interpreter -> IO Interpreter
+withErrorOutputLimitedToTerminalSize interpreter = getTerminalSize >>= \ case
+  Nothing -> return interpreter
+  Just (height, width) -> do
+    limitedEcho <- limitToTerminalSize (height - 3) width (Interpreter.echo interpreter)
+    return interpreter { Interpreter.echo = limitedEcho }
 
 data Summary = Summary {
   summaryExamples :: Int
@@ -105,7 +121,7 @@ runSpec :: String -> Session -> IO String
 runSpec command session@Session{..} = do
   failedPreviously <- isFailure <$> hspecPreviousSummary session
   let args = "--color" : (if failedPreviously then addRerun else id) sessionHspecArgs
-  r <- evalVerbose sessionInterpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ command
+  r <- evalVerboseWithErrorOutputLimitedToTerminalSize sessionInterpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ command
   writeIORef sessionHspecPreviousSummary (parseSummary r)
   return r
   where

@@ -17,7 +17,7 @@ dependencies:
   - warp
   - http-types
   - stm
-  - text
+  - text >= 2
   - network
   - ansi-terminal
   - directory
@@ -25,6 +25,8 @@ dependencies:
   - bytestring
   - filepath
   - unix
+  - terminal-size
+  - hspec-core
 
 ghc-options: -Wall -threaded
 
@@ -53,6 +55,7 @@ tests:
       - hspec >= 2.9.0
       - hspec-contrib >= 0.5.2
       - temporary
+      - random
       - QuickCheck
       - hspec-wai
       - mockery

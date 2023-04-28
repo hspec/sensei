@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Helper (
   module Imports
 , ghciConfig
@@ -8,6 +9,7 @@ module Helper (
 , failingSpec
 , Status(..)
 , modulesLoaded
+, randomChunkSizes
 ) where
 
 import           Imports
@@ -15,8 +17,10 @@ import           Imports
 import           System.Directory as Imports
 import           System.IO.Temp (withSystemTempDirectory)
 import           System.Process as Imports (readProcess, callProcess, callCommand)
+import qualified Data.ByteString as B
 import           Test.Hspec as Imports
 import           Test.Hspec.Contrib.Mocks.V1 as Imports
+import           Test.QuickCheck as Imports hiding (output)
 
 import           Run ()
 import           Language.Haskell.GhciWrapper (Config(..))
@@ -90,3 +94,23 @@ modulesLoaded status xs = show status ++ ", " ++ mods ++ " loaded."
       | n == 5 = "five modules"
       | n == 6 = "six modules"
       | otherwise = show n ++ " modules"
+
+data ChunkSizes = SmallChunks | BigChunks
+
+randomChunkSizes :: ByteString -> Gen [ByteString]
+randomChunkSizes input = do
+  chunkSizes <- elements [SmallChunks, BigChunks]
+  let
+    maxChunkSize = case chunkSizes of
+      SmallChunks -> 4
+      BigChunks -> B.length input
+  chunkByteString (1, maxChunkSize) input
+
+chunkByteString :: (Int, Int) -> ByteString -> Gen [ByteString]
+chunkByteString size = go
+  where
+    go "" = return []
+    go xs = do
+      n <- chooseInt size
+      let (chunk, rest) = B.splitAt n xs
+      (chunk :) <$> go rest
