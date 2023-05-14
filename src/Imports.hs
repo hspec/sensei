@@ -18,6 +18,9 @@ import           System.FilePath as Imports hiding (combine)
 import           System.IO.Error as Imports (isDoesNotExistError)
 import           Text.Read as Imports (readMaybe)
 
+import           System.IO (Handle)
+import           GHC.IO.Handle.Internals (wantReadableHandle_)
+
 pass :: Applicative m => m ()
 pass = pure ()
 
@@ -29,3 +32,6 @@ while p action = go
       when notDone $ do
         action
         go
+
+withLockedHandle :: Handle -> IO a -> IO a
+withLockedHandle h = wantReadableHandle_ "pager" h . const
