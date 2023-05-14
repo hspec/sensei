@@ -13,6 +13,7 @@ module Run (
 import           Imports
 
 import qualified Data.ByteString as B
+import           Data.IORef
 import           System.IO
 import qualified System.FSNotify as FSNotify
 
@@ -23,6 +24,7 @@ import           Session (withSession)
 import           EventQueue
 import           Trigger
 import qualified Input
+import           Pager (pager)
 import           Util
 
 waitForever :: IO ()
@@ -89,9 +91,21 @@ data RunArgs = RunArgs {
 
 runWith :: RunArgs -> IO ()
 runWith RunArgs {..} = do
+  cleanup <- newIORef pass
   let
+    runCleanupAction :: IO ()
+    runCleanupAction = join $ atomicModifyIORef' cleanup $ (,) pass
+
+    addCleanupAction :: IO () -> IO ()
+    addCleanupAction cleanupAction = atomicModifyIORef' cleanup $ \ action -> (action >> cleanupAction, ())
+
     saveOutput :: IO (Trigger.Result, String) -> IO ()
-    saveOutput action = modifyMVar_ lastOutput $ \ _ -> action
+    saveOutput action = do
+      runCleanupAction
+      result <- modifyMVar lastOutput $ \ _ -> (id &&& id) <$> action
+      case result of
+        (Failure, output) -> pager output >>= addCleanupAction
+        (Success, _output) -> pass
 
   fix $ \ rec -> do
     status <- withSession sessionConfig args $ \ session -> do

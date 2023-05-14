@@ -39,6 +39,7 @@ executable seito
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
+    , async
     , base >=4.11 && <5
     , bytestring
     , directory
@@ -62,6 +63,7 @@ executable seito
       Input
       Language.Haskell.GhciWrapper
       Options
+      Pager
       ReadHandle
       Run
       Session
@@ -88,6 +90,7 @@ executable sensei
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
+    , async
     , base >=4.11 && <5
     , bytestring
     , directory
@@ -111,6 +114,7 @@ executable sensei
       Input
       Language.Haskell.GhciWrapper
       Options
+      Pager
       ReadHandle
       Run
       Session
@@ -137,6 +141,7 @@ executable sensei-web
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
+    , async
     , base >=4.11 && <5
     , bytestring
     , directory
@@ -160,6 +165,7 @@ executable sensei-web
       Input
       Language.Haskell.GhciWrapper
       Options
+      Pager
       ReadHandle
       Run
       Session
@@ -191,6 +197,7 @@ test-suite spec
   build-depends:
       QuickCheck
     , ansi-terminal
+    , async
     , base >=4.11 && <5
     , bytestring
     , directory
@@ -219,6 +226,7 @@ test-suite spec
       Input
       Language.Haskell.GhciWrapper
       Options
+      Pager
       ReadHandle
       Run
       Session

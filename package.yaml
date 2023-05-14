@@ -38,6 +38,7 @@ dependencies:
   - bytestring
   - filepath
   - unix
+  - async
 
 ghc-options: -Wall -threaded
 
