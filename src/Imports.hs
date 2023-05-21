@@ -4,6 +4,7 @@ import           Control.Arrow as Imports ((>>>), (&&&))
 import           Control.Concurrent as Imports
 import           Control.Exception as Imports
 import           Control.Monad as Imports
+import           Data.Function as Imports (fix)
 import           Data.Functor as Imports
 import           Data.Bifunctor as Imports
 import           Data.Char as Imports

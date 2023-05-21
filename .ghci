@@ -1,1 +1,2 @@
+:set -XHaskell2010
 :set -DTEST -isrc -itest -hide-packagebase-compat-batteries

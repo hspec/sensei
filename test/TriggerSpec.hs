@@ -59,6 +59,18 @@ spec = do
         it "detects success" $ do
           reloadedSuccessfully "Ok, four modules loaded." `shouldBe` True
 
+  describe "removeProgress" $ do
+    it "removes transient output" $ do
+      (removeProgress . unlines) [
+          "foo"
+        , "some progress output...\r                       \rbar"
+        , "baz"
+        ] `shouldBe` unlines [
+          "foo"
+        , "bar"
+        , "baz"
+        ]
+
   describe "triggerAll" $ do
     it "runs all specs" $ do
       withSomeSpec $ \ name -> do
