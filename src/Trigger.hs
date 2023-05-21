@@ -4,6 +4,7 @@ module Trigger (
 , triggerAll
 #ifdef TEST
 , reloadedSuccessfully
+, removeProgress
 #endif
 ) where
 
@@ -30,10 +31,18 @@ reloadedSuccessfully = any success . lines
       Just xs -> "modules loaded: " `isPrefixOf` xs
       Nothing -> False
 
+removeProgress :: String -> String
+removeProgress xs = case break (== '\r') xs of
+  (_, "") -> xs
+  (ys, _ : zs) -> dropLastLine ys ++ removeProgress zs
+  where
+    dropLastLine :: String -> String
+    dropLastLine = reverse . dropWhile (/= '\n') . reverse
+
 trigger :: Session -> IO (Bool, String)
 trigger session = do
   xs <- Session.reload session
-  fmap (xs ++) <$> if reloadedSuccessfully xs
+  fmap removeProgress . fmap (xs ++) <$> if reloadedSuccessfully xs
     then do
       echo session $ withColor Green "RELOADING SUCCEEDED\n"
       hspec
