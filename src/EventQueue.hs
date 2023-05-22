@@ -50,7 +50,10 @@ readEvents chan = do
   return (e : es)
   where
     isKeyboardInput :: Event -> Bool
-    isKeyboardInput event = event == Done || event == TriggerAll
+    isKeyboardInput = \ case
+      TriggerAll -> True
+      FileEvent {} -> False
+      Done -> True
 
     emptyQueue :: STM [Event]
     emptyQueue = do
