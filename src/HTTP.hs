@@ -20,6 +20,8 @@ import           Network.HTTP.Types
 import           Network.Wai.Handler.Warp (runSettingsSocket, defaultSettings)
 import           Network.Socket
 
+import qualified Trigger
+
 socketName :: FilePath -> String
 socketName dir = dir </> ".sensei.sock"
 
@@ -32,7 +34,7 @@ newSocket = socket AF_UNIX Stream 0
 withSocket :: (Socket -> IO a) -> IO a
 withSocket = bracket newSocket close
 
-withServer :: FilePath -> IO (Bool, String) -> IO a -> IO a
+withServer :: FilePath -> IO (Trigger.Result, String) -> IO a -> IO a
 withServer dir trigger = withApplication dir (app trigger)
 
 withApplication :: FilePath -> Application -> IO a -> IO a
@@ -56,11 +58,11 @@ withThread asyncAction action = do
   takeMVar mvar
   return r
 
-app :: IO (Bool, String) -> Application
+app :: IO (Trigger.Result, String) -> Application
 app trigger _ respond = trigger >>= textPlain
   where
-    textPlain (success, xs) = respond $ responseLBS status [(hContentType, "text/plain")] (encodeUtf8 . fromString $ xs)
+    textPlain (result, xs) = respond $ responseLBS status [(hContentType, "text/plain")] (encodeUtf8 . fromString $ xs)
       where
-        status
-          | success = ok200
-          | otherwise = internalServerError500
+        status = case result of
+          Trigger.Failure -> internalServerError500
+          Trigger.Success -> ok200

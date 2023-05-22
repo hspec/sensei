@@ -76,7 +76,7 @@ spec = do
       withSomeSpec $ \ name -> do
         withSession name [] $ \session -> do
           writeFile name failingSpec
-          (False, xs) <- trigger session >> triggerAll session
+          (Failure, xs) <- trigger session >> triggerAll session
           normalize xs `shouldBe` [
               modulesLoaded Ok ["Spec"]
             , ""
@@ -101,7 +101,7 @@ spec = do
     it "reloads and runs specs" $ \ name -> do
       withSession name [] $ \session -> do
         result <- trigger session >> trigger session
-        fmap normalize result `shouldBe` (True, [
+        fmap normalize result `shouldBe` (Success, [
             modulesLoaded Ok ["Spec"]
           , ""
           , "foo [✔]"
@@ -116,7 +116,7 @@ spec = do
       it "stops after reloading" $ \ name -> do
         withSession name [] $ \session -> do
           writeFile name (passingSpec ++ "foo = bar")
-          (False, xs) <- trigger session >> trigger session
+          (Failure, xs) <- trigger session >> trigger session
           normalize xs `shouldBe` [
               "[1 of 1] Compiling Spec"
             , ""
@@ -132,14 +132,14 @@ spec = do
       it "indicates failure" $ \ name -> do
         withSession name [] $ \session -> do
           writeFile name failingSpec
-          (False, xs) <- trigger session
+          (Failure, xs) <- trigger session
           xs `shouldContain` modulesLoaded Ok ["Spec"]
           xs `shouldContain` "2 examples, 1 failure"
 
       it "only reruns failing specs" $ \ name -> do
         withSession name [] $ \session -> do
           writeFile name failingSpec
-          (False, xs) <- trigger session >> trigger session
+          (Failure, xs) <- trigger session >> trigger session
           normalize xs `shouldBe` [
               modulesLoaded Ok ["Spec"]
             , ""
@@ -165,7 +165,7 @@ spec = do
           writeFile name failingSpec
           _ <- trigger session
           writeFile name passingSpec
-          (True, xs) <- trigger session
+          (Success, xs) <- trigger session
           normalize xs `shouldBe` [
 #if __GLASGOW_HASKELL__ < 904
               "[1 of 1] Compiling Spec"
@@ -192,14 +192,14 @@ spec = do
       it "only reloads" $ \ name -> do
         withSession name [] $ \session -> do
           writeFile name "module Foo where"
-          (trigger session >> trigger session) `shouldReturn` (True, modulesLoaded Ok ["Foo"] ++ "\n")
+          (trigger session >> trigger session) `shouldReturn` (Success, modulesLoaded Ok ["Foo"] ++ "\n")
 
     context "with an hspec-meta spec" $ do
       it "reloads and runs spec" $ \ name -> do
         withSession name ["-package hspec-meta"] $ \session -> do
           writeFile name passingMetaSpec
           result <- trigger session >> trigger session
-          fmap normalize result `shouldBe` (True, [
+          fmap normalize result `shouldBe` (Success, [
               modulesLoaded Ok ["Spec"]
             , ""
             , "foo [✔]"

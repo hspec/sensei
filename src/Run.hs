@@ -60,11 +60,11 @@ run dir startupFile args = do
   queue <- newQueue
   watchFiles dir queue
   watchInput queue
-  lastOutput <- newMVar (True, "")
+  lastOutput <- newMVar (Trigger.Success, "")
   HTTP.withServer dir (readMVar lastOutput) $ do
     let
-      saveOutput :: IO (Bool, String) -> IO ()
-      saveOutput action = modifyMVar_ lastOutput $ \_ -> action
+      saveOutput :: IO (Trigger.Result, String) -> IO ()
+      saveOutput action = modifyMVar_ lastOutput $ \ _ -> action
 
       go = do
         status <- withSession startupFile args $ \ session -> do
