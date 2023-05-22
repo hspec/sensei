@@ -1,6 +1,8 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE LambdaCase #-}
 module Trigger (
-  trigger
+  Result(..)
+, trigger
 , triggerAll
 #ifdef TEST
 , reloadedSuccessfully
@@ -15,7 +17,10 @@ import           Util
 import           Session (Session, echo, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
 
-triggerAll :: Session -> IO (Bool, String)
+data Result = Failure | Success
+  deriving (Eq, Show)
+
+triggerAll :: Session -> IO (Result, String)
 triggerAll session = do
   resetSummary session
   trigger session
@@ -39,7 +44,7 @@ removeProgress xs = case break (== '\r') xs of
     dropLastLine :: String -> String
     dropLastLine = reverse . dropWhile (/= '\n') . reverse
 
-trigger :: Session -> IO (Bool, String)
+trigger :: Session -> IO (Result, String)
 trigger session = do
   xs <- Session.reload session
   fmap removeProgress . fmap (xs ++) <$> if reloadedSuccessfully xs
@@ -48,25 +53,27 @@ trigger session = do
       hspec
     else do
       echo session $ withColor Red "RELOADING FAILED\n"
-      return (False, "")
+      return (Failure, "")
   where
-    hspec :: IO (Bool, String)
+    hspec :: IO (Result, String)
     hspec = do
       mRun <- Session.getRunSpec session
       case mRun of
-        Just run -> runSpecs run
-        Nothing -> return (True, "")
+        Just run -> rerunAllOnSuccess run
+        Nothing -> return (Success, "")
 
-    runSpecs :: IO String -> IO (Bool, String)
-    runSpecs run = do
+    rerunAllOnSuccess :: IO String -> IO (Result, String)
+    rerunAllOnSuccess run = do
       failedPreviously <- isFailure <$> hspecPreviousSummary session
-      (success, xs) <- runSpec run
-      fmap (xs ++) <$> if success && failedPreviously
+      (result, xs) <- runSpec run
+      fmap (xs ++) <$> if result == Success && failedPreviously
         then runSpec run
-        else return (success, "")
+        else return (result, "")
 
-    runSpec :: IO a -> IO (Bool, a)
+    runSpec :: IO a -> IO (Result, a)
     runSpec run = do
       xs <- run
-      success <- isSuccess <$> hspecPreviousSummary session
-      return (success, xs)
+      result <- isSuccess <$> hspecPreviousSummary session >>= \ case
+        False -> return Failure
+        True -> return Success
+      return (result, xs)
