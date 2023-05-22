@@ -12,7 +12,6 @@ module Trigger (
 
 import           Imports
 
-
 import           Util
 import           Session (Session, echo, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
@@ -46,14 +45,22 @@ removeProgress xs = case break (== '\r') xs of
 
 trigger :: Session -> IO (Result, String)
 trigger session = do
-  xs <- Session.reload session
-  fmap removeProgress . fmap (xs ++) <$> if reloadedSuccessfully xs
-    then do
-      echo session $ withColor Green "RELOADING SUCCEEDED\n"
-      hspec
-    else do
-      echo session $ withColor Red "RELOADING FAILED\n"
-      return (Failure, "")
+  output <- Session.reload session
+
+  let
+    result
+      | reloadedSuccessfully output = Success
+      | otherwise = Failure
+
+    message = case result of
+      Failure -> withColor Red "RELOADING FAILED" <> "\n"
+      Success -> withColor Green "RELOADING SUCCEEDED" <> "\n"
+
+  echo session message
+
+  fmap removeProgress . fmap (output <>) . fmap (message <>) <$> case result of
+    Failure -> return (result, "")
+    Success -> hspec
   where
     hspec :: IO (Result, String)
     hspec = do

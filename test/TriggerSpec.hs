@@ -79,6 +79,7 @@ spec = do
           (Failure, xs) <- trigger session >> triggerAll session
           normalize xs `shouldBe` [
               modulesLoaded Ok ["Spec"]
+            , withColor Green "RELOADING SUCCEEDED"
             , ""
             , "foo [✔]"
             , "bar [✘]"
@@ -103,6 +104,7 @@ spec = do
         result <- trigger session >> trigger session
         fmap normalize result `shouldBe` (Success, [
             modulesLoaded Ok ["Spec"]
+          , withColor Green "RELOADING SUCCEEDED"
           , ""
           , "foo [✔]"
           , "bar [✔]"
@@ -126,6 +128,7 @@ spec = do
             , "Spec.hs:9:7: error: Variable not in scope: bar"
 #endif
             , modulesLoaded Failed []
+            , withColor Red "RELOADING FAILED"
             ]
 
     context "with a failing spec" $ do
@@ -142,6 +145,7 @@ spec = do
           (Failure, xs) <- trigger session >> trigger session
           normalize xs `shouldBe` [
               modulesLoaded Ok ["Spec"]
+            , withColor Green "RELOADING SUCCEEDED"
             , ""
             , "bar [✘]"
             , ""
@@ -173,6 +177,7 @@ spec = do
               "[1 of 1] Compiling Spec [Source file changed]"
 #endif
             , modulesLoaded Ok ["Spec"]
+            , withColor Green "RELOADING SUCCEEDED"
             , ""
             , "bar [✔]"
             , ""
@@ -192,7 +197,10 @@ spec = do
       it "only reloads" $ \ name -> do
         withSession name [] $ \session -> do
           writeFile name "module Foo where"
-          (trigger session >> trigger session) `shouldReturn` (Success, modulesLoaded Ok ["Foo"] ++ "\n")
+          (trigger session >> trigger session) `shouldReturn` (Success, unlines [
+              modulesLoaded Ok ["Foo"]
+            , withColor Green "RELOADING SUCCEEDED"
+            ])
 
     context "with an hspec-meta spec" $ do
       it "reloads and runs spec" $ \ name -> do
@@ -201,6 +209,7 @@ spec = do
           result <- trigger session >> trigger session
           fmap normalize result `shouldBe` (Success, [
               modulesLoaded Ok ["Spec"]
+            , withColor Green "RELOADING SUCCEEDED"
             , ""
             , "foo [✔]"
             , "bar [✔]"

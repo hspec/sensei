@@ -8,6 +8,9 @@ module Helper (
 , failingSpec
 , Status(..)
 , modulesLoaded
+
+, Color(..)
+, withColor
 ) where
 
 import           Imports
@@ -19,6 +22,7 @@ import           Test.Hspec as Imports
 import           Test.Hspec.Contrib.Mocks.V1 as Imports
 
 import           Run ()
+import           Util
 import           Language.Haskell.GhciWrapper (Config(..))
 
 ghciConfig :: Config
