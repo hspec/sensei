@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
 import           Helper

@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module ClientSpec (spec) where
 
 import           Helper

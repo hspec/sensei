@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 module SessionSpec (spec) where
 
 import           Helper
