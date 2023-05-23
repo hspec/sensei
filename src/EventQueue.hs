@@ -45,7 +45,7 @@ readEvents :: EventQueue -> IO [Event]
 readEvents chan = do
   e <- atomically $ readTChan chan
   unless (isKeyboardInput e) $ do
-    threadDelay 100000
+    threadDelay 100_000
   es <- atomically emptyQueue
   return (e : es)
   where
@@ -62,7 +62,7 @@ readEvents chan = do
         Nothing -> return []
         Just e -> (e :) <$> emptyQueue
 
-data Status = Terminate | Reload
+data Status = Terminate | Restart
 
 processQueue :: FilePath -> EventQueue -> IO () -> IO () -> IO Status
 processQueue dir chan triggerAll trigger = go
@@ -77,16 +77,16 @@ processQueue dir chan triggerAll trigger = go
       TriggerAllAction -> do
         triggerAll
         go
-      ReloadAction file t -> do
-        output [file <> " (" <> show t <> ", reloading)"]
-        return Reload
+      RestartAction file t -> do
+        output [file <> " (" <> show t <> ", restarting)"]
+        return Restart
       DoneAction -> do
         return Terminate
 
     output :: [String] -> IO ()
     output = mapM_ (putStrLn . withInfoColor . mappend "--> ")
 
-data Action = NoneAction | TriggerAction [FilePath] | TriggerAllAction | ReloadAction FilePath FileEventType | DoneAction
+data Action = NoneAction | TriggerAction [FilePath] | TriggerAllAction | RestartAction FilePath FileEventType | DoneAction
   deriving (Eq, Show)
 
 processEvents :: FilePath -> [Event] -> IO Action
@@ -94,13 +94,13 @@ processEvents dir events = do
   files <- fileEvents dir events
   return $ if
     | Done `elem` events -> DoneAction
-    | (file, t) : _ <- filter shouldReload files -> ReloadAction file t
+    | (file, t) : _ <- filter shouldRestart files -> RestartAction file t
     | TriggerAll `elem` events -> TriggerAllAction
     | not (null files) -> TriggerAction $ nub . sort $ map fst files
     | otherwise -> NoneAction
 
-shouldReload :: (FilePath, FileEventType) -> Bool
-shouldReload (name, event) = "Spec.hs" `isSuffixOf` name && case event of
+shouldRestart :: (FilePath, FileEventType) -> Bool
+shouldRestart (name, event) = "Spec.hs" `isSuffixOf` name && case event of
   FileAdded -> True
   FileRemoved -> True
   FileModified -> False

@@ -23,18 +23,18 @@ spec = do
             processEvents dir [FileEvent FileModified "test/FooSpec.hs"] `shouldReturn` NoneAction
 
         context "when a Spec file is added" $ do
-          it "returns ReloadAction" $ \ dir -> do
-            processEvents dir [FileEvent FileAdded "test/FooSpec.hs"] `shouldReturn` ReloadAction "test/FooSpec.hs" FileAdded
+          it "returns RestartAction" $ \ dir -> do
+            processEvents dir [FileEvent FileAdded "test/FooSpec.hs"] `shouldReturn` RestartAction "test/FooSpec.hs" FileAdded
 
           it "takes precedence over TriggerAll" $ \ dir -> do
-            processEvents dir [TriggerAll, FileEvent FileAdded "test/FooSpec.hs", TriggerAll] `shouldReturn` ReloadAction "test/FooSpec.hs" FileAdded
+            processEvents dir [TriggerAll, FileEvent FileAdded "test/FooSpec.hs", TriggerAll] `shouldReturn` RestartAction "test/FooSpec.hs" FileAdded
 
           it "is overruled by Done" $ \ dir -> do
             processEvents dir [Done, FileEvent FileAdded "test/FooSpec.hs", Done] `shouldReturn` DoneAction
 
         context "when a Spec file is removed" $ do
-          it "returns ReloadAction" $ \ dir -> do
-            processEvents dir [FileEvent FileRemoved "test/FooSpec.hs"] `shouldReturn` ReloadAction "test/FooSpec.hs" FileRemoved
+          it "returns RestartAction" $ \ dir -> do
+            processEvents dir [FileEvent FileRemoved "test/FooSpec.hs"] `shouldReturn` RestartAction "test/FooSpec.hs" FileRemoved
 
         context "when file is first removed and then added" $ do
           it "returns TriggerAction" $ \ dir -> do

@@ -26,6 +26,8 @@ executable seito
   hs-source-dirs:
       src
       driver
+  default-extensions:
+      NumericUnderscores
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
@@ -64,6 +66,8 @@ executable sensei
   hs-source-dirs:
       src
       driver
+  default-extensions:
+      NumericUnderscores
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
@@ -102,6 +106,8 @@ executable sensei-web
   hs-source-dirs:
       src
       driver
+  default-extensions:
+      NumericUnderscores
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
@@ -141,6 +147,8 @@ test-suite spec
   hs-source-dirs:
       src
       test
+  default-extensions:
+      NumericUnderscores
   ghc-options: -Wall -threaded
   cpp-options: -DTEST
   build-tool-depends:

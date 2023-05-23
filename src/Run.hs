@@ -74,7 +74,7 @@ run dir startupFile args = do
           triggerAction
           processQueue dir queue triggerAllAction triggerAction
         case status of
-          Reload -> go
+          Restart -> go
           Terminate -> return ()
     go
 
