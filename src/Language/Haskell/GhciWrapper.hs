@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase #-}
 module Language.Haskell.GhciWrapper (
   Config(..)
 , Interpreter(echo)
@@ -18,10 +19,11 @@ import           System.IO hiding (stdin, stdout, stderr)
 import           System.Directory (doesFileExist, makeAbsolute)
 import           System.Environment (getEnvironment)
 import           System.Process
-import           System.Exit (ExitCode(..))
+import           System.Exit (ExitCode(..), exitFailure)
 
 import qualified ReadHandle
 import           ReadHandle (ReadHandle, toReadHandle)
+
 
 data Config = Config {
   configIgnoreDotGhci :: Bool
@@ -87,17 +89,20 @@ new Config{..} args_ = do
     , echo = configEcho
     }
 
+
   _ <- printStartupMessages interpreter
+  getProcessExitCode processHandle >>= \ case
+    Just _ -> exitFailure
+    Nothing -> do
+      -- GHCi uses NoBuffering for stdout and stderr by default:
+      -- https://downloads.haskell.org/ghc/9.4.4/docs/users_guide/ghci.html
+      evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stdout GHC.IO.Handle.LineBuffering"
+      evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stderr GHC.IO.Handle.LineBuffering"
 
-  -- GHCi uses NoBuffering for stdout and stderr by default:
-  -- https://downloads.haskell.org/ghc/9.4.4/docs/users_guide/ghci.html
-  evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stdout GHC.IO.Handle.LineBuffering"
-  evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stderr GHC.IO.Handle.LineBuffering"
+      evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stdout GHC.IO.Encoding.utf8"
+      evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stderr GHC.IO.Encoding.utf8"
 
-  evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stdout GHC.IO.Encoding.utf8"
-  evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stderr GHC.IO.Encoding.utf8"
-
-  return interpreter
+      return interpreter
   where
     requireFile name = do
       exists <- doesFileExist name
@@ -109,6 +114,7 @@ new Config{..} args_ = do
       hSetBuffering h LineBuffering
       hSetEncoding h utf8
 
+    printStartupMessages :: Interpreter -> IO String
     printStartupMessages interpreter = evalVerbose interpreter ""
 
     evalThrow :: Interpreter -> String -> IO ()
