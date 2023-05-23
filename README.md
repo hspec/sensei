@@ -74,13 +74,6 @@ Add the following to your Vim configuration (e.g.
 
 ## Development
 
-One of the tests requires `hspec-meta`.  This test will fail if `hspec-meta` is
-not available.  To address this run:
-
-```
-echo | cabal repl sensei --build-depends hspec-meta
-```
-
 If you want to use `sensei` while hacking on `sensei` you will need to tell
 `sensei` where to find `startup.ghci` by setting:
 

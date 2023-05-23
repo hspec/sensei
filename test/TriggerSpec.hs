@@ -1,7 +1,10 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE LambdaCase #-}
 module TriggerSpec (spec) where
 
 import           Helper
+
+import           System.Exit
 
 import qualified Session
 import           Session (Session)
@@ -33,6 +36,18 @@ withSession specPath args = do
     ++ ["--no-color", "--seed=0"]
   where
     (dir, file) = splitFileName specPath
+
+requiresHspecMeta :: IO () -> IO ()
+requiresHspecMeta action = try action >>= \ case
+  Left (ExitFailure 1) -> expectationFailure $ unlines [
+      "This tests requires `hspec-meta`, which is not available.  To address this run"
+    , ""
+    , "    echo | cabal repl sensei --build-depends hspec-meta"
+    , ""
+    , "once."
+    ]
+  Left err -> throwIO err
+  Right () -> pass
 
 spec :: Spec
 spec = do
@@ -204,7 +219,7 @@ spec = do
 
     context "with an hspec-meta spec" $ do
       it "reloads and runs spec" $ \ name -> do
-        withSession name ["-package hspec-meta"] $ \session -> do
+        requiresHspecMeta $ withSession name ["-package hspec-meta"] $ \ session -> do
           writeFile name passingMetaSpec
           result <- trigger session >> trigger session
           fmap normalize result `shouldBe` (Success, [
