@@ -1,7 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE LambdaCase #-}
 module Language.Haskell.GhciWrapper (
   Config(..)
 , Interpreter(echo)
@@ -23,7 +20,6 @@ import           System.Exit (ExitCode(..), exitFailure)
 
 import qualified ReadHandle
 import           ReadHandle (ReadHandle, toReadHandle)
-
 
 data Config = Config {
   configIgnoreDotGhci :: Bool

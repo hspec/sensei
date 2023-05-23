@@ -27,7 +27,44 @@ executable seito
       src
       driver
   default-extensions:
+      BangPatterns
+      BinaryLiterals
+      ConstrainedClassMethods
+      ConstraintKinds
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      EmptyCase
+      EmptyDataDeriving
+      ExistentialQuantification
+      ExplicitForAll
+      FlexibleContexts
+      FlexibleInstances
+      GADTSyntax
+      GeneralizedNewtypeDeriving
+      HexFloatLiterals
+      InstanceSigs
+      KindSignatures
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NamedWildCards
       NumericUnderscores
+      PolyKinds
+      PostfixOperators
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeOperators
+      TypeSynonymInstances
+      LambdaCase
+      OverloadedStrings
+      RecordWildCards
+      ViewPatterns
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
@@ -67,7 +104,44 @@ executable sensei
       src
       driver
   default-extensions:
+      BangPatterns
+      BinaryLiterals
+      ConstrainedClassMethods
+      ConstraintKinds
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      EmptyCase
+      EmptyDataDeriving
+      ExistentialQuantification
+      ExplicitForAll
+      FlexibleContexts
+      FlexibleInstances
+      GADTSyntax
+      GeneralizedNewtypeDeriving
+      HexFloatLiterals
+      InstanceSigs
+      KindSignatures
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NamedWildCards
       NumericUnderscores
+      PolyKinds
+      PostfixOperators
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeOperators
+      TypeSynonymInstances
+      LambdaCase
+      OverloadedStrings
+      RecordWildCards
+      ViewPatterns
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
@@ -107,7 +181,44 @@ executable sensei-web
       src
       driver
   default-extensions:
+      BangPatterns
+      BinaryLiterals
+      ConstrainedClassMethods
+      ConstraintKinds
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      EmptyCase
+      EmptyDataDeriving
+      ExistentialQuantification
+      ExplicitForAll
+      FlexibleContexts
+      FlexibleInstances
+      GADTSyntax
+      GeneralizedNewtypeDeriving
+      HexFloatLiterals
+      InstanceSigs
+      KindSignatures
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NamedWildCards
       NumericUnderscores
+      PolyKinds
+      PostfixOperators
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeOperators
+      TypeSynonymInstances
+      LambdaCase
+      OverloadedStrings
+      RecordWildCards
+      ViewPatterns
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
@@ -148,7 +259,44 @@ test-suite spec
       src
       test
   default-extensions:
+      BangPatterns
+      BinaryLiterals
+      ConstrainedClassMethods
+      ConstraintKinds
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      EmptyCase
+      EmptyDataDeriving
+      ExistentialQuantification
+      ExplicitForAll
+      FlexibleContexts
+      FlexibleInstances
+      GADTSyntax
+      GeneralizedNewtypeDeriving
+      HexFloatLiterals
+      InstanceSigs
+      KindSignatures
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NamedWildCards
       NumericUnderscores
+      PolyKinds
+      PostfixOperators
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeOperators
+      TypeSynonymInstances
+      LambdaCase
+      OverloadedStrings
+      RecordWildCards
+      ViewPatterns
   ghc-options: -Wall -threaded
   cpp-options: -DTEST
   build-tool-depends:

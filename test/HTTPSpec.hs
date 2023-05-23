@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module HTTPSpec (spec) where
 
 import           Helper

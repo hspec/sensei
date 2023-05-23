@@ -1,2 +1,42 @@
-:set -XHaskell2010 -XNumericUnderscores
+:set -XHaskell2010
+:set -XBangPatterns
+:set -XBinaryLiterals
+:set -XConstrainedClassMethods
+:set -XConstraintKinds
+:set -XDeriveDataTypeable
+:set -XDeriveFoldable
+:set -XDeriveFunctor
+:set -XDeriveGeneric
+:set -XDeriveLift
+:set -XDeriveTraversable
+:set -XEmptyCase
+:set -XEmptyDataDeriving
+:set -XExistentialQuantification
+:set -XExplicitForAll
+:set -XFlexibleContexts
+:set -XFlexibleInstances
+:set -XGADTSyntax
+:set -XGeneralizedNewtypeDeriving
+:set -XHexFloatLiterals
+:set -XInstanceSigs
+:set -XKindSignatures
+:set -XMultiParamTypeClasses
+:set -XNamedFieldPuns
+:set -XNamedWildCards
+:set -XNumericUnderscores
+:set -XPolyKinds
+:set -XPostfixOperators
+:set -XRankNTypes
+:set -XScopedTypeVariables
+:set -XStandaloneDeriving
+:set -XTupleSections
+:set -XTypeApplications
+:set -XTypeOperators
+:set -XTypeSynonymInstances
+
+:set -XLambdaCase
+:set -XOverloadedStrings
+:set -XRecordWildCards
+:set -XViewPatterns
+
 :set -DTEST -isrc -itest -hide-packagebase-compat-batteries

@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Client (client) where
 
 import           Imports

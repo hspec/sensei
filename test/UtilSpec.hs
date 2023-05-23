@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module UtilSpec (spec) where
 
 import           Helper
