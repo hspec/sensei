@@ -8,6 +8,9 @@ category: Development
 
 data-files: startup.ghci
 
+language: Haskell2010
+default-extensions: NumericUnderscores
+
 dependencies:
   - base >= 4.11 && < 5
   - process
