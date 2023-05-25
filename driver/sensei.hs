@@ -8,4 +8,4 @@ import           Run
 main :: IO ()
 main = do
   startupFile <- getDataFileName "startup.ghci"
-  getArgs >>= run "" startupFile
+  getArgs >>= run startupFile

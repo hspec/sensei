@@ -27,44 +27,12 @@ executable seito
       src
       driver
   default-extensions:
-      BangPatterns
-      BinaryLiterals
-      ConstrainedClassMethods
-      ConstraintKinds
-      DeriveDataTypeable
-      DeriveFoldable
-      DeriveFunctor
-      DeriveGeneric
-      DeriveLift
-      DeriveTraversable
-      EmptyCase
-      EmptyDataDeriving
-      ExistentialQuantification
-      ExplicitForAll
-      FlexibleContexts
-      FlexibleInstances
-      GADTSyntax
-      GeneralizedNewtypeDeriving
-      HexFloatLiterals
-      InstanceSigs
-      KindSignatures
-      MultiParamTypeClasses
-      NamedFieldPuns
-      NamedWildCards
-      NumericUnderscores
-      PolyKinds
-      PostfixOperators
-      RankNTypes
-      ScopedTypeVariables
-      StandaloneDeriving
-      TupleSections
-      TypeApplications
-      TypeOperators
-      TypeSynonymInstances
       LambdaCase
       OverloadedStrings
       RecordWildCards
       ViewPatterns
+  other-extensions:
+      NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
@@ -96,7 +64,7 @@ executable seito
       Trigger
       Util
       Paths_sensei
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable sensei
   main-is: sensei.hs
@@ -104,44 +72,12 @@ executable sensei
       src
       driver
   default-extensions:
-      BangPatterns
-      BinaryLiterals
-      ConstrainedClassMethods
-      ConstraintKinds
-      DeriveDataTypeable
-      DeriveFoldable
-      DeriveFunctor
-      DeriveGeneric
-      DeriveLift
-      DeriveTraversable
-      EmptyCase
-      EmptyDataDeriving
-      ExistentialQuantification
-      ExplicitForAll
-      FlexibleContexts
-      FlexibleInstances
-      GADTSyntax
-      GeneralizedNewtypeDeriving
-      HexFloatLiterals
-      InstanceSigs
-      KindSignatures
-      MultiParamTypeClasses
-      NamedFieldPuns
-      NamedWildCards
-      NumericUnderscores
-      PolyKinds
-      PostfixOperators
-      RankNTypes
-      ScopedTypeVariables
-      StandaloneDeriving
-      TupleSections
-      TypeApplications
-      TypeOperators
-      TypeSynonymInstances
       LambdaCase
       OverloadedStrings
       RecordWildCards
       ViewPatterns
+  other-extensions:
+      NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
@@ -173,7 +109,7 @@ executable sensei
       Trigger
       Util
       Paths_sensei
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable sensei-web
   main-is: sensei-web.hs
@@ -181,44 +117,12 @@ executable sensei-web
       src
       driver
   default-extensions:
-      BangPatterns
-      BinaryLiterals
-      ConstrainedClassMethods
-      ConstraintKinds
-      DeriveDataTypeable
-      DeriveFoldable
-      DeriveFunctor
-      DeriveGeneric
-      DeriveLift
-      DeriveTraversable
-      EmptyCase
-      EmptyDataDeriving
-      ExistentialQuantification
-      ExplicitForAll
-      FlexibleContexts
-      FlexibleInstances
-      GADTSyntax
-      GeneralizedNewtypeDeriving
-      HexFloatLiterals
-      InstanceSigs
-      KindSignatures
-      MultiParamTypeClasses
-      NamedFieldPuns
-      NamedWildCards
-      NumericUnderscores
-      PolyKinds
-      PostfixOperators
-      RankNTypes
-      ScopedTypeVariables
-      StandaloneDeriving
-      TupleSections
-      TypeApplications
-      TypeOperators
-      TypeSynonymInstances
       LambdaCase
       OverloadedStrings
       RecordWildCards
       ViewPatterns
+  other-extensions:
+      NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
       ansi-terminal
@@ -250,7 +154,7 @@ executable sensei-web
       Trigger
       Util
       Paths_sensei
-  default-language: Haskell2010
+  default-language: GHC2021
 
 test-suite spec
   type: exitcode-stdio-1.0
@@ -259,44 +163,12 @@ test-suite spec
       src
       test
   default-extensions:
-      BangPatterns
-      BinaryLiterals
-      ConstrainedClassMethods
-      ConstraintKinds
-      DeriveDataTypeable
-      DeriveFoldable
-      DeriveFunctor
-      DeriveGeneric
-      DeriveLift
-      DeriveTraversable
-      EmptyCase
-      EmptyDataDeriving
-      ExistentialQuantification
-      ExplicitForAll
-      FlexibleContexts
-      FlexibleInstances
-      GADTSyntax
-      GeneralizedNewtypeDeriving
-      HexFloatLiterals
-      InstanceSigs
-      KindSignatures
-      MultiParamTypeClasses
-      NamedFieldPuns
-      NamedWildCards
-      NumericUnderscores
-      PolyKinds
-      PostfixOperators
-      RankNTypes
-      ScopedTypeVariables
-      StandaloneDeriving
-      TupleSections
-      TypeApplications
-      TypeOperators
-      TypeSynonymInstances
       LambdaCase
       OverloadedStrings
       RecordWildCards
       ViewPatterns
+  other-extensions:
+      NoFieldSelectors
   ghc-options: -Wall -threaded
   cpp-options: -DTEST
   build-tool-depends:
@@ -343,9 +215,10 @@ test-suite spec
       Language.Haskell.GhciWrapperSpec
       OptionsSpec
       ReadHandleSpec
+      RunSpec
       SessionSpec
       SpecHook
       TriggerSpec
       UtilSpec
       Paths_sensei
-  default-language: Haskell2010
+  default-language: GHC2021
