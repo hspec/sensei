@@ -18,6 +18,7 @@ import           System.Environment (getEnvironment)
 import           System.Process
 import           System.Exit (ExitCode(..), exitFailure)
 
+import           Util (isWritableByOthers)
 import qualified ReadHandle
 import           ReadHandle (ReadHandle, toReadHandle)
 
@@ -50,7 +51,7 @@ sanitizeEnv = filter p
 
 new :: Config -> [String] -> IO Interpreter
 new Config{..} args_ = do
-
+  checkDotGhci
   requireFile configStartupFile
   startupFile <- makeAbsolute configStartupFile
   env <- sanitizeEnv <$> getEnvironment
@@ -100,6 +101,17 @@ new Config{..} args_ = do
 
       return interpreter
   where
+    checkDotGhci = unless configIgnoreDotGhci $ do
+      let dotGhci = fromMaybe "" configWorkingDirectory </> ".ghci"
+      isWritableByOthers dotGhci >>= \ case
+        False -> pass
+        True -> die $ unlines [
+            dotGhci <> " is writable by others, you can fix this with:"
+          , ""
+          , "    chmod go-w " <> dotGhci <> " ."
+          , ""
+          ]
+
     requireFile name = do
       exists <- doesFileExist name
       unless exists $ do

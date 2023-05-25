@@ -6,7 +6,6 @@ module Util (
 , isBoring
 , filterGitIgnoredFiles
 , normalizeTypeSignatures
-, dotGhciWritableByOthers
 , isWritableByOthers
 
 #ifdef TEST
@@ -81,9 +80,6 @@ normalizeTypeSignatures = normalize . concatMap replace
       '\8759' -> "::"
       '\8594' -> "->"
       _ -> [c]
-
-dotGhciWritableByOthers :: IO Bool
-dotGhciWritableByOthers = isWritableByOthers ".ghci"
 
 isWritableByOthers :: FilePath -> IO Bool
 isWritableByOthers name = do

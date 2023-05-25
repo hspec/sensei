@@ -7,12 +7,11 @@ import           Imports
 
 import qualified Data.ByteString as B
 import           System.IO
-import           System.Exit
 import qualified System.FSNotify as FSNotify
 
 import qualified HTTP
 import qualified Session
-import           Session (Session, Config(..))
+import           Session (withSession)
 
 import           EventQueue
 import           Trigger
@@ -66,7 +65,7 @@ run dir startupFile args = do
       saveOutput action = modifyMVar_ lastOutput $ \ _ -> action
 
       go = do
-        status <- withSession startupFile args $ \ session -> do
+        status <- withSession (sessionConfig startupFile) args $ \ session -> do
           let
             triggerAction = saveOutput (trigger session)
             triggerAllAction = saveOutput (triggerAll session)
@@ -79,27 +78,16 @@ run dir startupFile args = do
 
 runWeb :: FilePath -> [String] -> IO ()
 runWeb startupFile args = do
-  withSession startupFile args $ \session -> do
+  withSession (sessionConfig startupFile) args $ \session -> do
     _ <- trigger session
     lock <- newMVar ()
     HTTP.withServer "" (withMVar lock $ \() -> trigger session) $ do
       waitForever
 
-withSession :: FilePath -> [String] -> (Session -> IO a) -> IO a
-withSession startupFile args action = do
-  check <- dotGhciWritableByOthers
-  when check $ do
-    putStrLn ".ghci is writable by others, you can fix this with:"
-    putStrLn ""
-    putStrLn "    chmod go-w .ghci ."
-    putStrLn ""
-    exitFailure
-  Session.withSession config args action
-  where
-    config :: Config
-    config = Config {
-      configIgnoreDotGhci = False
-    , configStartupFile = startupFile
-    , configWorkingDirectory = Nothing
-    , configEcho = \ string -> B.putStr string >> hFlush stdout
-    }
+sessionConfig :: FilePath -> Session.Config
+sessionConfig startupFile = Session.Config {
+  configIgnoreDotGhci = False
+, configStartupFile = startupFile
+, configWorkingDirectory = Nothing
+, configEcho = \ string -> B.putStr string >> hFlush stdout
+}

@@ -26,6 +26,31 @@ spec = do
             pass
         last (B.lines $ mconcat result) `shouldBe` "Leaving GHCi."
 
+    context "when .ghci is writable by others" $ do
+      let
+        with :: FilePath -> Config -> IO String
+        with dir config = do
+          let dotGhci = dir </> ".ghci"
+          writeFile dotGhci ""
+          callProcess "chmod" ["go+w", dotGhci]
+          Interpreter.withInterpreter config { configWorkingDirectory = Just dir } [] $ \ ghci -> Interpreter.eval ghci "23"
+
+      context "when configIgnoreDotGhci is False" $ do
+        it "terminates with an error message" $ do
+          withTempDirectory $ \ dir -> do
+            let dotGhci = dir </> ".ghci"
+            with dir ghciConfig { configIgnoreDotGhci = False } `shouldThrow` (== (ErrorCall . unlines) [
+                dotGhci <> " is writable by others, you can fix this with:"
+              , ""
+              , "    chmod go-w " <> dotGhci <> " ."
+              , ""
+              ])
+
+      context "when configIgnoreDotGhci is True" $ do
+        it "does not terminate" $ do
+          withTempDirectory $ \ dir -> do
+            with dir ghciConfig { configIgnoreDotGhci = True } `shouldReturn` "23\n"
+
   describe "evalVerbose" $ do
     it "echos result" $ do
       fmap mconcat . withSpy $ \ spy -> do
