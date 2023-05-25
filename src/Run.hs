@@ -1,6 +1,13 @@
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE NoFieldSelectors #-}
 module Run (
   run
 , runWeb
+#ifdef TEST
+, RunArgs(..)
+, runWith
+, defaultRunArgs
+#endif
 ) where
 
 import           Imports
@@ -53,28 +60,48 @@ watchInput queue = void . forkIO $ do
     emitEvent queue TriggerAll
   emitEvent queue Done
 
-run :: FilePath -> FilePath -> [String] -> IO ()
-run dir startupFile args = do
-  queue <- newQueue
+run :: FilePath -> [String] -> IO ()
+run startupFile args = do
+  runArgs@RunArgs{dir, lastOutput, queue} <- defaultRunArgs startupFile
   watchFiles dir queue
   watchInput queue
-  lastOutput <- newMVar (Trigger.Success, "")
   HTTP.withServer dir (readMVar lastOutput) $ do
-    let
-      saveOutput :: IO (Trigger.Result, String) -> IO ()
-      saveOutput action = modifyMVar_ lastOutput $ \ _ -> action
+    runWith runArgs {args}
 
-      go = do
-        status <- withSession (sessionConfig startupFile) args $ \ session -> do
-          let
-            triggerAction = saveOutput (trigger session)
-            triggerAllAction = saveOutput (triggerAll session)
-          triggerAction
-          processQueue dir queue triggerAllAction triggerAction
-        case status of
-          Restart -> go
-          Terminate -> return ()
-    go
+defaultRunArgs :: FilePath -> IO RunArgs
+defaultRunArgs startupFile = do
+  queue <- newQueue
+  lastOutput <- newMVar (Trigger.Success, "")
+  return RunArgs {
+    dir = ""
+  , startupFile
+  , args = []
+  , lastOutput = lastOutput
+  , queue = queue
+  }
+
+data RunArgs = RunArgs {
+  dir :: FilePath
+, startupFile :: FilePath
+, args :: [String]
+, lastOutput :: MVar (Result, String)
+, queue :: EventQueue
+}
+
+runWith :: RunArgs -> IO ()
+runWith RunArgs {..} = fix $ \ rec -> do
+  status <- withSession (sessionConfig startupFile) args $ \ session -> do
+    let
+      triggerAction = saveOutput (trigger session)
+      triggerAllAction = saveOutput (triggerAll session)
+    triggerAction
+    processQueue dir queue triggerAllAction triggerAction
+  case status of
+    Restart -> rec
+    Terminate -> return ()
+  where
+    saveOutput :: IO (Trigger.Result, String) -> IO ()
+    saveOutput action = modifyMVar_ lastOutput $ \ _ -> action
 
 runWeb :: FilePath -> [String] -> IO ()
 runWeb startupFile args = do

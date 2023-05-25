@@ -8,51 +8,15 @@ category: Development
 
 data-files: startup.ghci
 
-language: Haskell2010
+language: GHC2021
 default-extensions:
-  # GHC2021 extensions
-# - ImportQualifiedPost
-# - StandaloneKindSignatures
-  - BangPatterns
-  - BinaryLiterals
-  - ConstrainedClassMethods
-  - ConstraintKinds
-  - DeriveDataTypeable
-  - DeriveFoldable
-  - DeriveFunctor
-  - DeriveGeneric
-  - DeriveLift
-  - DeriveTraversable
-  - EmptyCase
-  - EmptyDataDeriving
-  - ExistentialQuantification
-  - ExplicitForAll
-  - FlexibleContexts
-  - FlexibleInstances
-  - GADTSyntax
-  - GeneralizedNewtypeDeriving
-  - HexFloatLiterals
-  - InstanceSigs
-  - KindSignatures
-  - MultiParamTypeClasses
-  - NamedFieldPuns
-  - NamedWildCards
-  - NumericUnderscores
-  - PolyKinds
-  - PostfixOperators
-  - RankNTypes
-  - ScopedTypeVariables
-  - StandaloneDeriving
-  - TupleSections
-  - TypeApplications
-  - TypeOperators
-  - TypeSynonymInstances
-
-  # non-GHC2021 extensions
   - LambdaCase
   - OverloadedStrings
   - RecordWildCards
   - ViewPatterns
+
+other-extensions:
+  - NoFieldSelectors
 
 dependencies:
   - base >= 4.11 && < 5
