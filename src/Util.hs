@@ -3,6 +3,7 @@ module Util (
   Color(..)
 , withColor
 , withInfoColor
+, encodeUtf8
 , isBoring
 , filterGitIgnoredFiles
 , normalizeTypeSignatures
@@ -22,6 +23,7 @@ import           System.Process
 import           System.Posix.Files
 import           System.Posix.Types
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 
 withInfoColor :: String -> String
 withInfoColor = withColor Magenta
@@ -31,6 +33,9 @@ withColor c string =  set <> string <> reset
   where
     set = setSGRCode [SetColor Foreground Dull c]
     reset = setSGRCode []
+
+encodeUtf8 :: String -> ByteString
+encodeUtf8 = T.encodeUtf8 . T.pack
 
 isBoring :: FilePath -> Bool
 isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p

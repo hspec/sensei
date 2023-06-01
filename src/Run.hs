@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE NoFieldSelectors #-}
 module Run (
   run
 , runWeb
@@ -74,28 +73,28 @@ defaultRunArgs startupFile = do
   lastOutput <- newMVar (Trigger.Success, "")
   return RunArgs {
     dir = ""
-  , startupFile
   , args = []
   , lastOutput = lastOutput
   , queue = queue
+  , sessionConfig = defaultSessionConfig startupFile
   }
 
 data RunArgs = RunArgs {
   dir :: FilePath
-, startupFile :: FilePath
 , args :: [String]
 , lastOutput :: MVar (Result, String)
 , queue :: EventQueue
+, sessionConfig  :: Session.Config
 }
 
 runWith :: RunArgs -> IO ()
 runWith RunArgs {..} = fix $ \ rec -> do
-  status <- withSession (sessionConfig startupFile) args $ \ session -> do
+  status <- withSession sessionConfig args $ \ session -> do
     let
       triggerAction = saveOutput (trigger session)
       triggerAllAction = saveOutput (triggerAll session)
     triggerAction
-    processQueue putStrLn dir queue triggerAllAction triggerAction
+    processQueue (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
   case status of
     Restart -> rec
     Terminate -> return ()
@@ -105,14 +104,14 @@ runWith RunArgs {..} = fix $ \ rec -> do
 
 runWeb :: FilePath -> [String] -> IO ()
 runWeb startupFile args = do
-  withSession (sessionConfig startupFile) args $ \session -> do
+  withSession (defaultSessionConfig startupFile) args $ \session -> do
     _ <- trigger session
     lock <- newMVar ()
     HTTP.withServer "" (withMVar lock $ \() -> trigger session) $ do
       waitForever
 
-sessionConfig :: FilePath -> Session.Config
-sessionConfig startupFile = Session.Config {
+defaultSessionConfig :: FilePath -> Session.Config
+defaultSessionConfig startupFile = Session.Config {
   configIgnoreDotGhci = False
 , configStartupFile = startupFile
 , configWorkingDirectory = Nothing
