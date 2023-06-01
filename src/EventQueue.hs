@@ -62,11 +62,12 @@ readEvents chan = do
         Just e -> (e :) <$> emptyQueue
 
 data Status = Terminate | Restart
+  deriving (Eq, Show)
 
-processQueue :: FilePath -> EventQueue -> IO () -> IO () -> IO Status
-processQueue dir chan triggerAll trigger = go
+processQueue :: (String -> IO ()) -> FilePath -> EventQueue -> IO () -> IO () -> IO Status
+processQueue echo dir chan triggerAll trigger = go
   where
-    go = readEvents chan >>= processEvents dir >>= \ case
+    go = readEvents chan >>= processEvents echo dir >>= \ case
       NoneAction -> do
         go
       TriggerAction files -> do
@@ -83,14 +84,14 @@ processQueue dir chan triggerAll trigger = go
         return Terminate
 
     output :: [String] -> IO ()
-    output = mapM_ (putStrLn . withInfoColor . mappend "--> ")
+    output = mapM_ (echo . withInfoColor . mappend "--> ")
 
 data Action = NoneAction | TriggerAction [FilePath] | TriggerAllAction | RestartAction FilePath FileEventType | DoneAction
   deriving (Eq, Show)
 
-processEvents :: FilePath -> [Event] -> IO Action
-processEvents dir events = do
-  files <- fileEvents dir events
+processEvents :: (String -> IO ()) -> FilePath -> [Event] -> IO Action
+processEvents echo dir events = do
+  files <- fileEvents echo dir events
   return $ if
     | Done `elem` events -> DoneAction
     | (file, t) : _ <- filter shouldRestart files -> RestartAction file t
@@ -99,16 +100,22 @@ processEvents dir events = do
     | otherwise -> NoneAction
 
 shouldRestart :: (FilePath, FileEventType) -> Bool
-shouldRestart (name, event) = "Spec.hs" `isSuffixOf` name && case event of
-  FileAdded -> True
-  FileRemoved -> True
-  FileModified -> False
+shouldRestart = (||) <$> specAddedOrRemoved <*> dotGhciModified
+  where
+    specAddedOrRemoved :: (FilePath, FileEventType) -> Bool
+    specAddedOrRemoved (name, event) = "Spec.hs" `isSuffixOf` name && case event of
+      FileAdded -> True
+      FileRemoved -> True
+      FileModified -> False
 
-fileEvents :: FilePath -> [Event] -> IO [(FilePath, FileEventType)]
-fileEvents dir events = filterGitIgnored dir $ combineFileEvents [(p, e) | FileEvent e p <- events]
+    dotGhciModified :: (FilePath, FileEventType) -> Bool
+    dotGhciModified (name, _) = takeFileName name == ".ghci"
 
-filterGitIgnored :: FilePath -> [(FilePath, FileEventType)] -> IO [(FilePath, FileEventType)]
-filterGitIgnored dir events = map f <$> filterGitIgnoredFiles dir (map fst events)
+fileEvents :: (String -> IO ()) -> FilePath -> [Event] -> IO [(FilePath, FileEventType)]
+fileEvents echo dir events = filterGitIgnored echo dir $ combineFileEvents [(p, e) | FileEvent e p <- events]
+
+filterGitIgnored :: (String -> IO ()) -> FilePath -> [(FilePath, FileEventType)] -> IO [(FilePath, FileEventType)]
+filterGitIgnored echo dir events = map f <$> filterGitIgnoredFiles echo dir (map fst events)
   where
     f :: FilePath -> (FilePath, FileEventType)
     f p = (p, fromJust $ lookup p events)

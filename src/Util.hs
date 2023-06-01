@@ -38,14 +38,14 @@ isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
     dirs = splitDirectories p
     isEmacsAutoSave = isPrefixOf ".#" . takeFileName
 
-filterGitIgnoredFiles :: FilePath -> [FilePath] -> IO [FilePath]
-filterGitIgnoredFiles dir files = do
+filterGitIgnoredFiles :: (String -> IO ()) -> FilePath -> [FilePath] -> IO [FilePath]
+filterGitIgnoredFiles echo dir files = do
   (feedback, ignoredFiles) <- filterGitIgnoredFiles_ dir files
   printFeedback feedback
   return ignoredFiles
   where
     printFeedback :: Feedback -> IO ()
-    printFeedback = mapM_ $ \ (color, err) -> putStrLn ('\n' : withColor color err)
+    printFeedback = mapM_ $ \ (color, err) -> echo ('\n' : withColor color err)
 
 type Feedback = Maybe (Color, String)
 

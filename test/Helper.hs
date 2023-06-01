@@ -1,5 +1,6 @@
 module Helper (
   module Imports
+, silent
 , ghciConfig
 , withTempDirectory
 , withSomeSpec
@@ -15,22 +16,27 @@ module Helper (
 
 import           Imports
 
+import           System.Timeout as Imports (timeout)
 import           System.Directory as Imports
 import           System.IO.Temp (withSystemTempDirectory)
 import           System.Process as Imports (readProcess, callProcess, callCommand)
 import           Test.Hspec as Imports
 import           Test.Hspec.Contrib.Mocks.V1 as Imports
+import           Test.Mockery.Directory as Imports (touch)
 
 import           Run ()
 import           Util
 import           Language.Haskell.GhciWrapper (Config(..))
+
+silent :: a -> IO ()
+silent _ = pass
 
 ghciConfig :: Config
 ghciConfig = Config {
   configIgnoreDotGhci = True
 , configStartupFile = "startup.ghci"
 , configWorkingDirectory = Nothing
-, configEcho = \ _ -> pass
+, configEcho = silent
 }
 
 withTempDirectory :: (FilePath -> IO a) -> IO a
