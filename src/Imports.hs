@@ -2,7 +2,7 @@ module Imports (module Imports) where
 
 import           Control.Arrow as Imports ((>>>), (&&&))
 import           Control.Concurrent as Imports
-import           Control.Exception as Imports
+import           Control.Exception as Imports hiding (handle)
 import           Control.Monad as Imports
 import           Data.Function as Imports (fix)
 import           Data.Functor as Imports

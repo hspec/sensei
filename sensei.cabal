@@ -59,6 +59,7 @@ executable seito
       EventQueue
       HTTP
       Imports
+      Input
       Language.Haskell.GhciWrapper
       Options
       ReadHandle
@@ -107,6 +108,7 @@ executable sensei
       EventQueue
       HTTP
       Imports
+      Input
       Language.Haskell.GhciWrapper
       Options
       ReadHandle
@@ -155,6 +157,7 @@ executable sensei-web
       EventQueue
       HTTP
       Imports
+      Input
       Language.Haskell.GhciWrapper
       Options
       ReadHandle
@@ -213,6 +216,7 @@ test-suite spec
       EventQueue
       HTTP
       Imports
+      Input
       Language.Haskell.GhciWrapper
       Options
       ReadHandle

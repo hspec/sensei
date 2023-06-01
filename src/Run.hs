@@ -22,6 +22,7 @@ import           Session (withSession)
 
 import           EventQueue
 import           Trigger
+import qualified Input
 import           Util
 
 waitForever :: IO ()
@@ -52,20 +53,19 @@ watchFiles dir queue action = do
     isFile :: FSNotify.Event -> Bool
     isFile = FSNotify.eventIsDirectory >>> (== FSNotify.IsFile)
 
-watchInput :: EventQueue -> IO ()
-watchInput queue = void . forkIO $ do
-  input <- getContents
-  forM_ (lines input) $ \_ -> do
-    emitEvent queue TriggerAll
-  emitEvent queue Done
-
 run :: FilePath -> [String] -> IO ()
 run startupFile args = do
   runArgs@RunArgs{dir, lastOutput, queue} <- defaultRunArgs startupFile
   watchFiles dir queue $ do
-    watchInput queue
+    Input.watch stdin (dispatch queue) (emitEvent queue Done)
     HTTP.withServer dir (readMVar lastOutput) $ do
       runWith runArgs {args}
+  where
+    dispatch :: EventQueue -> Char -> IO ()
+    dispatch queue = \ case
+      '\n' -> emitEvent queue TriggerAll
+      'q' -> emitEvent queue Done
+      _ -> pass
 
 defaultRunArgs :: FilePath -> IO RunArgs
 defaultRunArgs startupFile = do
@@ -88,19 +88,21 @@ data RunArgs = RunArgs {
 }
 
 runWith :: RunArgs -> IO ()
-runWith RunArgs {..} = fix $ \ rec -> do
-  status <- withSession sessionConfig args $ \ session -> do
-    let
-      triggerAction = saveOutput (trigger session)
-      triggerAllAction = saveOutput (triggerAll session)
-    triggerAction
-    processQueue (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
-  case status of
-    Restart -> rec
-    Terminate -> return ()
-  where
+runWith RunArgs {..} = do
+  let
     saveOutput :: IO (Trigger.Result, String) -> IO ()
     saveOutput action = modifyMVar_ lastOutput $ \ _ -> action
+
+  fix $ \ rec -> do
+    status <- withSession sessionConfig args $ \ session -> do
+      let
+        triggerAction = saveOutput (trigger session)
+        triggerAllAction = saveOutput (triggerAll session)
+      triggerAction
+      processQueue (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
+    case status of
+      Restart -> rec
+      Terminate -> return ()
 
 runWeb :: FilePath -> [String] -> IO ()
 runWeb startupFile args = do
