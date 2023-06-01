@@ -7,6 +7,7 @@ module Run (
 , RunArgs(..)
 , runWith
 , defaultRunArgs
+, watchFiles
 #endif
 ) where
 
@@ -27,25 +28,24 @@ import           Util
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
 
-watchFiles :: FilePath -> EventQueue -> IO ()
-watchFiles dir queue = do
-  watch $ \ case
-    FSNotify.Added file _ _ -> emit $ FileEvent FileAdded file
-    FSNotify.Modified file _ _ -> emit $ FileEvent FileModified file
-    FSNotify.ModifiedAttributes _file _ _ -> pass
-    FSNotify.Removed file _ _ -> emit $ FileEvent FileRemoved file
-    FSNotify.WatchedDirectoryRemoved _file _ _ -> pass
-    FSNotify.CloseWrite file _ _ -> emit $ FileEvent FileModified file
-    FSNotify.Unknown file _ _ _ -> emit $ FileEvent FileModified file
+watchFiles :: FilePath -> EventQueue -> IO () -> IO ()
+watchFiles dir queue action = do
+  FSNotify.withManager $ \ manager -> do
+    bracket (FSNotify.watchTree manager dir isInteresting dispatch) (\ stopListening -> stopListening) $ \ _ -> do
+      action
   where
+    dispatch :: FSNotify.Event -> IO ()
+    dispatch = \ case
+      FSNotify.Added file _ _ -> emit $ FileEvent FileAdded file
+      FSNotify.Modified file _ _ -> emit $ FileEvent FileModified file
+      FSNotify.ModifiedAttributes file _ _ -> emit $ FileEvent FileModified file
+      FSNotify.Removed file _ _ -> emit $ FileEvent FileRemoved file
+      FSNotify.WatchedDirectoryRemoved _file _ _ -> pass
+      FSNotify.CloseWrite file _ _ -> emit $ FileEvent FileModified file
+      FSNotify.Unknown file _ _ _ -> emit $ FileEvent FileModified file
+
     emit :: EventQueue.Event -> IO ()
     emit = emitEvent queue
-
-    watch :: FSNotify.Action -> IO ()
-    watch action = void . forkIO $ do
-      FSNotify.withManager $ \ manager -> do
-        _stopListening <- FSNotify.watchTree manager dir isInteresting action
-        waitForever
 
     isInteresting :: FSNotify.Event -> Bool
     isInteresting = (&&) <$> isFile <*> not . isBoring . FSNotify.eventPath
@@ -63,10 +63,10 @@ watchInput queue = void . forkIO $ do
 run :: FilePath -> [String] -> IO ()
 run startupFile args = do
   runArgs@RunArgs{dir, lastOutput, queue} <- defaultRunArgs startupFile
-  watchFiles dir queue
-  watchInput queue
-  HTTP.withServer dir (readMVar lastOutput) $ do
-    runWith runArgs {args}
+  watchFiles dir queue $ do
+    watchInput queue
+    HTTP.withServer dir (readMVar lastOutput) $ do
+      runWith runArgs {args}
 
 defaultRunArgs :: FilePath -> IO RunArgs
 defaultRunArgs startupFile = do
@@ -95,7 +95,7 @@ runWith RunArgs {..} = fix $ \ rec -> do
       triggerAction = saveOutput (trigger session)
       triggerAllAction = saveOutput (triggerAll session)
     triggerAction
-    processQueue dir queue triggerAllAction triggerAction
+    processQueue putStrLn dir queue triggerAllAction triggerAction
   case status of
     Restart -> rec
     Terminate -> return ()

@@ -1,7 +1,6 @@
 module RunSpec (spec) where
 
 import           Helper
-import           System.Timeout
 
 import           EventQueue
 
