@@ -20,6 +20,7 @@ spec = do
         withTempDirectory $ \ dir -> do
           queue <- newQueue
           watchFiles dir queue $ do
+            threadDelay 100_000
             touch $ dir </> "FooSpec.hs"
             timeout 10_000_000 (processQueue silent dir queue pass pass) `shouldReturn` Just Restart
 
@@ -30,6 +31,7 @@ spec = do
           touch file
           queue <- newQueue
           watchFiles dir queue $ do
+            threadDelay 100_000
             removeFile file
             timeout 10_000_000 (processQueue silent dir queue pass pass) `shouldReturn` Just Restart
 
@@ -40,6 +42,7 @@ spec = do
           touch file
           queue <- newQueue
           watchFiles dir queue $ do
+            threadDelay 100_000
             touch file
             timeout 10_000_000 (processQueue silent dir queue pass pass) `shouldReturn` Just Restart
 

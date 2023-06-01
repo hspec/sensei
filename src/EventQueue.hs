@@ -84,7 +84,7 @@ processQueue echo dir chan triggerAll trigger = go
         return Terminate
 
     output :: [String] -> IO ()
-    output = mapM_ (echo . withInfoColor . mappend "--> ")
+    output = mapM_ (\ name -> echo . withInfoColor $ "--> " <> name <> "\n")
 
 data Action = NoneAction | TriggerAction [FilePath] | TriggerAllAction | RestartAction FilePath FileEventType | DoneAction
   deriving (Eq, Show)

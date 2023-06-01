@@ -50,7 +50,7 @@ filterGitIgnoredFiles echo dir files = do
   return ignoredFiles
   where
     printFeedback :: Feedback -> IO ()
-    printFeedback = mapM_ $ \ (color, err) -> echo ('\n' : withColor color err)
+    printFeedback = mapM_ $ \ (color, err) -> echo ('\n' : withColor color err <> "\n")
 
 type Feedback = Maybe (Color, String)
 
