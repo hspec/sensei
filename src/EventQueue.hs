@@ -28,7 +28,10 @@ import           Util
 
 type EventQueue = TChan Event
 
-data Event = TriggerAll | FileEvent FileEventType FilePath | Done
+data Event =
+    TriggerAll
+  | FileEvent FileEventType FilePath
+  | Done
   deriving (Eq, Show)
 
 data FileEventType = FileAdded | FileRemoved | FileModified
@@ -86,7 +89,12 @@ processQueue echo dir chan triggerAll trigger = go
     output :: [String] -> IO ()
     output = mapM_ (\ name -> echo . withInfoColor $ "--> " <> name <> "\n")
 
-data Action = NoneAction | TriggerAction [FilePath] | TriggerAllAction | RestartAction FilePath FileEventType | DoneAction
+data Action =
+    NoneAction
+  | TriggerAction [FilePath]
+  | TriggerAllAction
+  | RestartAction FilePath FileEventType
+  | DoneAction
   deriving (Eq, Show)
 
 processEvents :: (String -> IO ()) -> FilePath -> [Event] -> IO Action
