@@ -1,4 +1,7 @@
+:set -XDuplicateRecordFields
 :set -XLambdaCase
+:set -XNoFieldSelectors
+:set -XOverloadedRecordDot
 :set -XOverloadedStrings
 :set -XRecordWildCards
 :set -XViewPatterns

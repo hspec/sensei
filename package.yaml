@@ -10,7 +10,10 @@ data-files: startup.ghci
 
 language: GHC2021
 default-extensions:
+  - DuplicateRecordFields
   - LambdaCase
+  - NoFieldSelectors
+  - OverloadedRecordDot
   - OverloadedStrings
   - RecordWildCards
   - ViewPatterns

@@ -25,8 +25,6 @@ module Session (
 import           Imports
 
 import           Data.IORef
-import qualified Data.Text as T
-import           Data.Text.Encoding (encodeUtf8)
 
 import           Language.Haskell.GhciWrapper hiding (echo)
 import qualified Language.Haskell.GhciWrapper as Interpreter
@@ -41,7 +39,7 @@ data Session = Session {
 }
 
 echo :: Session -> String -> IO ()
-echo session = Interpreter.echo (sessionInterpreter session) . encodeUtf8 . T.pack
+echo session = session.sessionInterpreter.echo . encodeUtf8
 
 resetSummary :: Session -> IO ()
 resetSummary Session{..} = writeIORef sessionHspecPreviousSummary (Just $ Summary 0 0)
@@ -111,7 +109,7 @@ runSpec command session@Session{..} = do
     addRerun args = "--rerun" : args
 
 isFailure :: Maybe Summary -> Bool
-isFailure = maybe True ((/= 0) . summaryFailures)
+isFailure = maybe True ((/= 0) . (.summaryFailures))
 
 isSuccess :: Maybe Summary -> Bool
 isSuccess = not . isFailure
