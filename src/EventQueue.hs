@@ -20,6 +20,7 @@ module EventQueue (
 ) where
 
 import           Imports
+import qualified Data.Set as Set
 
 import           Control.Monad.STM
 import           Control.Concurrent.STM.TChan
@@ -31,6 +32,7 @@ type EventQueue = TChan Event
 data Event =
     TriggerAll
   | FileEvent FileEventType FilePath
+  | RestartWith [String]
   | Done
   deriving (Eq, Show)
 
@@ -55,6 +57,7 @@ readEvents chan = do
     isKeyboardInput = \ case
       TriggerAll -> True
       FileEvent {} -> False
+      RestartWith {} -> True
       Done -> True
 
     emptyQueue :: STM [Event]
@@ -64,7 +67,7 @@ readEvents chan = do
         Nothing -> return []
         Just e -> (e :) <$> emptyQueue
 
-data Status = Terminate | Restart
+data Status = Terminate | Restart (Maybe [String])
   deriving (Eq, Show)
 
 processQueue :: (String -> IO ()) -> FilePath -> EventQueue -> IO () -> IO () -> IO Status
@@ -82,7 +85,9 @@ processQueue echo dir chan triggerAll trigger = go
         go
       RestartAction file t -> do
         output [file <> " (" <> show t <> ", restarting)"]
-        return Restart
+        return $ Restart Nothing
+      RestartWithAction args -> do
+        return $ Restart (Just args)
       DoneAction -> do
         return Terminate
 
@@ -94,6 +99,7 @@ data Action =
   | TriggerAction [FilePath]
   | TriggerAllAction
   | RestartAction FilePath FileEventType
+  | RestartWithAction [String]
   | DoneAction
   deriving (Eq, Show)
 
@@ -102,9 +108,10 @@ processEvents echo dir events = do
   files <- fileEvents echo dir events
   return $ if
     | Done `elem` events -> DoneAction
+    | args : _ <- [args | RestartWith args <- reverse events] -> RestartWithAction args
     | (file, t) : _ <- filter shouldRestart files -> RestartAction file t
     | TriggerAll `elem` events -> TriggerAllAction
-    | not (null files) -> TriggerAction $ nub . sort $ map fst files
+    | not (null files) -> TriggerAction . Set.toList . Set.fromList $ map fst files
     | otherwise -> NoneAction
 
 shouldRestart :: (FilePath, FileEventType) -> Bool

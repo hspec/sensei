@@ -63,7 +63,7 @@ jobs:
         run: echo | cabal repl sensei --build-depends hspec-meta
 
       - shell: bash
-        run: cabal exec "${PWD}/$(find dist-newstyle/ -name spec -type f)"
+        run: cabal exec -- "${PWD}/$(find dist-newstyle/ -name spec -type f)" --times --print-slow
         env:
           HSPEC_OPTIONS: --color
 

@@ -42,6 +42,7 @@ executable seito
     , async
     , base >=4.11 && <5
     , bytestring
+    , containers
     , directory
     , filepath
     , fsnotify ==0.4.*
@@ -93,6 +94,7 @@ executable sensei
     , async
     , base >=4.11 && <5
     , bytestring
+    , containers
     , directory
     , filepath
     , fsnotify ==0.4.*
@@ -144,6 +146,7 @@ executable sensei-web
     , async
     , base >=4.11 && <5
     , bytestring
+    , containers
     , directory
     , filepath
     , fsnotify ==0.4.*
@@ -200,6 +203,7 @@ test-suite spec
     , async
     , base >=4.11 && <5
     , bytestring
+    , containers
     , directory
     , filepath
     , fsnotify ==0.4.*
