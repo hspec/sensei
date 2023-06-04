@@ -19,7 +19,6 @@ import qualified System.FSNotify as FSNotify
 
 import qualified HTTP
 import qualified Session
-import           Session (withSession)
 
 import           EventQueue
 import           Trigger
@@ -55,19 +54,32 @@ watchFiles dir queue action = do
     isFile :: FSNotify.Event -> Bool
     isFile = FSNotify.eventIsDirectory >>> (== FSNotify.IsFile)
 
+data Mode = Lenient | Strict
+
 run :: FilePath -> [String] -> IO ()
 run startupFile args = do
   runArgs@RunArgs{dir, lastOutput, queue} <- defaultRunArgs startupFile
   watchFiles dir queue $ do
-    Input.watch stdin (dispatch queue) (emitEvent queue Done)
+    mode <- newIORef Lenient
+    Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
     HTTP.withServer dir (readMVar lastOutput) $ do
       runWith runArgs {args}
   where
-    dispatch :: EventQueue -> Char -> IO ()
-    dispatch queue = \ case
+    dispatch :: IORef Mode -> EventQueue -> Char -> IO ()
+    dispatch mode queue = \ case
       '\n' -> emitEvent queue TriggerAll
+      'w' -> do
+        modifyIORef mode toggle
+        readIORef mode >>= \ case
+          Lenient -> emitEvent queue (RestartWith ["-Wdefault"])
+          Strict -> emitEvent queue (RestartWith ["-Wall"])
       'q' -> emitEvent queue Done
       _ -> pass
+
+    toggle :: Mode -> Mode
+    toggle = \ case
+      Lenient -> Strict
+      Strict -> Lenient
 
 defaultRunArgs :: FilePath -> IO RunArgs
 defaultRunArgs startupFile = do
@@ -79,6 +91,7 @@ defaultRunArgs startupFile = do
   , lastOutput = lastOutput
   , queue = queue
   , sessionConfig = defaultSessionConfig startupFile
+  , withSession = Session.withSession
   }
 
 data RunArgs = RunArgs {
@@ -87,6 +100,7 @@ data RunArgs = RunArgs {
 , lastOutput :: MVar (Result, String)
 , queue :: EventQueue
 , sessionConfig  :: Session.Config
+, withSession :: forall r. Session.Config -> [String] -> (Session.Session -> IO r) -> IO r
 }
 
 runWith :: RunArgs -> IO ()
@@ -107,21 +121,21 @@ runWith RunArgs {..} = do
         (Failure, output) -> pager output >>= addCleanupAction
         (Success, _output) -> pass
 
-    go = do
-      status <- withSession sessionConfig args $ \ session -> do
+    go extraArgs = do
+      status <- withSession sessionConfig (extraArgs <> args) $ \ session -> do
         let
           triggerAction = saveOutput (trigger session)
           triggerAllAction = saveOutput (triggerAll session)
         triggerAction
         processQueue (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
       case status of
-        Restart -> go
+        Restart mExtraArgs -> go (fromMaybe extraArgs mExtraArgs)
         Terminate -> return ()
-  go
+  go []
 
 runWeb :: FilePath -> [String] -> IO ()
 runWeb startupFile args = do
-  withSession (defaultSessionConfig startupFile) args $ \session -> do
+  Session.withSession (defaultSessionConfig startupFile) args $ \session -> do
     _ <- trigger session
     lock <- newMVar ()
     HTTP.withServer "" (withMVar lock $ \() -> trigger session) $ do

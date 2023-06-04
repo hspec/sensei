@@ -21,3 +21,50 @@ spec = do
         runArgs <- defaultRunArgs
         emitEvent runArgs.queue Done
         timeout 10_000_000 (runWith runArgs) `shouldReturn` Just ()
+
+    context "on RestartWith" $ do
+      it "restarts the session with the given extra arguments" $ do
+        withSpy $ \ spy -> do
+          RunArgs{..} <- defaultRunArgs
+          let
+            runArgs = RunArgs {
+              withSession = \ config sessionArgs action -> withSession config sessionArgs $ \ session -> do
+                spy sessionArgs
+                action session <* emitEvent runArgs.queue Done
+            , ..
+            }
+          emitEvent runArgs.queue (RestartWith ["-Wall"])
+          timeout 10_000_000 (runWith runArgs) `shouldReturn` Just ()
+        `shouldReturn` [[], ["-Wall"]]
+
+      context "with multiple occurrences of RestartWith" $ do
+        it "gives the last occurrence precedence" $ do
+          withSpy $ \ spy -> do
+            RunArgs{..} <- defaultRunArgs
+            let
+              runArgs = RunArgs {
+                withSession = \ config sessionArgs action -> withSession config sessionArgs $ \ session -> do
+                  spy sessionArgs
+                  action session <* emitEvent runArgs.queue Done
+              , ..
+              }
+            emitEvent runArgs.queue (RestartWith ["-Wall"])
+            emitEvent runArgs.queue (RestartWith ["-Wdefault"])
+            timeout 10_000_000 (runWith runArgs) `shouldReturn` Just ()
+          `shouldReturn` [[], ["-Wdefault"]]
+
+      context "after a restart without arguments" $ do
+        it "remembers the last seen extra arguments" $ do
+          nextEvent <- stubAction [RestartWith ["-Wall"], FileEvent FileModified ".ghci", Done]
+          withSpy $ \ spy -> do
+            RunArgs{..} <- defaultRunArgs
+            let
+              runArgs = RunArgs {
+                withSession = \ config sessionArgs action -> withSession config sessionArgs $ \ session -> do
+                  spy sessionArgs
+                  nextEvent >>= emitEvent runArgs.queue
+                  action session
+              , ..
+              }
+            timeout 10_000_000 (runWith runArgs) `shouldReturn` Just ()
+          `shouldReturn` [[], ["-Wall"], ["-Wall"]]

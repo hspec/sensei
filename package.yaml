@@ -39,6 +39,7 @@ dependencies:
   - filepath
   - unix
   - async
+  - containers
 
 ghc-options: -Wall -threaded
 
