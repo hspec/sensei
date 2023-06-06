@@ -20,7 +20,7 @@ forEachInputChar handle action = do
     chunkSize = 64
 
     inputDelay :: Int
-    inputDelay = 1_000
+    inputDelay = 100_000
 
     go :: IO ()
     go = B.hGetNonBlocking handle chunkSize >>= \ case
