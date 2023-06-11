@@ -44,8 +44,8 @@ echo session = session.interpreter.echo . encodeUtf8
 resetSummary :: Session -> IO ()
 resetSummary session = writeIORef session.hspecPreviousSummaryRef (Just $ Summary 0 0)
 
-hspecPreviousSummary :: Session -> IO (Maybe Summary)
-hspecPreviousSummary session = readIORef session.hspecPreviousSummaryRef
+hspecPreviousSummary :: MonadIO m => Session -> m (Maybe Summary)
+hspecPreviousSummary session = liftIO $ readIORef session.hspecPreviousSummaryRef
 
 withSession :: Config -> [String] -> (Session -> IO r) -> IO r
 withSession config args action = do
@@ -55,8 +55,8 @@ withSession config args action = do
   where
     (ghciArgs, hspecArgs) = splitArgs args
 
-reload :: Session -> IO String
-reload session = evalVerbose session.interpreter ":reload"
+reload :: MonadIO m => Session -> m String
+reload session = liftIO $ evalVerbose session.interpreter ":reload"
 
 data Summary = Summary {
   summaryExamples :: Int

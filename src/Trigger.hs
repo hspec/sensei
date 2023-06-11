@@ -11,8 +11,17 @@ module Trigger (
 
 import           Imports
 
+#if MIN_VERSION_mtl(2,3,1)
+import           Control.Monad.Trans.Writer.CPS (runWriterT)
+import           Control.Monad.Writer.CPS hiding (pass)
+#else
+import           Control.Monad.Writer.Strict hiding (pass)
+#endif
+
+import           Control.Monad.Except
+
 import           Util
-import           Session (Session, echo, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
+import           Session (Session, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
 
 data Result = Failure | Success
@@ -42,44 +51,47 @@ removeProgress xs = case break (== '\r') xs of
     dropLastLine :: String -> String
     dropLastLine = reverse . dropWhile (/= '\n') . reverse
 
+type Trigger = ExceptT () (WriterT String IO)
+
 trigger :: Session -> IO (Result, String)
-trigger session = do
-  output <- Session.reload session
-
-  let
-    result
-      | reloadedSuccessfully output = Success
-      | otherwise = Failure
-
-    message = case result of
-      Failure -> withColor Red "RELOADING FAILED" <> "\n"
-      Success -> withColor Green "RELOADING SUCCEEDED" <> "\n"
-
-  echo session message
-
-  fmap removeProgress . fmap (output <>) . fmap (message <>) <$> case result of
-    Failure -> return (result, "")
-    Success -> hspec
+trigger session = runWriterT (runExceptT go) >>= \ case
+  (Left (), output) -> return (Failure, output)
+  (Right (), output) -> return (Success, output)
   where
-    hspec :: IO (Result, String)
-    hspec = do
-      mRun <- Session.getRunSpec session
-      case mRun of
-        Just run -> rerunAllOnSuccess run
-        Nothing -> return (Success, "")
+    go :: Trigger ()
+    go = do
+      output <- Session.reload session
+      tell output
+      case reloadedSuccessfully output of
+        False -> do
+          echo $ withColor Red "RELOADING FAILED" <> "\n"
+          abort
+        True -> do
+          echo $ withColor Green "RELOADING SUCCEEDED" <> "\n"
 
-    rerunAllOnSuccess :: IO String -> IO (Result, String)
-    rerunAllOnSuccess run = do
+      getRunSpec >>= \ case
+        Just hspec -> rerunAllOnSuccess hspec
+        Nothing -> pass
+
+    abort :: Trigger a
+    abort = throwError ()
+
+    rerunAllOnSuccess :: Trigger () -> Trigger ()
+    rerunAllOnSuccess hspec = do
       failedPreviously <- isFailure <$> hspecPreviousSummary session
-      (result, xs) <- runSpec run
-      fmap (xs ++) <$> if result == Success && failedPreviously
-        then runSpec run
-        else return (result, "")
+      hspec
+      when failedPreviously hspec
 
-    runSpec :: IO a -> IO (Result, a)
-    runSpec run = do
-      xs <- run
-      result <- isSuccess <$> hspecPreviousSummary session >>= \ case
-        False -> return Failure
-        True -> return Success
-      return (result, xs)
+    getRunSpec :: MonadIO m => m (Maybe (Trigger ()))
+    getRunSpec = liftIO $ fmap runSpec <$> Session.getRunSpec session
+
+    runSpec :: IO String -> Trigger ()
+    runSpec hspec = do
+      liftIO hspec >>= tell . removeProgress
+      result <- hspecPreviousSummary session
+      unless (isSuccess result) abort
+
+    echo :: String -> Trigger ()
+    echo message = do
+      tell message
+      liftIO $ Session.echo session message

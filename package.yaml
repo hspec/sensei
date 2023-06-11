@@ -40,6 +40,8 @@ dependencies:
   - unix
   - async
   - containers
+  - transformers
+  - mtl
 
 ghc-options: -Wall -threaded
 
