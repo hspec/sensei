@@ -33,19 +33,19 @@ import           Util
 import           Options
 
 data Session = Session {
-  sessionInterpreter :: Interpreter
-, sessionHspecArgs :: [String]
-, sessionHspecPreviousSummary :: IORef (Maybe Summary)
+  interpreter :: Interpreter
+, hspecArgs :: [String]
+, hspecPreviousSummaryRef :: IORef (Maybe Summary)
 }
 
 echo :: Session -> String -> IO ()
-echo session = session.sessionInterpreter.echo . encodeUtf8
+echo session = session.interpreter.echo . encodeUtf8
 
 resetSummary :: Session -> IO ()
-resetSummary Session{..} = writeIORef sessionHspecPreviousSummary (Just $ Summary 0 0)
+resetSummary session = writeIORef session.hspecPreviousSummaryRef (Just $ Summary 0 0)
 
 hspecPreviousSummary :: Session -> IO (Maybe Summary)
-hspecPreviousSummary Session{..} = readIORef sessionHspecPreviousSummary
+hspecPreviousSummary session = readIORef session.hspecPreviousSummaryRef
 
 withSession :: Config -> [String] -> (Session -> IO r) -> IO r
 withSession config args action = do
@@ -56,7 +56,7 @@ withSession config args action = do
     (ghciArgs, hspecArgs) = splitArgs args
 
 reload :: Session -> IO String
-reload Session{..} = evalVerbose sessionInterpreter ":reload"
+reload session = evalVerbose session.interpreter ":reload"
 
 data Summary = Summary {
   summaryExamples :: Int
@@ -90,7 +90,7 @@ getRunSpecWith command session = do
     else return Nothing
 
 hasSpec :: String -> Session -> IO Bool
-hasSpec command Session{..} = hasHspecCommandSignature command <$> eval sessionInterpreter (":type " ++ command)
+hasSpec command session = hasHspecCommandSignature command <$> eval session.interpreter (":type " ++ command)
 
 hasHspecCommandSignature :: String -> String -> Bool
 hasHspecCommandSignature command = any match . lines . normalizeTypeSignatures
@@ -98,11 +98,11 @@ hasHspecCommandSignature command = any match . lines . normalizeTypeSignatures
     match line = (command ++ " :: IO ") `isPrefixOf` line && "Summary" `isSuffixOf` line
 
 runSpec :: String -> Session -> IO String
-runSpec command session@Session{..} = do
+runSpec command session = do
   failedPreviously <- isFailure <$> hspecPreviousSummary session
-  let args = "--color" : (if failedPreviously then addRerun else id) sessionHspecArgs
-  r <- evalVerbose sessionInterpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ command
-  writeIORef sessionHspecPreviousSummary (parseSummary r)
+  let args = "--color" : (if failedPreviously then addRerun else id) session.hspecArgs
+  r <- evalVerbose session.interpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ command
+  writeIORef session.hspecPreviousSummaryRef (parseSummary r)
   return r
   where
     addRerun :: [String] -> [String]
