@@ -16,7 +16,7 @@ import           System.IO hiding (stdin, stdout, stderr)
 import           System.Directory (doesFileExist, makeAbsolute)
 import           System.Environment (getEnvironment)
 import           System.Process
-import           System.Exit (ExitCode(..), exitFailure)
+import           System.Exit (exitFailure)
 
 import           Util (isWritableByOthers)
 import qualified ReadHandle

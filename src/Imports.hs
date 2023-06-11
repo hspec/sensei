@@ -17,6 +17,7 @@ import           Data.Tuple as Imports
 import           System.FilePath as Imports hiding (combine)
 import           System.IO.Error as Imports (isDoesNotExistError)
 import           Text.Read as Imports (readMaybe)
+import           System.Exit as Imports (ExitCode(..))
 
 import           System.IO (Handle)
 import           GHC.IO.Handle.Internals (wantReadableHandle_)
