@@ -7,7 +7,8 @@ import qualified Session
 import           Session (Session)
 import           Language.Haskell.GhciWrapper (Config(..))
 
-import           Trigger
+import           Trigger hiding (trigger, triggerAll)
+import qualified Trigger
 
 normalize :: String -> [String]
 normalize = normalizeTiming . lines
@@ -33,6 +34,12 @@ withSession specPath args = do
     ++ ["--no-color", "--seed=0"]
   where
     (dir, file) = splitFileName specPath
+
+trigger :: Session -> IO (Result, [String])
+trigger session = fmap normalize <$> Trigger.trigger session
+
+triggerAll :: Session -> IO (Result, [String])
+triggerAll session = fmap normalize <$> Trigger.triggerAll session
 
 requiresHspecMeta :: IO () -> IO ()
 requiresHspecMeta action = try action >>= \ case
@@ -86,10 +93,9 @@ spec = do
   describe "triggerAll" $ do
     it "runs all specs" $ do
       withSomeSpec $ \ name -> do
-        withSession name [] $ \session -> do
+        withSession name [] $ \ session -> do
           writeFile name failingSpec
-          (Failure, xs) <- trigger session >> triggerAll session
-          normalize xs `shouldBe` [
+          (trigger session >> triggerAll session) `shouldReturn` (Failure, [
               modulesLoaded Ok ["Spec"]
             , withColor Green "RELOADING SUCCEEDED"
             , ""
@@ -108,13 +114,12 @@ spec = do
             , "Finished in ..."
             , "2 examples, 1 failure"
             , "Summary {summaryExamples = 2, summaryFailures = 1}"
-            ]
+            ])
 
   describe "trigger" $ around withSomeSpec $ do
     it "reloads and runs specs" $ \ name -> do
-      withSession name [] $ \session -> do
-        result <- trigger session >> trigger session
-        fmap normalize result `shouldBe` (Success, [
+      withSession name [] $ \ session -> do
+        trigger session `shouldReturn` (Success, [
             modulesLoaded Ok ["Spec"]
           , withColor Green "RELOADING SUCCEEDED"
           , ""
@@ -128,10 +133,9 @@ spec = do
 
     context "with a module that does not compile" $ do
       it "stops after reloading" $ \ name -> do
-        withSession name [] $ \session -> do
+        withSession name [] $ \ session -> do
           writeFile name (passingSpec ++ "foo = bar")
-          (Failure, xs) <- trigger session >> trigger session
-          normalize xs `shouldBe` [
+          (trigger session >> trigger session) `shouldReturn` (Failure, [
               "[1 of 1] Compiling Spec"
             , ""
 #if __GLASGOW_HASKELL__ >= 906
@@ -141,21 +145,20 @@ spec = do
 #endif
             , modulesLoaded Failed []
             , withColor Red "RELOADING FAILED"
-            ]
+            ])
 
     context "with a failing spec" $ do
       it "indicates failure" $ \ name -> do
-        withSession name [] $ \session -> do
+        withSession name [] $ \ session -> do
           writeFile name failingSpec
           (Failure, xs) <- trigger session
-          xs `shouldContain` modulesLoaded Ok ["Spec"]
-          xs `shouldContain` "2 examples, 1 failure"
+          xs `shouldContain` [modulesLoaded Ok ["Spec"]]
+          xs `shouldContain` ["2 examples, 1 failure"]
 
       it "only reruns failing specs" $ \ name -> do
-        withSession name [] $ \session -> do
+        withSession name [] $ \ session -> do
           writeFile name failingSpec
-          (Failure, xs) <- trigger session >> trigger session
-          normalize xs `shouldBe` [
+          (trigger session >> trigger session) `shouldReturn` (Failure, [
               modulesLoaded Ok ["Spec"]
             , withColor Green "RELOADING SUCCEEDED"
             , ""
@@ -173,16 +176,15 @@ spec = do
             , "Finished in ..."
             , "1 example, 1 failure"
             , "Summary {summaryExamples = 1, summaryFailures = 1}"
-            ]
+            ])
 
     context "after a failing spec passes" $ do
       it "runs all specs" $ \ name -> do
-        withSession name [] $ \session -> do
+        withSession name [] $ \ session -> do
           writeFile name failingSpec
           _ <- trigger session
           writeFile name passingSpec
-          (Success, xs) <- trigger session
-          normalize xs `shouldBe` [
+          trigger session `shouldReturn` (Success, [
 #if __GLASGOW_HASKELL__ < 904
               "[1 of 1] Compiling Spec"
 #else
@@ -203,13 +205,13 @@ spec = do
             , "Finished in ..."
             , "2 examples, 0 failures"
             , "Summary {summaryExamples = 2, summaryFailures = 0}"
-            ]
+            ])
 
     context "with a module that does not expose a spec" $ do
       it "only reloads" $ \ name -> do
-        withSession name [] $ \session -> do
+        withSession name [] $ \ session -> do
           writeFile name "module Foo where"
-          (trigger session >> trigger session) `shouldReturn` (Success, unlines [
+          (trigger session >> trigger session) `shouldReturn` (Success, [
               modulesLoaded Ok ["Foo"]
             , withColor Green "RELOADING SUCCEEDED"
             ])
@@ -218,8 +220,7 @@ spec = do
       it "reloads and runs spec" $ \ name -> do
         requiresHspecMeta $ withSession name ["-package hspec-meta"] $ \ session -> do
           writeFile name passingMetaSpec
-          result <- trigger session >> trigger session
-          fmap normalize result `shouldBe` (Success, [
+          (trigger session >> trigger session) `shouldReturn` (Success, [
               modulesLoaded Ok ["Spec"]
             , withColor Green "RELOADING SUCCEEDED"
             , ""
