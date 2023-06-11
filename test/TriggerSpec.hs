@@ -3,8 +3,6 @@ module TriggerSpec (spec) where
 
 import           Helper
 
-import           System.Exit
-
 import qualified Session
 import           Session (Session)
 import           Language.Haskell.GhciWrapper (Config(..))
