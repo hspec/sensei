@@ -48,11 +48,13 @@ executable seito
     , fsnotify ==0.4.*
     , http-client >=0.5.0
     , http-types
+    , mtl
     , network
     , process
     , stm
     , text
     , time
+    , transformers
     , unix
     , wai
     , warp
@@ -100,11 +102,13 @@ executable sensei
     , fsnotify ==0.4.*
     , http-client >=0.5.0
     , http-types
+    , mtl
     , network
     , process
     , stm
     , text
     , time
+    , transformers
     , unix
     , wai
     , warp
@@ -152,11 +156,13 @@ executable sensei-web
     , fsnotify ==0.4.*
     , http-client >=0.5.0
     , http-types
+    , mtl
     , network
     , process
     , stm
     , text
     , time
+    , transformers
     , unix
     , wai
     , warp
@@ -213,12 +219,14 @@ test-suite spec
     , http-client >=0.5.0
     , http-types
     , mockery
+    , mtl
     , network
     , process
     , stm
     , temporary
     , text
     , time
+    , transformers
     , unix
     , wai
     , warp

@@ -20,7 +20,7 @@ spec = do
       it "terminates" $ do
         runArgs <- defaultRunArgs
         emitEvent runArgs.queue Done
-        timeout 10_000_000 (runWith runArgs) `shouldReturn` Just ()
+        timeout (runWith runArgs) `shouldReturn` Just ()
 
     context "on RestartWith" $ do
       it "restarts the session with the given extra arguments" $ do
@@ -34,7 +34,7 @@ spec = do
             , ..
             }
           emitEvent runArgs.queue (RestartWith ["-Wall"])
-          timeout 10_000_000 (runWith runArgs) `shouldReturn` Just ()
+          timeout (runWith runArgs) `shouldReturn` Just ()
         `shouldReturn` [[], ["-Wall"]]
 
       context "with multiple occurrences of RestartWith" $ do
@@ -50,7 +50,7 @@ spec = do
               }
             emitEvent runArgs.queue (RestartWith ["-Wall"])
             emitEvent runArgs.queue (RestartWith ["-Wdefault"])
-            timeout 10_000_000 (runWith runArgs) `shouldReturn` Just ()
+            timeout (runWith runArgs) `shouldReturn` Just ()
           `shouldReturn` [[], ["-Wdefault"]]
 
       context "after a restart without arguments" $ do
@@ -66,5 +66,5 @@ spec = do
                   action session
               , ..
               }
-            timeout 10_000_000 (runWith runArgs) `shouldReturn` Just ()
+            timeout (runWith runArgs) `shouldReturn` Just ()
           `shouldReturn` [[], ["-Wall"], ["-Wall"]]
