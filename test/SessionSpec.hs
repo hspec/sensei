@@ -17,7 +17,7 @@ spec = do
     it "unsets HSPEC_FAILURES" $ do
       setEnv "HSPEC_FAILURES" "foo" True
       withSession [] $ \ Session{..} -> do
-        eval sessionInterpreter "System.Environment.lookupEnv \"HSPEC_FAILURES\"" `shouldReturn` "Nothing\n"
+        eval interpreter "System.Environment.lookupEnv \"HSPEC_FAILURES\"" `shouldReturn` "Nothing\n"
 
     context "with `:set +t +s`" $ do
       it "works just fine" $ do
@@ -29,12 +29,12 @@ spec = do
             }
           writeFile (dir </> ".ghci") ":set +t +s"
           Session.withSession config [] $ \ Session{..} -> do
-            eval sessionInterpreter "23" `shouldReturn` "23\n"
+            eval interpreter "23" `shouldReturn` "23\n"
 
     context "with -XOverloadedStrings" $ do
       it "works just fine" $ do
         withSession ["-XOverloadedStrings", "-Wall", "-Werror"] $ \ Session{..} -> do
-          eval sessionInterpreter "23 :: Int" `shouldReturn` "23\n"
+          eval interpreter "23 :: Int" `shouldReturn` "23\n"
 
   describe "reload" $ do
     it "reloads" $ do

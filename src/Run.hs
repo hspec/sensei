@@ -107,16 +107,17 @@ runWith RunArgs {..} = do
         (Failure, output) -> pager output >>= addCleanupAction
         (Success, _output) -> pass
 
-  fix $ \ rec -> do
-    status <- withSession sessionConfig args $ \ session -> do
-      let
-        triggerAction = saveOutput (trigger session)
-        triggerAllAction = saveOutput (triggerAll session)
-      triggerAction
-      processQueue (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
-    case status of
-      Restart -> rec
-      Terminate -> return ()
+    go = do
+      status <- withSession sessionConfig args $ \ session -> do
+        let
+          triggerAction = saveOutput (trigger session)
+          triggerAllAction = saveOutput (triggerAll session)
+        triggerAction
+        processQueue (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
+      case status of
+        Restart -> go
+        Terminate -> return ()
+  go
 
 runWeb :: FilePath -> [String] -> IO ()
 runWeb startupFile args = do
