@@ -59,10 +59,10 @@ data Mode = Lenient | Strict
 run :: FilePath -> [String] -> IO ()
 run startupFile args = do
   runArgs@RunArgs{dir, lastOutput, queue} <- defaultRunArgs startupFile
-  watchFiles dir queue $ do
-    mode <- newIORef Lenient
-    Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
-    HTTP.withServer dir (readMVar lastOutput) $ do
+  HTTP.withServer dir (readMVar lastOutput) $ do
+    watchFiles dir queue $ do
+      mode <- newIORef Lenient
+      Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
       runWith runArgs {args}
   where
     dispatch :: IORef Mode -> EventQueue -> Char -> IO ()
