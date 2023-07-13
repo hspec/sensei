@@ -220,6 +220,7 @@ test-suite spec
       HTTPSpec
       Language.Haskell.GhciWrapperSpec
       OptionsSpec
+      PagerSpec
       ReadHandleSpec
       RunSpec
       SessionSpec

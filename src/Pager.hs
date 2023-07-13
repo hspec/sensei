@@ -18,9 +18,7 @@ pager input = do
     readMVar pid >>= terminateProcess
     void $ wait tid
   where
-    less = proc "less" ["--RAW", "--QUIT-AT-EOF", "--pattern", pattern]
-    patterns =
-      [ "^.*\\w:\\d+:\\d+:.+$"
-      , "^Module imports form a cycle:$"
-      ]
-    pattern = intercalate "|" patterns
+    less = proc "less" $ "--RAW" : "--QUIT-AT-EOF" : matchOptions
+
+matchOptions :: [String]
+matchOptions = ["--incsearch", "--pattern", "^.*\\w:\\d+:\\d+:.+$|"]
