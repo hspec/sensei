@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.35.4.
 --
 -- see: https://github.com/sol/hpack
 
@@ -58,7 +58,7 @@ executable seito
     , ansi-terminal
     , async
     , base >=4.11 && <5
-    , bytestring
+    , bytestring >=0.11
     , casing
     , containers
     , directory
@@ -116,7 +116,7 @@ executable sensei
     , ansi-terminal
     , async
     , base >=4.11 && <5
-    , bytestring
+    , bytestring >=0.11
     , casing
     , containers
     , directory
@@ -174,7 +174,7 @@ executable sensei-web
     , ansi-terminal
     , async
     , base >=4.11 && <5
-    , bytestring
+    , bytestring >=0.11
     , casing
     , containers
     , directory
@@ -251,7 +251,7 @@ test-suite spec
     , ansi-terminal
     , async
     , base >=4.11 && <5
-    , bytestring
+    , bytestring >=0.11
     , casing
     , containers
     , directory

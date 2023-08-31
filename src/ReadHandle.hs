@@ -16,16 +16,7 @@ import qualified Data.ByteString.Char8 as B
 import           Data.IORef
 import           System.IO hiding (stdin, stdout, stderr, isEOF)
 
-#if MIN_VERSION_bytestring(0,11,0)
 import           Data.ByteString (dropEnd)
-#else
-import qualified Data.ByteString.Internal as B
-dropEnd :: Int -> ByteString -> ByteString
-dropEnd n ps@(B.PS x offset len)
-    | n <= 0    = ps
-    | n >= len  = B.empty
-    | otherwise = B.PS x offset (len - n)
-#endif
 
 -- | Truly random marker, used to separate expressions.
 --
