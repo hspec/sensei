@@ -2,7 +2,7 @@
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
 import           Helper
-import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Char8 as ByteString
 
 import           Language.Haskell.GhciWrapper (Config(..), Interpreter(..))
 import qualified Language.Haskell.GhciWrapper as Interpreter
@@ -24,7 +24,7 @@ spec = do
         result <- withSpy $ \ spy -> do
           Interpreter.withInterpreter ghciConfig {configEcho = spy} [] $ \ _ghci -> do
             pass
-        last (B.lines $ mconcat result) `shouldBe` "Leaving GHCi."
+        last (ByteString.lines $ mconcat result) `shouldBe` "Leaving GHCi."
 
     context "when .ghci is writable by others" $ do
       let

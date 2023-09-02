@@ -3,7 +3,7 @@ module Input (watch) where
 import           Imports
 
 import           System.IO
-import qualified Data.ByteString as B
+import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
 
 watch :: Handle -> (Char -> IO ()) -> IO () -> IO ()
@@ -23,7 +23,7 @@ forEachInputChar handle action = do
     inputDelay = 100_000
 
     go :: IO ()
-    go = B.hGetNonBlocking handle chunkSize >>= \ case
+    go = ByteString.hGetNonBlocking handle chunkSize >>= \ case
       "" -> threadDelay inputDelay >> go
       cs -> consume (Char8.unpack cs)
 
