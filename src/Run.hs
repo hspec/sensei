@@ -12,7 +12,7 @@ module Run (
 
 import           Imports
 
-import qualified Data.ByteString as B
+import qualified Data.ByteString as ByteString
 import           Data.IORef
 import           System.IO
 import qualified System.FSNotify as FSNotify
@@ -163,5 +163,5 @@ defaultSessionConfig startupFile = Session.Config {
   configIgnoreDotGhci = False
 , configStartupFile = startupFile
 , configWorkingDirectory = Nothing
-, configEcho = \ string -> B.putStr string >> hFlush stdout
+, configEcho = \ string -> ByteString.putStr string >> hFlush stdout
 }

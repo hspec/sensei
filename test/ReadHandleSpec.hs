@@ -2,7 +2,7 @@ module ReadHandleSpec (spec) where
 
 import           Helper
 import           Test.QuickCheck
-import qualified Data.ByteString as B
+import qualified Data.ByteString as ByteString
 
 import           ReadHandle
 
@@ -12,7 +12,7 @@ chunkByteString size = go
     go "" = return []
     go xs = do
       n <- chooseInt size
-      let (chunk, rest) = B.splitAt n xs
+      let (chunk, rest) = ByteString.splitAt n xs
       (chunk :) <$> go rest
 
 fakeHandle :: [ByteString] -> IO ReadHandle
@@ -26,13 +26,13 @@ withRandomChunkSizes (mconcat -> input) action = property $ do
   let
     maxChunkSize = case chunkSizes of
       SmallChunks -> 4
-      BigChunks -> B.length input
+      BigChunks -> ByteString.length input
 
   chunks <- chunkByteString (1, maxChunkSize) input
   return $ fakeHandle chunks >>= action
 
 partialMarker :: ByteString
-partialMarker = B.take 5 marker
+partialMarker = ByteString.take 5 marker
 
 spec :: Spec
 spec = do

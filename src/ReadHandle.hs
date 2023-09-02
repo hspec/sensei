@@ -12,7 +12,7 @@ module ReadHandle (
 
 import           Imports
 
-import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Char8 as ByteString
 import           Data.IORef
 import           System.IO hiding (stdin, stdout, stderr, isEOF)
 
@@ -27,7 +27,7 @@ marker :: ByteString
 marker = pack (show @String "be77d2c8427d29cd1d62b7612d8e98cc") <> "\n"
 
 partialMarkers :: [ByteString]
-partialMarkers = reverse . drop 1 . init $ B.inits marker
+partialMarkers = reverse . drop 1 . init $ ByteString.inits marker
 
 data ReadHandle = ReadHandle {
   getChunk :: IO ByteString
@@ -56,7 +56,7 @@ emptyBuffer old = case old of
 
 mkBufferChunk :: ByteString -> Buffer
 mkBufferChunk chunk
-  | B.null chunk = BufferEmpty
+  | ByteString.null chunk = BufferEmpty
   | otherwise = BufferChunk chunk
 
 data Buffer =
@@ -68,7 +68,7 @@ data Buffer =
 toReadHandle :: Handle -> Int -> IO ReadHandle
 toReadHandle h n = do
   hSetBinaryMode h True
-  ReadHandle (B.hGetSome h n) <$> newEmptyBuffer
+  ReadHandle (ByteString.hGetSome h n) <$> newEmptyBuffer
 
 newEmptyBuffer :: IO (IORef Buffer)
 newEmptyBuffer = newIORef BufferEmpty
@@ -99,7 +99,7 @@ nextChunk ReadHandle {..} = go
     getSome :: IO (Maybe ByteString)
     getSome = do
       chunk <- getChunk
-      if B.null chunk then do
+      if ByteString.null chunk then do
         putBuffer BufferEOF
         return Nothing
       else do
@@ -127,7 +127,7 @@ nextChunk ReadHandle {..} = go
       NoMarker -> case splitPartialMarker chunk of
         Just (prefix, partialMarker) -> do
           putBuffer (BufferPartialMarker partialMarker)
-          if B.null prefix then do
+          if ByteString.null prefix then do
             go
           else do
             return (Chunk prefix)
@@ -136,10 +136,10 @@ nextChunk ReadHandle {..} = go
 splitPartialMarker :: ByteString -> Maybe (ByteString, ByteString)
 splitPartialMarker chunk = split <$> findPartialMarker chunk
   where
-    split partialMarker = (dropEnd (B.length partialMarker) chunk, partialMarker)
+    split partialMarker = (dropEnd (ByteString.length partialMarker) chunk, partialMarker)
 
 findPartialMarker :: ByteString -> Maybe ByteString
-findPartialMarker chunk = find (`B.isSuffixOf` chunk) partialMarkers
+findPartialMarker chunk = find (`ByteString.isSuffixOf` chunk) partialMarkers
 
 data StripMarker =
     NoMarker
@@ -152,5 +152,5 @@ stripMarker input = case brakeAtMarker input of
   ("", dropMarker -> ys) -> StrippedMarker ys
   (xs, ys) -> PrefixBeforeMarker xs ys
   where
-    brakeAtMarker = B.breakSubstring marker
-    dropMarker = B.drop (B.length marker)
+    brakeAtMarker = ByteString.breakSubstring marker
+    dropMarker = ByteString.drop (ByteString.length marker)

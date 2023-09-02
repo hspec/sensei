@@ -9,7 +9,7 @@ module Language.Haskell.GhciWrapper (
 
 import           Imports
 
-import qualified Data.ByteString as B
+import qualified Data.ByteString as ByteString
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text as T
 import           System.IO hiding (stdin, stdout, stderr)
@@ -144,7 +144,7 @@ close Interpreter{..} = do
 putExpression :: Interpreter -> String -> IO ()
 putExpression Interpreter{hIn = stdin} e = do
   hPutStrLn stdin e
-  B.hPut stdin ReadHandle.marker
+  ByteString.hPut stdin ReadHandle.marker
   hFlush stdin
 
 getResult :: Interpreter -> IO String

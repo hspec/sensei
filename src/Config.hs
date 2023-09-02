@@ -14,7 +14,7 @@ module Config (
 import Imports
 
 import GHC.Generics
-import Data.ByteString qualified as B
+import Data.ByteString qualified as ByteString
 import System.Directory
 import System.Process
 import Text.Casing
@@ -72,7 +72,7 @@ data Config = Config {
 }
 
 tryReadFile :: FilePath -> IO (Maybe ByteString)
-tryReadFile = fmap (either (const Nothing) Just) . tryJust (guard . isDoesNotExistError) . B.readFile
+tryReadFile = fmap (either (const Nothing) Just) . tryJust (guard . isDoesNotExistError) . ByteString.readFile
 
 readConfigFile :: FilePath -> IO (Either String ConfigFile)
 readConfigFile path = tryReadFile path >>= \ case
