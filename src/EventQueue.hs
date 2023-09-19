@@ -70,26 +70,39 @@ readEvents chan = do
 data Status = Terminate | Restart (Maybe [String])
   deriving (Eq, Show)
 
-processQueue :: (String -> IO ()) -> FilePath -> EventQueue -> IO () -> IO () -> IO Status
-processQueue echo dir chan triggerAll trigger = go
+processQueue :: IO () -> (String -> IO ()) -> FilePath -> EventQueue -> IO () -> IO () -> IO Status
+processQueue cleanup echo dir chan triggerAll trigger = go
   where
-    go = readEvents chan >>= processEvents echo dir >>= \ case
-      NoneAction -> do
-        go
-      TriggerAction files -> do
-        output files
-        trigger
-        go
-      TriggerAllAction -> do
-        triggerAll
-        go
-      RestartAction file t -> do
-        output [file <> " (" <> show t <> ", restarting)"]
-        return $ Restart Nothing
-      RestartWithAction args -> do
-        return $ Restart (Just args)
-      DoneAction -> do
-        return Terminate
+    go :: IO Status
+    go = do
+      action <- readEvents chan >>= processEvents echo dir
+      runCleanup action
+      case action of
+        NoneAction -> do
+          go
+        TriggerAction files -> do
+          output files
+          trigger
+          go
+        TriggerAllAction -> do
+          triggerAll
+          go
+        RestartAction file t -> do
+          output [file <> " (" <> show t <> ", restarting)"]
+          return $ Restart Nothing
+        RestartWithAction args -> do
+          return $ Restart (Just args)
+        DoneAction -> do
+          return Terminate
+
+    runCleanup :: Action -> IO ()
+    runCleanup = \ case
+      NoneAction -> pass
+      TriggerAction {} -> cleanup
+      TriggerAllAction -> cleanup
+      RestartAction {} -> cleanup
+      RestartWithAction {} -> cleanup
+      DoneAction -> cleanup
 
     output :: [String] -> IO ()
     output = mapM_ (\ name -> echo . withInfoColor $ "--> " <> name <> "\n")

@@ -144,7 +144,7 @@ runWith RunArgs {..} = do
           triggerAction = saveOutput (trigger session hooks)
           triggerAllAction = saveOutput (triggerAll session hooks)
         triggerAction
-        processQueue (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
+        processQueue runCleanupAction (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
       case status of
         Restart mExtraArgs -> go (fromMaybe extraArgs mExtraArgs)
         Terminate -> return ()

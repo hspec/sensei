@@ -22,7 +22,7 @@ spec = do
           watchFiles dir queue $ do
             threadDelay 100_000
             touch $ dir </> "FooSpec.hs"
-            timeout (processQueue silent dir queue pass pass) `shouldReturn` Just (Restart Nothing)
+            timeout (processQueue pass silent dir queue pass pass) `shouldReturn` Just (Restart Nothing)
 
     context "when a spec is removed" $ do
       it "restarts" $ do
@@ -33,7 +33,7 @@ spec = do
           watchFiles dir queue $ do
             threadDelay 100_000
             removeFile file
-            timeout (processQueue silent dir queue pass pass) `shouldReturn` Just (Restart Nothing)
+            timeout (processQueue pass silent dir queue pass pass) `shouldReturn` Just (Restart Nothing)
 
     context "when .ghci is modified" $ do
       it "restarts" $ do
@@ -44,7 +44,7 @@ spec = do
           watchFiles dir queue $ do
             threadDelay 100_000
             touch file
-            timeout (processQueue silent dir queue pass pass) `shouldReturn` Just (Restart Nothing)
+            timeout (processQueue pass silent dir queue pass pass) `shouldReturn` Just (Restart Nothing)
 
   describe "processEvents" $ do
     around withGitRepository $ do
