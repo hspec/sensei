@@ -15,7 +15,7 @@ import qualified Data.Text as T
 import           System.IO hiding (stdin, stdout, stderr)
 import           System.Directory (doesFileExist, makeAbsolute)
 import           System.Environment (getEnvironment)
-import           System.Process
+import           System.Process hiding (createPipe)
 import           System.Exit (exitFailure)
 
 import           Util (isWritableByOthers)
@@ -61,10 +61,6 @@ new Config{..} args_ = do
       ]
 
   (stdoutReadEnd, stdoutWriteEnd) <- createPipe
-
-#if defined(__IO_MANAGER_WINIO__)
-#error Use `associateHandle'` as per https://hackage.haskell.org/package/process-1.6.17.0/docs/System-Process.html#v:createPipe
-#endif
 
   (Just stdin_, Nothing, Nothing, processHandle ) <- createProcess (proc "ghci" args) {
     cwd = configWorkingDirectory
