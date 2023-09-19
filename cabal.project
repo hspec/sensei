@@ -3,3 +3,5 @@ packages:
 
 package sensei
   ghc-options: -Werror
+
+tests: True

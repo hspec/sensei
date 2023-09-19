@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Imports (module Imports) where
 
 import           Control.Arrow as Imports ((>>>), (&&&))
@@ -19,6 +20,7 @@ import           System.FilePath as Imports hiding (combine)
 import           System.IO.Error as Imports (isDoesNotExistError)
 import           Text.Read as Imports (readMaybe)
 import           System.Exit as Imports (ExitCode(..))
+import           System.Process as Process
 import           Control.Monad.IO.Class as Imports
 
 import           System.IO (Handle)
@@ -38,3 +40,9 @@ while p action = go
 
 withLockedHandle :: Handle -> IO a -> IO a
 withLockedHandle h = wantReadableHandle_ "pager" h . const
+
+createPipe :: IO (Handle, Handle)
+#if defined(__IO_MANAGER_WINIO__)
+#error Use `associateHandle'` as per https://hackage.haskell.org/package/process-1.6.17.0/docs/System-Process.html#v:createPipe
+#endif
+createPipe = Process.createPipe
