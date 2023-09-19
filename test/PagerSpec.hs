@@ -19,12 +19,16 @@ spec = do
 
   describe "pagerWith" $ do
     it "pipes the provided input into a pager" $ do
-      (stdoutReadEnd, stdoutWriteEnd) <- createPipe
+      (readEnd, writeEnd) <- createPipe
       let
         process :: CreateProcess
-        process = (proc "cat" []) { std_out = UseHandle stdoutWriteEnd }
-      bracket (pagerWith process "foo") id $ \ _ -> do
-        hGetContents stdoutReadEnd `shouldReturn` "foo"
+        process = (proc "cat" []) { std_out = UseHandle writeEnd }
+
+        input :: String
+        input = "foo"
+
+      bracket (pagerWith process input) id $ \ _ -> do
+        hGetContents readEnd `shouldReturn` input
 
     it "can be canceled" $ do
       let
@@ -32,3 +36,16 @@ spec = do
         process = proc "sleep" ["1d"]
       cancel <- pagerWith process "foo"
       timeout cancel `shouldReturn` Just ()
+
+    context "when writing to stdin of the subprocess blocks" $ do
+      it "can still be canceled" $ do
+        (_, writeEnd) <- createPipe
+        let
+          process :: CreateProcess
+          process = (proc "cat" []) { std_out = UseHandle writeEnd }
+
+          input :: String
+          input = cycle "foo\n"
+
+        cancel <- pagerWith process input
+        timeout cancel `shouldReturn` Just ()

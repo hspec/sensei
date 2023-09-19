@@ -3,6 +3,7 @@ module Pager where
 import           Imports
 
 import           System.IO
+import           System.IO.Error
 import           System.Process
 import           Control.Concurrent.Async
 
@@ -19,8 +20,8 @@ pagerWith process input = do
   pid <- newEmptyMVar
   tid <- async $ withLockedHandle stdin $ do
     (Just hin, Nothing, Nothing, p) <- createProcess process { delegate_ctlc = True, std_in = CreatePipe }
-    hPutStr hin input >> hClose hin
     putMVar pid p
+    _ <- tryJust (guard . isResourceVanishedError) $ hPutStr hin input >> hClose hin
     waitForProcess p
   return $ do
     readMVar pid >>= terminateProcess
