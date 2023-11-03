@@ -26,8 +26,7 @@ import           Imports
 
 import           Data.IORef
 
-import           Language.Haskell.GhciWrapper hiding (echo)
-import qualified Language.Haskell.GhciWrapper as Interpreter
+import           Language.Haskell.GhciWrapper
 
 import           Util
 import           Options
