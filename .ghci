@@ -6,4 +6,4 @@
 :set -XRecordWildCards
 :set -XViewPatterns
 
-:set -DTEST -isrc -itest -hide-packagebase-compat-batteries
+:set -DTEST -isrc -itest

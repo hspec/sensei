@@ -7,7 +7,7 @@ import           Control.Exception as Imports hiding (handle)
 import           Control.Monad as Imports
 import           Data.Function as Imports (fix)
 import           Control.Applicative as Imports
-import           Data.Functor as Imports
+import           Data.Functor as Imports ((<&>))
 import           Data.Bifunctor as Imports
 import           Data.Char as Imports
 import           Data.Either as Imports
