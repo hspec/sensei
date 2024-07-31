@@ -5,3 +5,8 @@ package sensei
   ghc-options: -Werror
 
 tests: True
+
+source-repository-package
+  type: git
+  location: https://github.com/sol/hinotify/
+  tag: 2131698f86939542c7df2cf3e60b40cc7e42819c
