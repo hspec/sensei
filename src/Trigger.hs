@@ -53,13 +53,9 @@ reloadedSuccessfully = any success . lines
   where
     success :: String -> Bool
     success x = case stripPrefix "Ok, " x of
-      Just "one module loaded." -> True
-      Just "one module reloaded." -> True
-      Just "1 module loaded." -> True
-      Just "1 module reloaded." -> True
-      Just xs | [_number, "modules", "loaded."] <- words xs -> True
-      Just xs | [_number, "modules", "reloaded."] <- words xs -> True
-      Just xs -> "modules loaded: " `isPrefixOf` xs || "modules reloaded: " `isPrefixOf` xs
+      Just "no modules to be reloaded." -> True
+      Just xs | [_number, modules, loaded] <- words xs, modules `elem` ["module", "modules"], loaded `elem` ["loaded.", "reloaded."] -> True
+      Just xs -> "modules loaded: " `isPrefixOf` xs
       Nothing -> False
 
 removeProgress :: String -> String

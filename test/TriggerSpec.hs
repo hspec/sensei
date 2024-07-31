@@ -93,6 +93,19 @@ spec = do
         it "detects success" $ do
           reloadedSuccessfully "Ok, four modules loaded." `shouldBe` True
 
+    context "with GHC >= 9.10.1 (reload)" $ do
+      context "without any modules" $ do
+        it "detects success" $ do
+          reloadedSuccessfully "Ok, no modules to be reloaded." `shouldBe` True
+
+      context "with a single module" $ do
+        it "detects success" $ do
+          reloadedSuccessfully "Ok, one module reloaded." `shouldBe` True
+
+      context "with multiple modules" $ do
+        it "detects success" $ do
+          reloadedSuccessfully "Ok, four modules reloaded." `shouldBe` True
+
   describe "removeProgress" $ do
     it "removes transient output" $ do
       (removeProgress . unlines) [
