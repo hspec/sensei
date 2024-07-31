@@ -54,9 +54,12 @@ reloadedSuccessfully = any success . lines
     success :: String -> Bool
     success x = case stripPrefix "Ok, " x of
       Just "one module loaded." -> True
+      Just "one module reloaded." -> True
       Just "1 module loaded." -> True
+      Just "1 module reloaded." -> True
       Just xs | [_number, "modules", "loaded."] <- words xs -> True
-      Just xs -> "modules loaded: " `isPrefixOf` xs
+      Just xs | [_number, "modules", "reloaded."] <- words xs -> True
+      Just xs -> "modules loaded: " `isPrefixOf` xs || "modules reloaded: " `isPrefixOf` xs
       Nothing -> False
 
 removeProgress :: String -> String

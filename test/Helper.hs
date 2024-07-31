@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Helper (
   module Imports
 , silent
@@ -97,7 +98,7 @@ data Status = Ok | Failed
   deriving (Eq, Show)
 
 modulesLoaded :: Status -> [String] -> String
-modulesLoaded status xs = show status ++ ", " ++ mods ++ " loaded."
+modulesLoaded status xs = show status ++ ", " ++ mods ++ " " ++ loaded ++ "."
   where
     n = length xs
     mods
@@ -109,3 +110,11 @@ modulesLoaded status xs = show status ++ ", " ++ mods ++ " loaded."
       | n == 5 = "five modules"
       | n == 6 = "six modules"
       | otherwise = show n ++ " modules"
+
+#if __GLASGOW_HASKELL__ < 910
+    loaded = "loaded"
+#else
+    loaded
+      | n == 0 = "to be reloaded"
+      | otherwise = "reloaded"
+#endif

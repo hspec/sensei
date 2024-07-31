@@ -25,8 +25,9 @@ jobs:
           - '9.4'
           - '9.6'
           - '9.8'
+          - '9.10'
         include:
-          - os: macos-latest
+          - os: macos-12
             ghc: system
     steps:
       - uses: actions/checkout@v3
@@ -55,16 +56,13 @@ jobs:
         run: cabal update
 
       - shell: bash
-        run: cabal configure --enable-tests --enable-benchmarks
-
-      - shell: bash
         run: cabal build all
 
       - shell: bash
         run: echo | cabal repl sensei --build-depends hspec-meta
 
       - shell: bash
-        run: cabal exec -- "${PWD}/$(find dist-newstyle/ -name spec -type f)" --times --print-slow
+        run: cabal exec -- $(cabal list-bin spec) --times --print-slow
         env:
           HSPEC_OPTIONS: --color
 

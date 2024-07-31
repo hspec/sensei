@@ -193,11 +193,16 @@ spec = do
           writeFile name (passingSpec ++ "foo = bar")
           (trigger session >> trigger session) `shouldReturn` (Failure, [
               "[1 of 1] Compiling Spec"
+#if __GLASGOW_HASKELL__ < 910
             , ""
+#endif
 #if __GLASGOW_HASKELL__ >= 906
             , "Spec.hs:9:7: error: [GHC-88464] Variable not in scope: bar"
 #else
             , "Spec.hs:9:7: error: Variable not in scope: bar"
+#endif
+#if __GLASGOW_HASKELL__ >= 910
+            , ""
 #endif
             , modulesLoaded Failed []
             , withColor Red "RELOADING FAILED"
