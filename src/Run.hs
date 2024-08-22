@@ -138,11 +138,17 @@ runWith RunArgs {..} = do
     , afterReload = config.senseiHooksAfterReload
     }
 
+    go :: [String] -> IO ()
     go extraArgs = do
       status <- withSession sessionConfig (extraArgs <> args) $ \ session -> do
         let
-          triggerAction = saveOutput (trigger session hooks)
-          triggerAllAction = saveOutput (triggerAll session hooks)
+          printExtraArgs :: IO ()
+          printExtraArgs = forM_ extraArgs $ \ arg -> do
+            sessionConfig.configEcho . encodeUtf8 . withColor Red $ arg <> "\n"
+
+          triggerAction = saveOutput (trigger session hooks <* printExtraArgs)
+          triggerAllAction = saveOutput (triggerAll session hooks <* printExtraArgs)
+
         triggerAction
         processQueue runCleanupAction (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
       case status of
