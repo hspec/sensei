@@ -13,7 +13,7 @@ import qualified Data.ByteString as ByteString
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text as T
 import           System.IO hiding (stdin, stdout, stderr)
-import           System.Directory (doesFileExist, makeAbsolute)
+import           System.IO.Temp (withSystemTempFile)
 import           System.Environment (getEnvironment)
 import           System.Process hiding (createPipe)
 import           System.Exit (exitFailure)
@@ -24,7 +24,6 @@ import           ReadHandle (ReadHandle, toReadHandle)
 
 data Config = Config {
   configIgnoreDotGhci :: Bool
-, configStartupFile :: FilePath
 , configWorkingDirectory :: Maybe FilePath
 , configEcho :: ByteString -> IO ()
 }
@@ -41,7 +40,16 @@ die :: String -> IO a
 die = throwIO . ErrorCall
 
 withInterpreter :: Config -> [String] -> (Interpreter -> IO r) -> IO r
-withInterpreter config args = bracket (new config args) close
+withInterpreter config args action = do
+  withSystemTempFile "sensei" $ \ startupFile h -> do
+    hPutStrLn h $ unlines [
+        ":set prompt \"\""
+      , ":unset +m +r +s +t +c"
+      , ":seti -XHaskell2010"
+      , ":seti -XNoOverloadedStrings"
+      ]
+    hClose h
+    bracket (new startupFile config args) close action
 
 sanitizeEnv :: [(String, String)] -> [(String, String)]
 sanitizeEnv = filter p
@@ -49,11 +57,9 @@ sanitizeEnv = filter p
     p ("HSPEC_FAILURES", _) = False
     p _ = True
 
-new :: Config -> [String] -> IO Interpreter
-new Config{..} args_ = do
+new :: FilePath -> Config -> [String] -> IO Interpreter
+new startupFile Config{..} args_ = do
   checkDotGhci
-  requireFile configStartupFile
-  startupFile <- makeAbsolute configStartupFile
   env <- sanitizeEnv <$> getEnvironment
   let
     args = "-ghci-script" : startupFile : args_ ++ catMaybes [
@@ -107,11 +113,6 @@ new Config{..} args_ = do
           , "    chmod go-w " <> dotGhci <> " ."
           , ""
           ]
-
-    requireFile name = do
-      exists <- doesFileExist name
-      unless exists $ do
-        die $ "Required file " <> show name <> " does not exist!"
 
     setMode h = do
       hSetBinaryMode h False

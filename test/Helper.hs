@@ -44,7 +44,6 @@ silent _ = pass
 ghciConfig :: Config
 ghciConfig = Config {
   configIgnoreDotGhci = True
-, configStartupFile = "startup.ghci"
 , configWorkingDirectory = Nothing
 , configEcho = silent
 }

@@ -14,8 +14,6 @@ maintainer:     Simon Hengel <sol@typeful.net>
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple
-data-files:
-    startup.ghci
 
 source-repository head
   type: git
@@ -38,7 +36,6 @@ executable seito
       Session
       Trigger
       Util
-      Paths_sensei
   hs-source-dirs:
       src
       driver
@@ -70,6 +67,7 @@ executable seito
     , network
     , process
     , stm
+    , temporary
     , text
     , time
     , transformers
@@ -96,7 +94,6 @@ executable sensei
       Session
       Trigger
       Util
-      Paths_sensei
   hs-source-dirs:
       src
       driver
@@ -128,6 +125,7 @@ executable sensei
     , network
     , process
     , stm
+    , temporary
     , text
     , time
     , transformers
@@ -154,7 +152,6 @@ executable sensei-web
       Session
       Trigger
       Util
-      Paths_sensei
   hs-source-dirs:
       src
       driver
@@ -186,6 +183,7 @@ executable sensei-web
     , network
     , process
     , stm
+    , temporary
     , text
     , time
     , transformers
@@ -227,7 +225,6 @@ test-suite spec
       SpecHook
       TriggerSpec
       UtilSpec
-      Paths_sensei
   hs-source-dirs:
       src
       test

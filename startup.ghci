@@ -1,4 +1,0 @@
-:set prompt ""
-:unset +m +r +s +t +c
-:seti -XHaskell2010
-:seti -XNoOverloadedStrings
