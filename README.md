@@ -78,12 +78,3 @@ Similarly you can use `sensei` to load the result of the last test run into emac
 buffer by executing `M-x compile` in emacs.
 
 For this to work you can create a `Makefile` as described in Option 1 above.
-
-## Development
-
-If you want to use `sensei` while hacking on `sensei` you will need to tell
-`sensei` where to find `startup.ghci` by setting:
-
-```
-export sensei_datadir=.
-```

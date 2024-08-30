@@ -1,3 +1,4 @@
+spec-version: 0.36.0
 name: sensei
 version: 0.8.0
 synopsis: Automatically run Hspec tests on file modifications
@@ -5,8 +6,6 @@ maintainer: Simon Hengel <sol@typeful.net>
 license: MIT
 github: hspec/sensei
 category: Development
-
-data-files: startup.ghci
 
 language: GHC2021
 default-extensions:
@@ -45,6 +44,7 @@ dependencies:
   - aeson
   - yaml
   - casing
+  - temporary
 
 ghc-options: -Wall -threaded
 
@@ -72,7 +72,6 @@ tests:
     dependencies:
       - hspec >= 2.9.0
       - hspec-contrib >= 0.5.2
-      - temporary
       - QuickCheck
       - hspec-wai
       - mockery

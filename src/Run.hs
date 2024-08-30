@@ -57,9 +57,9 @@ watchFiles dir queue action = do
 
 data Mode = Lenient | Strict
 
-run :: FilePath -> [String] -> IO ()
-run startupFile args = do
-  runArgs@RunArgs{dir, lastOutput, queue} <- defaultRunArgs startupFile
+run :: [String] -> IO ()
+run args = do
+  runArgs@RunArgs{dir, lastOutput, queue} <- defaultRunArgs
   HTTP.withServer dir (readMVar lastOutput) $ do
     watchFiles dir queue $ do
       mode <- newIORef Lenient
@@ -82,8 +82,8 @@ run startupFile args = do
       Lenient -> Strict
       Strict -> Lenient
 
-defaultRunArgs :: FilePath -> IO RunArgs
-defaultRunArgs startupFile = do
+defaultRunArgs :: IO RunArgs
+defaultRunArgs = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "")
   return RunArgs {
@@ -92,7 +92,7 @@ defaultRunArgs startupFile = do
   , args = []
   , lastOutput = lastOutput
   , queue = queue
-  , sessionConfig = defaultSessionConfig startupFile
+  , sessionConfig = defaultSessionConfig
   , withSession = Session.withSession
   }
 
@@ -150,18 +150,17 @@ runWith RunArgs {..} = do
         Terminate -> return ()
   go []
 
-runWeb :: FilePath -> [String] -> IO ()
-runWeb startupFile args = do
-  Session.withSession (defaultSessionConfig startupFile) args $ \session -> do
+runWeb :: [String] -> IO ()
+runWeb args = do
+  Session.withSession defaultSessionConfig args $ \session -> do
     _ <- trigger session defaultHooks
     lock <- newMVar ()
     HTTP.withServer "" (withMVar lock $ \() -> trigger session defaultHooks) $ do
       waitForever
 
-defaultSessionConfig :: FilePath -> Session.Config
-defaultSessionConfig startupFile = Session.Config {
+defaultSessionConfig :: Session.Config
+defaultSessionConfig = Session.Config {
   configIgnoreDotGhci = False
-, configStartupFile = startupFile
 , configWorkingDirectory = Nothing
 , configEcho = \ string -> ByteString.putStr string >> hFlush stdout
 }
