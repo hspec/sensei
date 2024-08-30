@@ -2,7 +2,7 @@ __THIS IS EXPERIMENTAL STUFF! USE AT YOUR OWN RISK!__
 
 # 先生 (*rōmaji*: sensei)
 
-In it's simplest form, you run `sensei` with the `Main` module of your test
+In its simplest form, you run `sensei` with the `Main` module of your test
 suite as an argument:
 
     sensei test/Spec.hs
@@ -18,20 +18,20 @@ avoid ambiguity, GHC options have to be given before any Hspec options:
     sensei -isrc -itest test/Spec.hs --no-color --match foo
 
 All command-line arguments after the last `--` are passed to Hspec, regardless
-how they look:
+of how they look:
 
     sensei -isrc -itest test/Spec.hs -- --no-color --match foo
 
 ### Boring files
 
-When `sensei` is used inside a Git repository it ignores modifications to
+When `sensei` is used inside a Git repository, it ignores modifications to
 [files that are ignored by `git`](https://git-scm.com/docs/gitignore).
 
 ### Using `sensei` with Cabal sandboxes
 
     cabal exec sensei test/Spec.hs
 
-## 生徒 (*rōmaji*: seito): Accessing result on the command-line
+## 生徒 (*rōmaji*: seito): Accessing results on the command-line
 
 You can access the results of the last test run with `seito`:
 
@@ -48,10 +48,10 @@ instead:
 You can use `sensei` to load the result of the last test run into your quickfix
 list by executing `:make` in Vim.
 
-For this to work you can either create a `Makefile` or set `makeprg` to a
+For this to work, you can either create a `Makefile` or set `makeprg` to a
 custom value.
 
-(In both cases `sed` is used to strip ANSI color sequences.)
+(In both cases, `sed` is used to strip ANSI color sequences.)
 
 #### Option 1: Create a `Makefile`
 
@@ -72,9 +72,9 @@ Add the following to your Vim configuration (e.g.
 :set makeprg=seito\ \\\|\ sed\ 's/\\x1B\\[[0-9;]*[JKmsu]//g'
 ```
 
-### Emacs Integration
+### Emacs integration
 
-Similarly you can use `sensei` to load the result of the last test run into emacs
-buffer by executing `M-x compile` in emacs.
+Similarly, you can use `sensei` to load the result of the last test run into an
+Emacs buffer by executing `M-x compile` in Emacs.
 
-For this to work you can create a `Makefile` as described in Option 1 above.
+For this to work, you can create a `Makefile` as described in Option 1 above.
