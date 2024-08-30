@@ -22,6 +22,12 @@ of how they look:
 
     sensei -isrc -itest test/Spec.hs -- --no-color --match foo
 
+### Warnings and errors
+
+By default, `sensei` treats warnings as errors.  You can pass `-Wwarn` on the
+command line to prevent this behavior.  However, consider to adjust the warning
+behavior instead (e.g. through `-w`, `-Wdefault`, `-Wall`).
+
 ### Boring files
 
 When `sensei` is used inside a Git repository, it ignores modifications to
@@ -31,7 +37,7 @@ When `sensei` is used inside a Git repository, it ignores modifications to
 
     cabal exec sensei test/Spec.hs
 
-## 生徒 (*rōmaji*: seito): Accessing results on the command-line
+## 生徒 (*rōmaji*: seito): Accessing results on the command line
 
 You can access the results of the last test run with `seito`:
 

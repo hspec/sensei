@@ -48,7 +48,7 @@ hspecPreviousSummary session = liftIO $ readIORef session.hspecPreviousSummaryRe
 
 withSession :: Config -> [String] -> (Session -> IO r) -> IO r
 withSession config args action = do
-  withInterpreter config ghciArgs $ \ ghci -> do
+  withInterpreter config ("-Werror" : ghciArgs) $ \ ghci -> do
     ref <- newIORef (Just $ Summary 0 0)
     action (Session ghci hspecArgs ref)
   where
