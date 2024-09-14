@@ -22,6 +22,8 @@ default-extensions:
   - PackageImports
   - DerivingVia
 
+data-files: vim/sensei.vim
+
 dependencies:
   - base >= 4.18 && < 5
   - pretty
@@ -71,6 +73,7 @@ executables:
 
   seito:
     source-dirs: driver
+    generated-other-modules: Paths_sensei
     main: seito.hs
 
 tests:

@@ -1,0 +1,8 @@
+[1 of 1] Compiling Main             ( type-error.hs, type-error.o )
+
+type-error.hs:2:7: error:
+    • Couldn't match type ‘Int’ with ‘[Char]’
+      Expected: String
+        Actual: Int
+    • In the expression: 23 :: Int
+      In an equation for ‘foo’: foo = 23 :: Int
