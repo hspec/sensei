@@ -1,0 +1,14 @@
+
+foo [✘]
+
+Failures:
+
+  vim/test/assets/hspec.hs:6:11: 
+  1) foo
+       expected: "bar"
+        but got: "foo"
+
+Randomized with seed 0
+
+Finished in 0.0005 seconds
+1 example, 1 failure
