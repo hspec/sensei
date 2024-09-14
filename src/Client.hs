@@ -11,11 +11,12 @@ import qualified Data.ByteString.Lazy as L
 
 import           HTTP (newSocket, socketName)
 
-client :: FilePath -> [String] -> IO (Bool, L.ByteString)
-client dir args = case args of
+client :: (FilePath -> IO FilePath) -> FilePath -> [String] -> IO (Bool, L.ByteString)
+client getDataFileName dir args = case args of
   [] -> hIsTerminalDevice stdout >>= run
   ["--no-color"] -> run False
   ["--color"] -> run True
+  ["--vim-config"] -> (,) True . fromString <$> getDataFileName "vim/sensei.vim"
   _ -> do
     hPutStrLn stderr $ "Usage: seito [ --color | --no-color ]"
     return (False, "")

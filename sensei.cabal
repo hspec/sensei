@@ -1,4 +1,4 @@
-cabal-version: 1.12
+cabal-version: 2.0
 
 -- This file has been generated from package.yaml by hpack version 0.38.0.
 --
@@ -14,6 +14,8 @@ maintainer:     Simon Hengel <sol@typeful.net>
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple
+data-files:
+    vim/sensei.vim
 
 source-repository head
   type: git
@@ -41,6 +43,9 @@ executable seito
       Session
       Trigger
       Util
+      Paths_sensei
+  autogen-modules:
+      Paths_sensei
   hs-source-dirs:
       src
       driver
@@ -53,8 +58,6 @@ executable seito
       RecordWildCards
       ViewPatterns
       BlockArguments
-  other-extensions:
-      NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -120,8 +123,6 @@ executable sensei
       RecordWildCards
       ViewPatterns
       BlockArguments
-  other-extensions:
-      NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -187,8 +188,6 @@ executable sensei-web
       RecordWildCards
       ViewPatterns
       BlockArguments
-  other-extensions:
-      NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -271,8 +270,6 @@ test-suite spec
       RecordWildCards
       ViewPatterns
       BlockArguments
-  other-extensions:
-      NoFieldSelectors
   ghc-options: -Wall -threaded
   cpp-options: -DTEST
   build-tool-depends:
