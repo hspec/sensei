@@ -1,2 +1,3 @@
 *.cabal linguist-generated=true
 /ghc-diagnostics/fixtures/**/* linguist-generated=true
+/vim/test/assets/*.errors linguist-generated=true
