@@ -7,12 +7,14 @@ module HTTP (
 
 #ifdef TEST
 , app
+, stripAnsi
 #endif
 ) where
 
 import           Imports
 
 import           System.Directory
+import qualified Data.ByteString.Lazy as L
 import           Data.Text.Lazy.Encoding (encodeUtf8)
 import           Network.Wai
 import           Network.HTTP.Types
@@ -58,11 +60,46 @@ withThread asyncAction action = do
   return r
 
 app :: IO (Trigger.Result, String) -> Application
-app trigger _ respond = trigger >>= textPlain
+app trigger request respond = trigger >>= textPlain
   where
-    textPlain (result, xs) = respond $ responseLBS status [(hContentType, "text/plain")] (encodeUtf8 . fromString $ xs)
-      where
-        status = case result of
-          Trigger.HookFailed -> internalServerError500
-          Trigger.Failure -> internalServerError500
-          Trigger.Success -> ok200
+    color :: Either ByteString Bool
+    color = case join $ lookup "color" $ queryString request of
+      Nothing -> Right True
+      Just "false" -> Right False
+      Just "true" -> Right True
+      Just value -> Left $ "invalid value for color: " <> urlEncode True value
+
+    textPlain :: (Trigger.Result, FilePath) -> IO ResponseReceived
+    textPlain (result, xs) = case color of
+      Left err -> respond $ responseLBS status400 [(hContentType, "text/plain")] (L.fromStrict err)
+      Right c -> respond $ responseLBS status [(hContentType, "text/plain")] (encodeUtf8 . fromString $ strip xs)
+        where
+          strip :: String -> String
+          strip
+            | c = id
+            | otherwise = stripAnsi
+
+          status = case result of
+            Trigger.HookFailed -> status500
+            Trigger.Failure -> status500
+            Trigger.Success -> status200
+
+-- |
+-- Remove terminal sequences.
+stripAnsi :: String -> String
+stripAnsi = go
+  where
+    go input = case input of
+      '\ESC' : '[' :       (dropNumericParameters -> c : xs) | isCommand c -> go xs
+      '\ESC' : '[' : '?' : (dropNumericParameters -> c : xs) | isCommand c -> go xs
+      x : xs -> x : go xs
+      [] -> []
+
+    dropNumericParameters :: FilePath -> FilePath
+    dropNumericParameters = dropWhile (`elem` ("0123456789;" :: [Char]))
+
+    isCommand :: Char -> Bool
+    isCommand = (`elem` commands)
+
+    commands :: FilePath
+    commands = ['A'..'Z'] <> ['a'..'z']

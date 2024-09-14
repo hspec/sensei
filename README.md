@@ -65,7 +65,7 @@ Create a Makefile with the following content:
 
 ```Makefile
 all:
-	@seito | sed 's/\x1B\[[0-9;]*[JKmsu]//g'
+	@seito
 ```
 
 
@@ -75,7 +75,7 @@ Add the following to your Vim configuration (e.g.
 `~/.vim/after/ftplugin/haskell.vim`):
 
 ```vim
-:set makeprg=seito\ \\\|\ sed\ 's/\\x1B\\[[0-9;]*[JKmsu]//g'
+:set makeprg=seito
 ```
 
 ### Emacs integration
