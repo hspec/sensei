@@ -55,6 +55,23 @@ jobs:
           compression-level: 0
         if: matrix.ghc == '9.10'
 
+      - run: vim/test/run.vim
+        if: runner.os == 'Linux'
+
+      - run: vim/test/assets/generate.sh
+        if: ${{ runner.os == 'Linux' && matrix.ghc != '9.4' }}
+
+      - run: git diff --exit-code
+
+      - shell: bash
+        run: |
+          untracked=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked" ]; then
+            echo "Untracked files:"
+            echo "$untracked"
+            exit 1
+          fi
+
   success:
     needs: build
     runs-on: ubuntu-latest
@@ -66,7 +83,7 @@ jobs:
 
       - uses: actions/checkout@v4
       - name: Check for trailing whitespace
-        run: '! git grep -I "\s\+$"'
+        run: "! git grep -nI '[[:blank:]]$' -- . ':!vim/test/assets'"
 
       - run: curl -sSL https://raw.githubusercontent.com/sol/hpack/main/get-hpack.sh | bash
       - run: hpack && git diff --exit-code
