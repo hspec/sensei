@@ -55,13 +55,14 @@ instead:
 
 ### Vim integration
 
-You can use `sensei` to load the result of the last test run into your quickfix
+You can use `seito` to load the results of the last test run into your quickfix
 list by executing `:make` in Vim.
 
-For this to work, you can either create a `Makefile` or set `makeprg` to a
-custom value.
+For this to work, you can choose one out of three options:
 
-(In both cases, `sed` is used to strip ANSI color sequences.)
+1. Create a `Makefile`
+2. Set `makeprg` to a custom value
+3. Use [`sensei.vim`](vim/sensei.vim)
 
 #### Option 1: Create a `Makefile`
 
@@ -80,6 +81,15 @@ Add the following to your Vim configuration (e.g.
 
 ```vim
 :set makeprg=seito
+```
+
+#### Option 3: Use `sensei.vim`:
+
+Add the following to your Vim configuration (e.g.
+`~/.vim/after/ftplugin/haskell.vim`):
+
+```vim
+execute 'source ' . system('seito --vim-config')
 ```
 
 ### Emacs integration
