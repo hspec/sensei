@@ -1,0 +1,1 @@
+src/Editor/Vim.hs:30:3: error: [GHC-76037] Not in scope: ‘cexpr’
