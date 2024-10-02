@@ -163,3 +163,16 @@ call ShouldBe(err.end_col, 0)
 call ShouldBe(err.type, '')
 call ShouldBe(err.nr, -1)
 call ShouldBe(err.text, "")
+
+let errors = PopulateQuickFixList("vim/test/fixtures/one-line.errors")
+call ShouldBe(len(errors), 1)
+
+let err = errors[0]
+call ShouldBe(bufname(err.bufnr), "src/Editor/Vim.hs")
+call ShouldBe(err.lnum, 30)
+call ShouldBe(err.col, 3)
+call ShouldBe(err.end_lnum, 0)
+call ShouldBe(err.end_col, 0)
+call ShouldBe(err.type, 'e')
+call ShouldBe(err.nr, 76037)
+call ShouldBe(err.text, "Not in scope: ‘cexpr’")
