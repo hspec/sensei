@@ -14,5 +14,9 @@ setlocal errorformat^=%Z
 setlocal errorformat^=%-G\ \ \ \ Suggested\ fix:%.%#
 setlocal errorformat^=%-G\ \ \ \ \ \ Perhaps\ you\ meant\ %.%# " GHC 9.2
 
+" single-line error message
+setlocal errorformat+=%f:%l:%c:\ %t%*[^:]:\ [GHC-%n]\ %m
+setlocal errorformat+=%f:%l:%c:\ %t%*[^:]:\ %m " GHC 9.6
+
 " Hspec
 setlocal errorformat^=\ \ %f:%l:%c:\ .%#
