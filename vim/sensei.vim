@@ -1,18 +1,22 @@
-setlocal makeprg=seito
+set makeprg=seito
 
 " GHC
-setlocal errorformat=%A%f:%l:%c:\ %t%*[^:]:\ [GHC-%n]
-setlocal errorformat^=%A%f:%l:%c:\ %t%*[^:]: " GHC 9.6
+set errorformat=%A%f:%l:%c:\ %t%*[^:]:\ [GHC-%n]
+set errorformat^=%A%f:%l:%c:\ %t%*[^:]: " GHC 9.6
 
 " lines that start with a space continue the previous message
-setlocal errorformat^=%+C\ %.%#
+set errorformat^=%+C\ %.%#
 
 " empty lines terminate a message
-setlocal errorformat^=%Z
+set errorformat^=%Z
 
 " ignore this part of the message
-setlocal errorformat^=%-G\ \ \ \ Suggested\ fix:%.%#
-setlocal errorformat^=%-G\ \ \ \ \ \ Perhaps\ you\ meant\ %.%# " GHC 9.2
+set errorformat^=%-G\ \ \ \ Suggested\ fix:%.%#
+set errorformat^=%-G\ \ \ \ \ \ Perhaps\ you\ meant\ %.%# " GHC 9.2
+
+" single-line error message
+set errorformat+=%f:%l:%c:\ %t%*[^:]:\ [GHC-%n]\ %m
+set errorformat+=%f:%l:%c:\ %t%*[^:]:\ %m " GHC 9.6
 
 " Hspec
-setlocal errorformat^=\ \ %f:%l:%c:\ .%#
+set errorformat^=\ \ %f:%l:%c:\ .%#

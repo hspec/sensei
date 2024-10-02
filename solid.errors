@@ -1,0 +1,6 @@
+src/Command.hs:200:22: error:
+     error: [GHC-21231]
+        lexical error in string/character literal at character 'c'
+
+src/Command.hs:1:1: error:
+    `solid-pp' failed in phase `Haskell pre-processor'. (Exit code: 1)
