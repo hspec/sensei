@@ -17,8 +17,7 @@ default-extensions:
   - RecordWildCards
   - ViewPatterns
 
-other-extensions:
-  - NoFieldSelectors
+data-files: vim/sensei.vim
 
 dependencies:
   - base >= 4.11 && < 5
@@ -62,6 +61,7 @@ executables:
 
   seito:
     source-dirs: driver
+    generated-other-modules: Paths_sensei
     main: seito.hs
 
 tests:
