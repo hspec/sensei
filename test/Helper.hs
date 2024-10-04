@@ -13,8 +13,17 @@ module Helper (
 , withColor
 
 , timeout
+
+, Diagnostic(..)
+, Span(..)
+, Location(..)
+, Severity(..)
+, diagnostic
+
+, to_json
 ) where
 
+import           Prelude hiding (span)
 import           Imports
 
 import           System.Directory as Imports
@@ -27,9 +36,14 @@ import           Test.Mockery.Directory as Imports (touch)
 import           System.Environment
 import qualified System.Timeout
 
+import           Data.ByteString.Lazy (toStrict)
+import           Data.Aeson (ToJSON, encode)
+
 import           Run ()
 import           Util
 import           Language.Haskell.GhciWrapper (Config(..))
+
+import           GHC.Diagnostic
 
 timeout :: IO a -> IO (Maybe a)
 timeout action = lookupEnv "CI" >>= \ case
@@ -90,3 +104,17 @@ failingSpec = unlines [
   , "  it \"foo\" True"
   , "  it \"bar\" False"
   ]
+
+diagnostic :: Severity -> Diagnostic
+diagnostic severity = Diagnostic {
+  version = "1.0"
+, ghcVersion = "ghc-9.10.1"
+, span = Nothing
+, severity
+, code = Nothing
+, message = []
+, hints = []
+}
+
+to_json :: ToJSON a => a -> ByteString
+to_json = toStrict . encode
