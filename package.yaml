@@ -22,6 +22,7 @@ other-extensions:
 
 dependencies:
   - base >= 4.11 && < 5
+  - pretty
   - process
   - fsnotify == 0.4.*
   - time

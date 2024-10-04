@@ -14,9 +14,12 @@ module Language.Haskell.GhciWrapper (
 , reload
 
 #ifdef TEST
+, sensei_ghc_version
 , lookupGhc
-, extractReloadStatus
-, extractNothing
+, lookupGhcVersion
+, numericVersion
+, extractReloadDiagnostics
+, extractDiagnostics
 #endif
 ) where
 
@@ -30,11 +33,27 @@ import           System.Process hiding (createPipe)
 import           System.Exit (exitFailure)
 
 import           Util (isWritableByOthers)
+import           ReadHandle hiding (getResult)
 import qualified ReadHandle
-import           ReadHandle (ReadHandle, toReadHandle, Extract(..), partialMessageStartsWithOneOf)
+import           GHC.Diagnostic (Diagnostic)
+import qualified GHC.Diagnostic as Diagnostic
+
+sensei_ghc_version :: String
+sensei_ghc_version = "SENSEI_GHC_VERSION"
 
 lookupGhc :: [(String, String)] -> FilePath
 lookupGhc = fromMaybe "ghc" . lookup "SENSEI_GHC"
+
+lookupGhcVersion :: [(String, String)] -> Maybe String
+lookupGhcVersion = lookup sensei_ghc_version
+
+getGhcVersion :: FilePath -> [(String, String)] -> IO String
+getGhcVersion ghc env = case lookupGhcVersion env of
+  Nothing -> numericVersion ghc
+  Just version -> return version
+
+numericVersion :: [Char] -> IO [Char]
+numericVersion ghc = strip <$> readProcess ghc ["--numeric-version"] ""
 
 data Config = Config {
   configIgnoreDotGhci :: Bool
@@ -85,16 +104,24 @@ new startupFile Config{..} envDefaults args_ = do
   env <- sanitizeEnv <$> getEnvironment
 
   let
+    ghc :: String
+    ghc = lookupGhc env
+
+  ghcVersion <- parseVersion <$> getGhcVersion ghc env
+
+  let
+    diagnosticsAsJson :: [String] -> [String]
+    diagnosticsAsJson
+      | ghcVersion < Just (makeVersion [9,10]) = id
+      | otherwise = ("-fdiagnostics-as-json" :)
+
     mandatoryArgs :: [String]
     mandatoryArgs = ["-fshow-loaded-modules", "--interactive"]
 
     args :: [String]
-    args = "-ghci-script" : startupFile : args_ ++ catMaybes [
+    args = "-ghci-script" : startupFile : diagnosticsAsJson args_ ++ catMaybes [
         if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
       ] ++ mandatoryArgs
-
-    ghc :: String
-    ghc = lookupGhc env
 
   (stdoutReadEnd, stdoutWriteEnd) <- createPipe
 
@@ -124,6 +151,7 @@ new startupFile Config{..} envDefaults args_ = do
     Just _ -> exitFailure
     Nothing -> return interpreter
   where
+    checkDotGhci :: IO ()
     checkDotGhci = unless configIgnoreDotGhci $ do
       let dotGhci = fromMaybe "" configWorkingDirectory </> ".ghci"
       isWritableByOthers dotGhci >>= \ case
@@ -135,18 +163,19 @@ new startupFile Config{..} envDefaults args_ = do
           , ""
           ]
 
+    setMode :: Handle -> IO ()
     setMode h = do
       hSetBinaryMode h False
       hSetBuffering h LineBuffering
       hSetEncoding h utf8
 
-    printStartupMessages :: Interpreter -> IO (String, [ReloadStatus])
-    printStartupMessages interpreter = evalVerbose extractReloadStatus interpreter ""
+    printStartupMessages :: Interpreter -> IO (String, [Either ReloadStatus Diagnostic])
+    printStartupMessages interpreter = evalVerbose extractReloadDiagnostics interpreter ""
 
 close :: Interpreter -> IO ()
 close Interpreter{..} = do
   hClose hIn
-  ReadHandle.drain extractNothing readHandle echo
+  ReadHandle.drain extractReloadDiagnostics readHandle echo
   hClose hOut
   e <- waitForProcess process
   when (e /= ExitSuccess) $ do
@@ -157,6 +186,9 @@ putExpression Interpreter{hIn = stdin} e = do
   hPutStrLn stdin e
   ByteString.hPut stdin ReadHandle.marker
   hFlush stdin
+
+extractReloadDiagnostics :: Extract (Either ReloadStatus Diagnostic)
+extractReloadDiagnostics = extractReloadStatus <+> extractDiagnostics
 
 data ReloadStatus = Ok | Failed
   deriving (Eq, Show)
@@ -172,10 +204,10 @@ extractReloadStatus = Extract {
     ok = "Ok, modules loaded: "
     failed = "Failed, modules loaded: "
 
-extractNothing :: Extract ()
-extractNothing = Extract {
-  isPartialMessage = const False
-, parseMessage = undefined
+extractDiagnostics :: ReadHandle.Extract Diagnostic
+extractDiagnostics = ReadHandle.Extract {
+  isPartialMessage = ByteString.isPrefixOf "{"
+, parseMessage = fmap (id &&& Diagnostic.format) . Diagnostic.parse
 }
 
 getResult :: Extract a -> Interpreter -> IO (String, [a])
@@ -185,12 +217,12 @@ silent :: ByteString -> IO ()
 silent _ = pass
 
 eval :: Interpreter -> String -> IO String
-eval ghci = fmap fst . evalVerbose extractNothing ghci {echo = silent}
+eval ghci = fmap fst . evalVerbose extractDiagnostics ghci {echo = silent}
 
 evalVerbose :: Extract a -> Interpreter -> String -> IO (String, [a])
 evalVerbose extract ghci expr = putExpression ghci expr >> getResult extract ghci
 
-reload :: Interpreter -> IO (String, ReloadStatus)
-reload ghci = evalVerbose extractReloadStatus ghci ":reload" <&> second \ case
-  [Ok] -> Ok
-  _ -> Failed
+reload :: Interpreter -> IO (String, (ReloadStatus, [Diagnostic]))
+reload ghci = evalVerbose extractReloadDiagnostics ghci ":reload" <&> second \ case
+  (partitionEithers -> ([Ok], diagnostics)) -> (Ok, diagnostics)
+  (partitionEithers ->(_, diagnostics)) -> (Failed, diagnostics)

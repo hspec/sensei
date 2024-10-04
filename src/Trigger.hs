@@ -27,6 +27,7 @@ import           Util
 import           Config (Hook, HookResult(..))
 import           Session (Session, ReloadStatus(..), isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
+import           GHC.Diagnostic
 
 data Hooks = Hooks {
   beforeReload :: Hook
@@ -42,7 +43,7 @@ defaultHooks = Hooks {
 data Result = HookFailed | Failure | Success
   deriving (Eq, Show)
 
-triggerAll :: Session -> Hooks -> IO (Result, String)
+triggerAll :: Session -> Hooks -> IO (Result, String, [Diagnostic])
 triggerAll session hooks = do
   resetSummary session
   trigger session hooks
@@ -55,18 +56,18 @@ removeProgress xs = case break (== '\r') xs of
     dropLastLine :: String -> String
     dropLastLine = reverse . dropWhile (/= '\n') . reverse
 
-type Trigger = ExceptT Result (WriterT String IO)
+type Trigger = ExceptT Result (WriterT (String, [Diagnostic]) IO)
 
-trigger :: Session -> Hooks -> IO (Result, String)
+trigger :: Session -> Hooks -> IO (Result, String, [Diagnostic])
 trigger session hooks = runWriterT (runExceptT go) >>= \ case
-  (Left result, output) -> return (result, output)
-  (Right (), output) -> return (Success, output)
+  (Left result, (output, diagnostics)) -> return (result, output, diagnostics)
+  (Right (), (output, diagnostics)) -> return (Success, output, diagnostics)
   where
     go :: Trigger ()
     go = do
       runHook hooks.beforeReload
-      (output, r) <- Session.reload session
-      tell output
+      (output, (r, err)) <- Session.reload session
+      tell (output, err)
       case r of
         Failed -> do
           echo $ withColor Red "RELOADING FAILED" <> "\n"
@@ -93,7 +94,8 @@ trigger session hooks = runWriterT (runExceptT go) >>= \ case
 
     runSpec :: IO String -> Trigger ()
     runSpec hspec = do
-      liftIO hspec >>= tell . removeProgress
+      r <- removeProgress <$> liftIO hspec
+      tell (r, [])
       result <- hspecPreviousSummary session
       unless (isSuccess result) abort
 
@@ -104,5 +106,5 @@ trigger session hooks = runWriterT (runExceptT go) >>= \ case
 
     echo :: String -> Trigger ()
     echo message = do
-      tell message
+      tell (message, [])
       liftIO $ Session.echo session message

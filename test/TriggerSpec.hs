@@ -39,10 +39,14 @@ trigger :: Session -> IO (Result, [String])
 trigger session = triggerWithHooks session defaultHooks
 
 triggerWithHooks :: Session -> Hooks -> IO (Result, [String])
-triggerWithHooks session hooks = fmap normalize <$> Trigger.trigger session hooks
+triggerWithHooks session hooks = do
+  (result, output, _) <- Trigger.trigger session hooks
+  return (result, normalize output)
 
 triggerAll :: Session -> IO (Result, [String])
-triggerAll session = fmap normalize <$> Trigger.triggerAll session defaultHooks
+triggerAll session = do
+  (result, output, _) <- Trigger.triggerAll session defaultHooks
+  return (result, normalize output)
 
 data HookExecuted = BeforeReloadSucceeded | AfterReloadSucceeded
   deriving (Eq, Show)
