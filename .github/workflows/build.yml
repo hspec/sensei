@@ -21,7 +21,6 @@ jobs:
         os:
           - ubuntu-latest
         ghc:
-          - '9.2'
           - '9.4'
           - '9.6'
           - '9.8'
@@ -43,11 +42,7 @@ jobs:
           restore-keys: ${{ runner.os }}-${{ steps.setup-haskell.outputs.ghc-version }}-
 
       - shell: bash
-        # The macOS runner comes with an outdated version of cabal:
-        # https://github.com/actions/runner-images/blob/macOS-12/20230416.1/images/macos/macos-12-Readme.md#tools
-        #
-        # (on Linux this is a noop)
-        run: ghcup install cabal 3.10 --set
+        run: ghcup install cabal latest --set
 
       - shell: bash
         run: git config --global init.defaultBranch main

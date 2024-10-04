@@ -263,11 +263,7 @@ spec = do
           _ <- trigger session
           writeFile name passingSpec
           trigger session `shouldReturn` (Success, [
-#if __GLASGOW_HASKELL__ < 904
-              "[1 of 1] Compiling Spec"
-#else
               "[1 of 1] Compiling Spec [Source file changed]"
-#endif
             , modulesLoaded Ok ["Spec"]
             , withColor Green "RELOADING SUCCEEDED"
             , ""
