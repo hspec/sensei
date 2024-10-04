@@ -26,6 +26,7 @@ import qualified Input
 import           Pager (pager)
 import           Util
 import           Config
+import           GHC.Diagnostic
 
 waitForever :: IO ()
 waitForever = forever $ threadDelay 10000000
@@ -85,7 +86,7 @@ run args = do
 defaultRunArgs :: IO RunArgs
 defaultRunArgs = do
   queue <- newQueue
-  lastOutput <- newMVar (Trigger.Success, "")
+  lastOutput <- newMVar (Trigger.Success, "", [])
   return RunArgs {
     ignoreConfig = False
   , dir = ""
@@ -100,7 +101,7 @@ data RunArgs = RunArgs {
   ignoreConfig :: Bool
 , dir :: FilePath
 , args :: [String]
-, lastOutput :: MVar (Result, String)
+, lastOutput :: MVar (Result, String, [Diagnostic])
 , queue :: EventQueue
 , sessionConfig  :: Session.Config
 , withSession :: forall r. Session.Config -> [String] -> (Session.Session -> IO r) -> IO r
@@ -119,16 +120,16 @@ runWith RunArgs {..} = do
     addCleanupAction :: IO () -> IO ()
     addCleanupAction cleanupAction = atomicModifyIORef' cleanup $ \ action -> (action >> cleanupAction, ())
 
-    saveOutput :: IO (Trigger.Result, String) -> IO ()
+    saveOutput :: IO (Trigger.Result, String, [Diagnostic]) -> IO ()
     saveOutput action = do
       runCleanupAction
       result <- modifyMVar lastOutput $ \ _ -> (id &&& id) <$> action
       case result of
-        (HookFailed, _output) -> pass
-        (Failure, output) -> config.senseiHooksOnFailure >>= \ case
+        (HookFailed, _output, _diagnostics) -> pass
+        (Failure, output, _diagnostics) -> config.senseiHooksOnFailure >>= \ case
           HookSuccess -> pager output >>= addCleanupAction
           HookFailure message -> hPutStrLn stderr message
-        (Success, _output) -> config.senseiHooksOnSuccess >>= \ case
+        (Success, _output, _diagnostics) -> config.senseiHooksOnSuccess >>= \ case
           HookSuccess -> pass
           HookFailure message -> hPutStrLn stderr message
 

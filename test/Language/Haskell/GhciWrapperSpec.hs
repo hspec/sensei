@@ -6,7 +6,7 @@ import           Helper
 import           Util
 import qualified Data.ByteString.Char8 as ByteString
 
-import           Language.Haskell.GhciWrapper (Config(..), Interpreter(..), ReloadStatus(..), extractNothing)
+import           Language.Haskell.GhciWrapper (Config(..), Interpreter(..), ReloadStatus(..), Extract(..))
 import qualified Language.Haskell.GhciWrapper as Interpreter
 
 main :: IO ()
@@ -17,6 +17,12 @@ withInterpreter = Interpreter.withInterpreter ghciConfig []
 
 withGhci :: ((String -> IO String) -> IO a) -> IO a
 withGhci action = withInterpreter [] $ action . Interpreter.eval
+
+extractNothing :: Extract ()
+extractNothing = Extract {
+  isPartialMessage = const False
+, parseMessage = undefined
+}
 
 spec :: Spec
 spec = do
@@ -135,16 +141,35 @@ spec = do
         writeFile file "module Foo where"
         action file
 
+      failingModule :: String -> IO ()
+      failingModule file = writeFile file $ unlines [
+          "module Foo where"
+        , "foo = bar"
+        ]
+
     it "indicates success" do
       withModule \ file -> do
         withInterpreter [file] \ ghci -> do
-          Interpreter.reload ghci `shouldReturn` ("", Ok)
+          Interpreter.reload ghci `shouldReturn` ("", (Ok, []))
 
     it "indicates failure" do
       withModule \ file -> do
         withInterpreter [file] \ ghci -> do
-          writeFile file $ unlines [
-              "module Foo where"
-            , "foo = bar"
-            ]
-          snd <$> Interpreter.reload ghci `shouldReturn` Failed
+          failingModule file
+          snd <$> Interpreter.reload ghci `shouldReturn` (Failed, [
+#if __GLASGOW_HASKELL__ >= 910
+              (diagnostic Error) {
+                span = Just $ Span file (Location 2 7) (Location 2 10)
+              , code = Just 88464
+              , message = ["Variable not in scope: bar"]
+              }
+#endif
+            ])
+
+    context "with -fno-diagnostics-as-json" $ do
+      it "does not extract diagnostics" do
+        requireGhc [9,10]
+        withModule \ file -> do
+          withInterpreter ["-fno-diagnostics-as-json", file] \ ghci -> do
+            failingModule file
+            snd <$> Interpreter.reload ghci `shouldReturn` (Failed, [])

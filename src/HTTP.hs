@@ -14,6 +14,7 @@ module HTTP (
 import           Imports hiding (strip, encodeUtf8)
 
 import           System.Directory
+import           Data.Aeson (ToJSON(..), encode)
 import qualified Data.ByteString.Lazy as L
 import           Data.Text.Lazy.Encoding (encodeUtf8)
 import           Network.Wai
@@ -22,6 +23,7 @@ import           Network.Wai.Handler.Warp (runSettingsSocket, defaultSettings)
 import           Network.Socket
 
 import qualified Trigger
+import           GHC.Diagnostic
 
 socketName :: FilePath -> String
 socketName dir = dir </> ".sensei.sock"
@@ -35,8 +37,8 @@ newSocket = socket AF_UNIX Stream 0
 withSocket :: (Socket -> IO a) -> IO a
 withSocket = bracket newSocket close
 
-withServer :: FilePath -> IO (Trigger.Result, String) -> IO a -> IO a
-withServer dir trigger = withApplication dir (app trigger)
+withServer :: FilePath -> IO (Trigger.Result, String, [Diagnostic]) -> IO a -> IO a
+withServer dir = withApplication dir . app
 
 withApplication :: FilePath -> Application -> IO a -> IO a
 withApplication dir application action = do
@@ -59,8 +61,12 @@ withThread asyncAction action = do
   takeMVar mvar
   return r
 
-app :: IO (Trigger.Result, String) -> Application
-app trigger request respond = trigger >>= textPlain
+app :: IO (Trigger.Result, String, [Diagnostic]) -> Application
+app getLastResult request respond = case pathInfo request of
+  ["diagnostics"] -> do
+    (_, _, diagnostics) <- getLastResult
+    respond $ json diagnostics
+  _ -> getLastResult >>= textPlain
   where
     color :: Either ByteString Bool
     color = case join $ lookup "color" $ queryString request of
@@ -69,8 +75,8 @@ app trigger request respond = trigger >>= textPlain
       Just "true" -> Right True
       Just value -> Left $ "invalid value for color: " <> urlEncode True value
 
-    textPlain :: (Trigger.Result, FilePath) -> IO ResponseReceived
-    textPlain (result, xs) = case color of
+    textPlain :: (Trigger.Result, FilePath, [Diagnostic]) -> IO ResponseReceived
+    textPlain (result, xs, _diagnostics) = case color of
       Left err -> respond $ responseLBS status400 [(hContentType, "text/plain")] (L.fromStrict err)
       Right c -> respond $ responseLBS status [(hContentType, "text/plain")] (encodeUtf8 . fromString $ strip xs)
         where
@@ -83,6 +89,12 @@ app trigger request respond = trigger >>= textPlain
             Trigger.HookFailed -> status500
             Trigger.Failure -> status500
             Trigger.Success -> status200
+
+json :: ToJSON a => a -> Response
+json value = responseLBS
+  status200
+  [("Content-Type", "application/json")]
+  (encode value)
 
 -- |
 -- Remove terminal sequences.

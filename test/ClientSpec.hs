@@ -16,7 +16,7 @@ withFailure = withServer Trigger.Failure (withColor Red "failure")
 withServer :: Trigger.Result -> String -> (FilePath -> IO a) -> IO a
 withServer result text action = do
   withTempDirectory $ \ dir -> do
-    HTTP.withServer dir (return (result, text)) $ do
+    HTTP.withServer dir (return (result, text, [])) $ do
       action dir
 
 spec :: Spec
