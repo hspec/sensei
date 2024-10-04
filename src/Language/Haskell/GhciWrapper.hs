@@ -61,10 +61,15 @@ new :: FilePath -> Config -> [String] -> IO Interpreter
 new startupFile Config{..} args_ = do
   checkDotGhci
   env <- sanitizeEnv <$> getEnvironment
+
   let
+    mandatoryArgs :: [String]
+    mandatoryArgs = ["-fshow-loaded-modules"]
+
+    args :: [String]
     args = "-ghci-script" : startupFile : args_ ++ catMaybes [
         if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
-      ]
+      ] ++ mandatoryArgs
 
   (stdoutReadEnd, stdoutWriteEnd) <- createPipe
 

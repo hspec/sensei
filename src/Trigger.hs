@@ -8,7 +8,6 @@ module Trigger (
 , trigger
 , triggerAll
 #ifdef TEST
-, reloadedSuccessfully
 , removeProgress
 #endif
 ) where
@@ -52,11 +51,7 @@ reloadedSuccessfully :: String -> Bool
 reloadedSuccessfully = any success . lines
   where
     success :: String -> Bool
-    success x = case stripPrefix "Ok, " x of
-      Just "no modules to be reloaded." -> True
-      Just xs | [_number, modules, loaded] <- words xs, modules `elem` ["module", "modules"], loaded `elem` ["loaded.", "reloaded."] -> True
-      Just xs -> "modules loaded: " `isPrefixOf` xs
-      Nothing -> False
+    success = isPrefixOf "Ok, modules loaded: "
 
 removeProgress :: String -> String
 removeProgress xs = case break (== '\r') xs of

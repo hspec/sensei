@@ -97,23 +97,12 @@ data Status = Ok | Failed
   deriving (Eq, Show)
 
 modulesLoaded :: Status -> [String] -> String
-modulesLoaded status xs = show status ++ ", " ++ mods ++ " " ++ loaded ++ "."
+modulesLoaded status xs = show status ++ ", modules loaded: " <> mods <> "."
   where
-    n = length xs
-    mods
-      | n == 0 = "no modules"
-      | n == 1 = "one module"
-      | n == 2 = "two modules"
-      | n == 3 = "three modules"
-      | n == 4 = "four modules"
-      | n == 5 = "five modules"
-      | n == 6 = "six modules"
-      | otherwise = show n ++ " modules"
+    mods = case xs of
+      [] -> "none"
+      [name] -> formatModule name
+      _ -> undefined
 
-#if __GLASGOW_HASKELL__ < 910
-    loaded = "loaded"
-#else
-    loaded
-      | n == 0 = "to be reloaded"
-      | otherwise = "reloaded"
-#endif
+    formatModule :: String -> String
+    formatModule name = name <> " (" <> name <> ".o)"

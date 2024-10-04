@@ -3,6 +3,8 @@ module TriggerSpec (spec) where
 
 import           Helper
 
+import qualified Data.Text as Text
+
 import qualified Session
 import           Session (Session)
 import           Language.Haskell.GhciWrapper (Config(..))
@@ -11,7 +13,7 @@ import           Trigger hiding (trigger, triggerAll)
 import qualified Trigger
 
 normalize :: String -> [String]
-normalize = normalizeTiming . lines
+normalize = normalizeTiming . lines . forGhc9dot4
   where
     normalizeTiming :: [String] -> [String]
     normalizeTiming = normalizeLine "Finished in "
@@ -22,6 +24,9 @@ normalize = normalizeTiming . lines
         f line
           | message `isPrefixOf` line = message ++ "..."
           | otherwise = line
+
+    forGhc9dot4 :: String -> String
+    forGhc9dot4 = Text.unpack . Text.replace "Ok, modules loaded: Spec." "Ok, modules loaded: Spec (Spec.o)." . Text.pack
 
 withSession :: FilePath -> [String] -> (Session -> IO a) -> IO a
 withSession specPath args = do
@@ -70,42 +75,6 @@ failingHook = return $ HookFailure "hook failed"
 
 spec :: Spec
 spec = do
-  describe "reloadedSuccessfully" $ do
-    context "with GHC < 8.2.1" $ do
-      it "detects success" $ do
-        reloadedSuccessfully "Ok, modules loaded: Spec." `shouldBe` True
-
-    context "with GHC >= 8.2.1" $ do
-      context "with a single module" $ do
-        it "detects success" $ do
-          reloadedSuccessfully "Ok, 1 module loaded." `shouldBe` True
-
-      context "with multiple modules" $ do
-        it "detects success" $ do
-          reloadedSuccessfully "Ok, 5 modules loaded." `shouldBe` True
-
-    context "with GHC >= 8.2.2" $ do
-      context "with a single module" $ do
-        it "detects success" $ do
-          reloadedSuccessfully "Ok, one module loaded." `shouldBe` True
-
-      context "with multiple modules" $ do
-        it "detects success" $ do
-          reloadedSuccessfully "Ok, four modules loaded." `shouldBe` True
-
-    context "with GHC >= 9.10.1 (reload)" $ do
-      context "without any modules" $ do
-        it "detects success" $ do
-          reloadedSuccessfully "Ok, no modules to be reloaded." `shouldBe` True
-
-      context "with a single module" $ do
-        it "detects success" $ do
-          reloadedSuccessfully "Ok, one module reloaded." `shouldBe` True
-
-      context "with multiple modules" $ do
-        it "detects success" $ do
-          reloadedSuccessfully "Ok, four modules reloaded." `shouldBe` True
-
   describe "removeProgress" $ do
     it "removes transient output" $ do
       (removeProgress . unlines) [
@@ -284,9 +253,9 @@ spec = do
     context "with a module that does not expose a spec" $ do
       it "only reloads" $ \ name -> do
         withSession name [] $ \ session -> do
-          writeFile name "module Foo where"
+          writeFile name "module Spec where"
           (trigger session >> trigger session) `shouldReturn` (Success, [
-              modulesLoaded Ok ["Foo"]
+              modulesLoaded Ok ["Spec"]
             , withColor Green "RELOADING SUCCEEDED"
             ])
 
