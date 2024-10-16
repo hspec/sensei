@@ -39,8 +39,8 @@ data Interpreter = Interpreter {
 die :: String -> IO a
 die = throwIO . ErrorCall
 
-withInterpreter :: Config -> [String] -> (Interpreter -> IO r) -> IO r
-withInterpreter config args action = do
+withInterpreter :: Config -> [(String, String)] -> [String] -> (Interpreter -> IO r) -> IO r
+withInterpreter config envDefaults args action = do
   withSystemTempFile "sensei" $ \ startupFile h -> do
     hPutStrLn h $ unlines [
         ":set prompt \"\""
@@ -49,7 +49,7 @@ withInterpreter config args action = do
       , ":seti -XNoOverloadedStrings"
       ]
     hClose h
-    bracket (new startupFile config args) close action
+    bracket (new startupFile config envDefaults args) close action
 
 sanitizeEnv :: [(String, String)] -> [(String, String)]
 sanitizeEnv = filter p
@@ -57,8 +57,8 @@ sanitizeEnv = filter p
     p ("HSPEC_FAILURES", _) = False
     p _ = True
 
-new :: FilePath -> Config -> [String] -> IO Interpreter
-new startupFile Config{..} args_ = do
+new :: FilePath -> Config -> [(String, String)] -> [String] -> IO Interpreter
+new startupFile Config{..} envDefaults args_ = do
   checkDotGhci
   env <- sanitizeEnv <$> getEnvironment
 
@@ -75,7 +75,7 @@ new startupFile Config{..} args_ = do
 
   (Just stdin_, Nothing, Nothing, processHandle ) <- createProcess (proc "ghci" args) {
     cwd = configWorkingDirectory
-  , env = Just env
+  , env = Just $ envDefaults ++ env
   , std_in  = CreatePipe
   , std_out = UseHandle stdoutWriteEnd
   , std_err = UseHandle stdoutWriteEnd

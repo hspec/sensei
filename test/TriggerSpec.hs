@@ -104,12 +104,6 @@ spec = do
             , "  Spec.hs:8:3: "
             , "  1) bar"
             , ""
-#if MIN_VERSION_hspec(2,11,7)
-            , "  To rerun use: --match \"/bar/\" --seed 0"
-#else
-            , "  To rerun use: --match \"/bar/\""
-#endif
-            , ""
             , "Randomized with seed 0"
             , ""
             , "Finished in ..."
@@ -211,12 +205,6 @@ spec = do
             , ""
             , "  Spec.hs:8:3: "
             , "  1) bar"
-            , ""
-#if MIN_VERSION_hspec(2,11,7)
-            , "  To rerun use: --match \"/bar/\" --seed 0"
-#else
-            , "  To rerun use: --match \"/bar/\""
-#endif
             , ""
             , "Randomized with seed 0"
             , ""
