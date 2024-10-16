@@ -71,7 +71,7 @@ library
     , http-conduit
     , http-media
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , pretty
     , process
@@ -138,7 +138,7 @@ executable seito
     , http-conduit
     , http-media
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , pretty
     , process
@@ -205,7 +205,7 @@ executable sensei
     , http-conduit
     , http-media
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , pretty
     , process
@@ -272,7 +272,7 @@ executable sensei-web
     , http-conduit
     , http-media
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , pretty
     , process
@@ -364,7 +364,7 @@ test-suite spec
     , http-media
     , http-types
     , mockery
-    , mtl
+    , mtl >=2.3.1
     , network
     , pretty
     , process

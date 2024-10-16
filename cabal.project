@@ -1,5 +1,6 @@
-packages:
-  sensei.cabal
+with-compiler: ghc-9.10.1
+
+packages: .
 
 program-options
   ghc-options: -Werror
