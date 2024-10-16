@@ -8,8 +8,6 @@ module Helper (
 , passingSpec
 , passingMetaSpec
 , failingSpec
-, Status(..)
-, modulesLoaded
 
 , Color(..)
 , withColor
@@ -92,17 +90,3 @@ failingSpec = unlines [
   , "  it \"foo\" True"
   , "  it \"bar\" False"
   ]
-
-data Status = Ok | Failed
-  deriving (Eq, Show)
-
-modulesLoaded :: Status -> [String] -> String
-modulesLoaded status xs = show status ++ ", modules loaded: " <> mods <> "."
-  where
-    mods = case xs of
-      [] -> "none"
-      [name] -> formatModule name
-      _ -> undefined
-
-    formatModule :: String -> String
-    formatModule name = name <> " (" <> name <> ".o)"

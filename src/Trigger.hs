@@ -25,7 +25,7 @@ import           Control.Monad.Except
 
 import           Util
 import           Config (Hook, HookResult(..))
-import           Session (Session, isFailure, isSuccess, hspecPreviousSummary, resetSummary)
+import           Session (Session, ReloadStatus(..), isFailure, isSuccess, hspecPreviousSummary, resetSummary)
 import qualified Session
 
 data Hooks = Hooks {
@@ -47,12 +47,6 @@ triggerAll session hooks = do
   resetSummary session
   trigger session hooks
 
-reloadedSuccessfully :: String -> Bool
-reloadedSuccessfully = any success . lines
-  where
-    success :: String -> Bool
-    success = isPrefixOf "Ok, modules loaded: "
-
 removeProgress :: String -> String
 removeProgress xs = case break (== '\r') xs of
   (_, "") -> xs
@@ -71,13 +65,13 @@ trigger session hooks = runWriterT (runExceptT go) >>= \ case
     go :: Trigger ()
     go = do
       runHook hooks.beforeReload
-      output <- Session.reload session
+      (output, r) <- Session.reload session
       tell output
-      case reloadedSuccessfully output of
-        False -> do
+      case r of
+        Failed -> do
           echo $ withColor Red "RELOADING FAILED" <> "\n"
           abort
-        True -> do
+        Ok -> do
           echo $ withColor Green "RELOADING SUCCEEDED" <> "\n"
 
       runHook hooks.afterReload

@@ -1,7 +1,7 @@
 packages:
   sensei.cabal
 
-package sensei
+program-options
   ghc-options: -Werror
 
 tests: True

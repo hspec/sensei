@@ -3,9 +3,13 @@ module ReadHandle (
   ReadHandle(..)
 , toReadHandle
 , marker
+, Extract(..)
+, partialMessageStartsWith
+, partialMessageStartsWithOneOf
 , getResult
 , drain
 #ifdef TEST
+, breakAfterNewLine
 , newEmptyBuffer
 #endif
 ) where
@@ -34,9 +38,9 @@ data ReadHandle = ReadHandle {
 , buffer :: IORef Buffer
 }
 
-drain :: ReadHandle -> (ByteString -> IO ()) -> IO ()
-drain h echo = while (not <$> isEOF h) $ do
-  _ <- getResult h echo
+drain :: Extract a -> ReadHandle -> (ByteString -> IO ()) -> IO ()
+drain extract h echo = while (not <$> isEOF h) $ do
+  _ <- getResult extract h echo
   pass
 
 isEOF :: ReadHandle -> IO Bool
@@ -73,14 +77,63 @@ toReadHandle h n = do
 newEmptyBuffer :: IO (IORef Buffer)
 newEmptyBuffer = newIORef BufferEmpty
 
-getResult :: ReadHandle -> (ByteString -> IO ()) -> IO ByteString
-getResult h echo = mconcat <$> go
-  where
-    go :: IO [ByteString]
-    go = nextChunk h >>= \ case
-      Chunk chunk -> echo chunk >> (chunk :) <$> go
+data Extract a = Extract {
+  isPartialMessage :: ByteString -> Bool
+, parseMessage :: ByteString -> Maybe (a, ByteString)
+}
+
+partialMessageStartsWith :: ByteString -> ByteString -> Bool
+partialMessageStartsWith prefix chunk = ByteString.isPrefixOf chunk prefix || ByteString.isPrefixOf prefix chunk
+
+partialMessageStartsWithOneOf :: [ByteString] -> ByteString -> Bool
+partialMessageStartsWithOneOf xs x = any ($ x) $ map partialMessageStartsWith xs
+
+getResult :: Extract a -> ReadHandle -> (ByteString -> IO ()) -> IO (ByteString, [a])
+getResult extract h echo = do
+  ref <- newIORef []
+
+  let
+    startOfLine :: ByteString -> IO [ByteString]
+    startOfLine = \ case
+      "" -> withMoreInput_ startOfLine
+      chunk | extract.isPartialMessage chunk -> extractMessage chunk
+      chunk -> notStartOfLine chunk
+
+    notStartOfLine :: ByteString -> IO [ByteString]
+    notStartOfLine chunk = case breakAfterNewLine chunk of
+      Nothing -> echo chunk >> (chunk :) <$> withMoreInput_ notStartOfLine
+      Just (x, xs) -> echo x >> (x :) <$> startOfLine xs
+
+    extractMessage :: ByteString -> IO [ByteString]
+    extractMessage chunk = case breakAfterNewLine chunk of
+      Nothing -> withMoreInput chunk startOfLine
+      Just (x, xs) -> do
+        c <- case extract.parseMessage x of
+          Nothing -> do
+            return x
+          Just (message, formatted) -> do
+            modifyIORef' ref (message :)
+            return formatted
+        echo c >> (c :) <$> startOfLine xs
+
+    withMoreInput_ :: (ByteString -> IO [ByteString]) -> IO [ByteString]
+    withMoreInput_ action = nextChunk h >>= \ case
+      Chunk chunk -> action chunk
       Marker -> return []
       EOF -> return []
+
+    withMoreInput :: ByteString -> (ByteString -> IO [ByteString]) -> IO [ByteString]
+    withMoreInput acc action = nextChunk h >>= \ case
+      Chunk chunk -> action (acc <> chunk)
+      Marker -> echo acc >> return [acc]
+      EOF -> echo acc >> return [acc]
+
+  (,) <$> (mconcat <$> withMoreInput_ startOfLine) <*> readIORef ref
+
+breakAfterNewLine :: ByteString -> Maybe (ByteString, ByteString)
+breakAfterNewLine input = case ByteString.elemIndex '\n' input of
+  Just n -> Just (ByteString.splitAt (n + 1) input)
+  Nothing -> Nothing
 
 data Chunk = Chunk ByteString | Marker | EOF
 
