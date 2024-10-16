@@ -20,14 +20,13 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
+          - macos-12
         ghc:
-          - '9.4'
-          - '9.6'
-          - '9.8'
           - '9.10'
         include:
           - os: macos-latest
             ghc: '9.10'
+
     steps:
       - uses: actions/checkout@v3
       - uses: hspec/setup-haskell@v1
@@ -54,9 +53,12 @@ jobs:
         run: cabal build all
 
       - shell: bash
-        run: $(cabal list-bin spec) --times --print-slow
-        env:
-          HSPEC_OPTIONS: --color
+        run: |
+          for GHC in 9.4 9.6 9.8 9.10
+          do
+            ghcup install ghc $GHC --no-set
+            SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)
+          done
 
   success:
     needs: build
