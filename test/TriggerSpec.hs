@@ -3,6 +3,8 @@ module TriggerSpec (spec) where
 
 import           Helper
 
+import qualified Data.Text as Text
+
 import qualified Session
 import           Session (Session)
 import           Language.Haskell.GhciWrapper (Config(..))
@@ -11,7 +13,7 @@ import           Trigger hiding (trigger, triggerAll)
 import qualified Trigger
 
 normalize :: String -> [String]
-normalize = normalizeTiming . lines
+normalize = normalizeTiming . lines . forGhc9dot4
   where
     normalizeTiming :: [String] -> [String]
     normalizeTiming = normalizeLine "Finished in "
@@ -22,6 +24,11 @@ normalize = normalizeTiming . lines
         f line
           | message `isPrefixOf` line = message ++ "..."
           | otherwise = line
+
+    forGhc9dot4 :: String -> String
+    forGhc9dot4 = Text.unpack
+      . Text.replace " error: Variable not in scope: " " error: [GHC-88464] Variable not in scope: "
+      . Text.pack
 
 withSession :: FilePath -> [String] -> (Session -> IO a) -> IO a
 withSession specPath args = do
@@ -147,19 +154,14 @@ spec = do
       it "stops after reloading" $ \ name -> do
         withSession name [] $ \ session -> do
           writeFile name (passingSpec ++ "foo = bar")
-          (trigger session >> trigger session) `shouldReturn` (Failure, [
+
+          let
+            fitterNotNull :: [String] -> [String]
+            fitterNotNull = filter (not . null)
+
+          (fmap fitterNotNull <$> (trigger session >> trigger session)) `shouldReturn` (Failure, [
               "[1 of 1] Compiling Spec"
-#if __GLASGOW_HASKELL__ < 910
-            , ""
-#endif
-#if __GLASGOW_HASKELL__ >= 906
             , "Spec.hs:9:7: error: [GHC-88464] Variable not in scope: bar"
-#else
-            , "Spec.hs:9:7: error: Variable not in scope: bar"
-#endif
-#if __GLASGOW_HASKELL__ >= 910
-            , ""
-#endif
             , withColor Red "RELOADING FAILED"
             ])
 
