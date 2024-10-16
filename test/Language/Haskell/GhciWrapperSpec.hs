@@ -1,10 +1,11 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE BlockArguments #-}
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
 import           Helper
 import qualified Data.ByteString.Char8 as ByteString
 
-import           Language.Haskell.GhciWrapper (Config(..), Interpreter(..))
+import           Language.Haskell.GhciWrapper (Config(..), Interpreter(..), ReloadStatus(..), extractNothing)
 import qualified Language.Haskell.GhciWrapper as Interpreter
 
 main :: IO ()
@@ -55,7 +56,7 @@ spec = do
     it "echos result" $ do
       fmap mconcat . withSpy $ \ spy -> do
         withInterpreter [] $ \ ghci -> do
-          Interpreter.evalVerbose ghci {echo = spy} "23" `shouldReturn` "23\n"
+          Interpreter.evalVerbose extractNothing ghci {echo = spy} "23" `shouldReturn` ("23\n", [])
       `shouldReturn` "23\n"
 
   describe "eval" $ do
@@ -116,9 +117,33 @@ spec = do
       ghci "exitWith $ ExitFailure 10" `shouldReturn` "*** Exception: ExitFailure 10\n"
 
     it "gives an error message for identifiers that are not in scope" $ withGhci $ \ ghci -> do
-      ghci "foo" >>= (`shouldSatisfy` isInfixOf "Variable not in scope: foo")
+      ghci "foo" >>= (`shouldContain` "Variable not in scope: foo")
 
     context "with -XNoImplicitPrelude" $ do
       it "works" $ withInterpreter ["-XNoImplicitPrelude"] $ \ ghci -> do
         Interpreter.eval ghci "putStrLn \"foo\"" >>= (`shouldContain` "Variable not in scope: putStrLn")
         Interpreter.eval ghci "23" `shouldReturn` "23\n"
+
+  describe "reload" do
+    let
+      withModule :: (FilePath -> IO a) -> IO a
+      withModule action = withTempDirectory \ dir -> do
+        let
+          file :: FilePath
+          file = dir </> "Foo.hs"
+        writeFile file "module Foo where"
+        action file
+
+    it "indicates success" do
+      withModule \ file -> do
+        withInterpreter [file] \ ghci -> do
+          Interpreter.reload ghci `shouldReturn` ("", Ok)
+
+    it "indicates failure" do
+      withModule \ file -> do
+        withInterpreter [file] \ ghci -> do
+          writeFile file $ unlines [
+              "module Foo where"
+            , "foo = bar"
+            ]
+          snd <$> Interpreter.reload ghci `shouldReturn` Failed

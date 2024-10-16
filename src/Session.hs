@@ -4,6 +4,8 @@ module Session (
 , Session(..)
 , echo
 , withSession
+
+, ReloadStatus(..)
 , reload
 
 , Summary(..)
@@ -18,15 +20,17 @@ module Session (
 , hasSpec
 , hasHspecCommandSignature
 , hspecCommand
-, parseSummary
+, extractSummary
 #endif
 ) where
 
 import           Imports
 
 import           Data.IORef
+import qualified Data.ByteString as ByteString
 
-import           Language.Haskell.GhciWrapper
+import           Language.Haskell.GhciWrapper hiding (reload)
+import qualified Language.Haskell.GhciWrapper as Interpreter
 
 import           Util
 import           Options
@@ -57,8 +61,8 @@ withSession config args action = do
   where
     (ghciArgs, hspecArgs) = splitArgs args
 
-reload :: MonadIO m => Session -> m String
-reload session = liftIO $ evalVerbose session.interpreter ":reload"
+reload :: MonadIO m => Session -> m (String, ReloadStatus)
+reload session = liftIO $ Interpreter.reload session.interpreter
 
 data Summary = Summary {
   summaryExamples :: Int
@@ -103,8 +107,8 @@ runSpec :: String -> Session -> IO String
 runSpec command session = do
   failedPreviously <- isFailure <$> hspecPreviousSummary session
   let args = "--color" : (if failedPreviously then addRerun else id) session.hspecArgs
-  r <- evalVerbose session.interpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ command
-  writeIORef session.hspecPreviousSummaryRef (parseSummary r)
+  (r, summary) <- evalVerbose extractSummary session.interpreter $ "System.Environment.withArgs " ++ show args ++ " $ " ++ command
+  writeIORef session.hspecPreviousSummaryRef . listToMaybe $ reverse summary
   return r
   where
     addRerun :: [String] -> [String]
@@ -116,13 +120,19 @@ isFailure = maybe True ((/= 0) . (.summaryFailures))
 isSuccess :: Maybe Summary -> Bool
 isSuccess = not . isFailure
 
-parseSummary :: String -> Maybe Summary
-parseSummary = findJust . map (readMaybe . dropAnsiEscapeSequences) . reverse . lines
-  where
-    findJust = listToMaybe . catMaybes
+extractSummary :: Extract Summary
+extractSummary = Extract {
+  isPartialMessage = partialMessageStartsWithOneOf [summaryPrefix, ansiShowCursor <> summaryPrefix]
+, parseMessage = fmap (flip (,) "") . parseSummary
+} where
+    summaryPrefix :: ByteString
+    summaryPrefix = "Summary {"
 
-    dropAnsiEscapeSequences xs
-      | "Summary" `isPrefixOf` xs = xs
-      | otherwise = case xs of
-          _ : ys -> dropAnsiEscapeSequences ys
-          [] -> []
+    parseSummary :: ByteString -> Maybe Summary
+    parseSummary = readMaybe . decodeUtf8 . stripAnsiShowCursor
+
+    ansiShowCursor :: ByteString
+    ansiShowCursor = "\ESC[?25h"
+
+    stripAnsiShowCursor :: ByteString -> ByteString
+    stripAnsiShowCursor input = fromMaybe input $ ByteString.stripPrefix ansiShowCursor input

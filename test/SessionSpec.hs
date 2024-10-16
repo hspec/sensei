@@ -38,8 +38,8 @@ spec = do
 
   describe "reload" $ do
     it "reloads" $ do
-      withSession [] $ \session -> do
-        Session.reload session `shouldReturn` (modulesLoaded Ok [] ++ "\n")
+      withSession [] $ \ session -> do
+        Session.reload session `shouldReturn` ("", Ok)
 
   describe "hasSpec" $ around withSomeSpec $ do
     context "when module contains spec" $ do
@@ -88,25 +88,3 @@ spec = do
       withSession [name, "--no-color", "-m", "foo"] $ \session -> do
         _ <- runSpec session >> runSpec session
         hspecPreviousSummary session `shouldReturn` Just (Summary 1 0)
-
-  describe "parseSummary" $ do
-    let summary = Summary 2 0
-
-    it "parses summary" $ do
-      Session.parseSummary (show summary) `shouldBe` Just summary
-
-    it "ignores additional output before / after summary" $ do
-      (Session.parseSummary . unlines) [
-          "foo"
-        , show summary
-        , "bar"
-        ] `shouldBe` Just summary
-
-    it "gives last occurrence precedence" $ do
-      (Session.parseSummary . unlines) [
-          show (Summary 3 0)
-        , show summary
-        ] `shouldBe` Just summary
-
-    it "ignores additional output at the beginning of a line (to cope with ansi escape sequences)" $ do
-      Session.parseSummary ("foo " ++ show summary) `shouldBe` Just (Summary 2 0)

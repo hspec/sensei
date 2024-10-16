@@ -3,8 +3,6 @@ module TriggerSpec (spec) where
 
 import           Helper
 
-import qualified Data.Text as Text
-
 import qualified Session
 import           Session (Session)
 import           Language.Haskell.GhciWrapper (Config(..))
@@ -13,7 +11,7 @@ import           Trigger hiding (trigger, triggerAll)
 import qualified Trigger
 
 normalize :: String -> [String]
-normalize = normalizeTiming . lines . forGhc9dot4
+normalize = normalizeTiming . lines
   where
     normalizeTiming :: [String] -> [String]
     normalizeTiming = normalizeLine "Finished in "
@@ -24,9 +22,6 @@ normalize = normalizeTiming . lines . forGhc9dot4
         f line
           | message `isPrefixOf` line = message ++ "..."
           | otherwise = line
-
-    forGhc9dot4 :: String -> String
-    forGhc9dot4 = Text.unpack . Text.replace "Ok, modules loaded: Spec." "Ok, modules loaded: Spec (Spec.o)." . Text.pack
 
 withSession :: FilePath -> [String] -> (Session -> IO a) -> IO a
 withSession specPath args = do
@@ -93,8 +88,7 @@ spec = do
         withSession name [] $ \ session -> do
           writeFile name failingSpec
           (trigger session >> triggerAll session) `shouldReturn` (Failure, [
-              modulesLoaded Ok ["Spec"]
-            , withColor Green "RELOADING SUCCEEDED"
+              withColor Green "RELOADING SUCCEEDED"
             , ""
             , "foo [✔]"
             , "bar [✘]"
@@ -108,22 +102,19 @@ spec = do
             , ""
             , "Finished in ..."
             , "2 examples, 1 failure"
-            , "Summary {summaryExamples = 2, summaryFailures = 1}"
             ])
 
   describe "trigger" $ around withSomeSpec $ do
     it "reloads and runs specs" $ \ name -> do
       withSession name [] $ \ session -> do
         trigger session `shouldReturn` (Success, [
-            modulesLoaded Ok ["Spec"]
-          , withColor Green "RELOADING SUCCEEDED"
+            withColor Green "RELOADING SUCCEEDED"
           , ""
           , "foo [✔]"
           , "bar [✔]"
           , ""
           , "Finished in ..."
           , "2 examples, 0 failures"
-          , "Summary {summaryExamples = 2, summaryFailures = 0}"
           ])
 
     context "with hooks" $ do
@@ -131,15 +122,13 @@ spec = do
         withHooks $ \ hooks -> do
           withSession name [] $ \ session -> do
             triggerWithHooks session hooks `shouldReturn` (Success, [
-                modulesLoaded Ok ["Spec"]
-              , withColor Green "RELOADING SUCCEEDED"
+                withColor Green "RELOADING SUCCEEDED"
               , ""
               , "foo [✔]"
               , "bar [✔]"
               , ""
               , "Finished in ..."
               , "2 examples, 0 failures"
-              , "Summary {summaryExamples = 2, summaryFailures = 0}"
               ])
         `shouldReturn` [BeforeReloadSucceeded, AfterReloadSucceeded]
 
@@ -157,8 +146,7 @@ spec = do
           withHooks $ \ hooks -> do
             withSession name [] $ \ session -> do
               triggerWithHooks session hooks { afterReload = failingHook } `shouldReturn` (HookFailed, [
-                  modulesLoaded Ok ["Spec"]
-                , withColor Green "RELOADING SUCCEEDED"
+                  withColor Green "RELOADING SUCCEEDED"
                 , "hook failed"
                 ])
           `shouldReturn` [BeforeReloadSucceeded]
@@ -180,7 +168,6 @@ spec = do
 #if __GLASGOW_HASKELL__ >= 910
             , ""
 #endif
-            , modulesLoaded Failed []
             , withColor Red "RELOADING FAILED"
             ])
 
@@ -189,15 +176,29 @@ spec = do
         withSession name [] $ \ session -> do
           writeFile name failingSpec
           (Failure, xs) <- trigger session
-          xs `shouldContain` [modulesLoaded Ok ["Spec"]]
-          xs `shouldContain` ["2 examples, 1 failure"]
+          xs `shouldBe` [
+              "[1 of 1] Compiling Spec [Source file changed]"
+            , withColor Green "RELOADING SUCCEEDED"
+            , ""
+            , "foo [✔]"
+            , "bar [✘]"
+            , ""
+            , "Failures:"
+            , ""
+            , "  Spec.hs:8:3: "
+            , "  1) bar"
+            , ""
+            , "Randomized with seed 0"
+            , ""
+            , "Finished in ..."
+            , "2 examples, 1 failure"
+            ]
 
       it "only reruns failing specs" $ \ name -> do
         withSession name [] $ \ session -> do
           writeFile name failingSpec
           (trigger session >> trigger session) `shouldReturn` (Failure, [
-              modulesLoaded Ok ["Spec"]
-            , withColor Green "RELOADING SUCCEEDED"
+              withColor Green "RELOADING SUCCEEDED"
             , ""
             , "bar [✘]"
             , ""
@@ -210,7 +211,6 @@ spec = do
             , ""
             , "Finished in ..."
             , "1 example, 1 failure"
-            , "Summary {summaryExamples = 1, summaryFailures = 1}"
             ])
 
     context "after a failing spec passes" $ do
@@ -221,21 +221,18 @@ spec = do
           writeFile name passingSpec
           trigger session `shouldReturn` (Success, [
               "[1 of 1] Compiling Spec [Source file changed]"
-            , modulesLoaded Ok ["Spec"]
             , withColor Green "RELOADING SUCCEEDED"
             , ""
             , "bar [✔]"
             , ""
             , "Finished in ..."
             , "1 example, 0 failures"
-            , "Summary {summaryExamples = 1, summaryFailures = 0}"
             , ""
             , "foo [✔]"
             , "bar [✔]"
             , ""
             , "Finished in ..."
             , "2 examples, 0 failures"
-            , "Summary {summaryExamples = 2, summaryFailures = 0}"
             ])
 
     context "with a module that does not expose a spec" $ do
@@ -243,8 +240,7 @@ spec = do
         withSession name [] $ \ session -> do
           writeFile name "module Spec where"
           (trigger session >> trigger session) `shouldReturn` (Success, [
-              modulesLoaded Ok ["Spec"]
-            , withColor Green "RELOADING SUCCEEDED"
+              withColor Green "RELOADING SUCCEEDED"
             ])
 
     context "with an hspec-meta spec" $ do
@@ -252,13 +248,11 @@ spec = do
         requiresHspecMeta $ withSession name ["-package hspec-meta"] $ \ session -> do
           writeFile name passingMetaSpec
           (trigger session >> trigger session) `shouldReturn` (Success, [
-              modulesLoaded Ok ["Spec"]
-            , withColor Green "RELOADING SUCCEEDED"
+              withColor Green "RELOADING SUCCEEDED"
             , ""
             , "foo [✔]"
             , "bar [✔]"
             , ""
             , "Finished in ..."
             , "2 examples, 0 failures"
-            , "Summary {summaryExamples = 2, summaryFailures = 0}"
             ])

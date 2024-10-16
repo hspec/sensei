@@ -26,6 +26,9 @@ import           Control.Monad.IO.Class as Imports
 import           System.IO (Handle)
 import           GHC.IO.Handle.Internals (wantReadableHandle_)
 
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+
 pass :: Applicative m => m ()
 pass = pure ()
 
@@ -46,3 +49,9 @@ createPipe :: IO (Handle, Handle)
 #error Use `associateHandle'` as per https://hackage.haskell.org/package/process-1.6.17.0/docs/System-Process.html#v:createPipe
 #endif
 createPipe = Process.createPipe
+
+encodeUtf8 :: String -> ByteString
+encodeUtf8 = T.encodeUtf8 . T.pack
+
+decodeUtf8 :: ByteString -> String
+decodeUtf8 = T.unpack . T.decodeUtf8

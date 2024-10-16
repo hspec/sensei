@@ -1,17 +1,27 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE BlockArguments #-}
 module Language.Haskell.GhciWrapper (
   Config(..)
 , Interpreter(echo)
 , withInterpreter
 , eval
+
+, Extract(..)
+, partialMessageStartsWithOneOf
 , evalVerbose
+
+, ReloadStatus(..)
+, reload
+
+#ifdef TEST
+, extractReloadStatus
+, extractNothing
+#endif
 ) where
 
 import           Imports
 
 import qualified Data.ByteString as ByteString
-import           Data.Text.Encoding (decodeUtf8)
-import qualified Data.Text as T
 import           System.IO hiding (stdin, stdout, stderr)
 import           System.IO.Temp (withSystemTempFile)
 import           System.Environment (getEnvironment)
@@ -20,7 +30,7 @@ import           System.Exit (exitFailure)
 
 import           Util (isWritableByOthers)
 import qualified ReadHandle
-import           ReadHandle (ReadHandle, toReadHandle)
+import           ReadHandle (ReadHandle, toReadHandle, Extract(..), partialMessageStartsWithOneOf)
 
 data Config = Config {
   configIgnoreDotGhci :: Bool
@@ -123,13 +133,13 @@ new startupFile Config{..} envDefaults args_ = do
       hSetBuffering h LineBuffering
       hSetEncoding h utf8
 
-    printStartupMessages :: Interpreter -> IO String
-    printStartupMessages interpreter = evalVerbose interpreter ""
+    printStartupMessages :: Interpreter -> IO (String, [ReloadStatus])
+    printStartupMessages interpreter = evalVerbose extractReloadStatus interpreter ""
 
 close :: Interpreter -> IO ()
 close Interpreter{..} = do
   hClose hIn
-  ReadHandle.drain readHandle echo
+  ReadHandle.drain extractNothing readHandle echo
   hClose hOut
   e <- waitForProcess process
   when (e /= ExitSuccess) $ do
@@ -141,14 +151,39 @@ putExpression Interpreter{hIn = stdin} e = do
   ByteString.hPut stdin ReadHandle.marker
   hFlush stdin
 
-getResult :: Interpreter -> IO String
-getResult Interpreter{..} = T.unpack . decodeUtf8 <$> ReadHandle.getResult readHandle echo
+data ReloadStatus = Ok | Failed
+  deriving (Eq, Show)
+
+extractReloadStatus :: Extract ReloadStatus
+extractReloadStatus = Extract {
+  isPartialMessage = partialMessageStartsWithOneOf [ok, failed]
+, parseMessage = \ case
+    line | ByteString.isPrefixOf ok line -> Just (Ok, "")
+    line | ByteString.isPrefixOf failed line -> Just (Failed, "")
+    _ -> Nothing
+} where
+    ok = "Ok, modules loaded: "
+    failed = "Failed, modules loaded: "
+
+extractNothing :: Extract ()
+extractNothing = Extract {
+  isPartialMessage = const False
+, parseMessage = undefined
+}
+
+getResult :: Extract a -> Interpreter -> IO (String, [a])
+getResult extract Interpreter{..} = first decodeUtf8 <$> ReadHandle.getResult extract readHandle echo
 
 silent :: ByteString -> IO ()
 silent _ = pass
 
 eval :: Interpreter -> String -> IO String
-eval ghci = evalVerbose ghci {echo = silent}
+eval ghci = fmap fst . evalVerbose extractNothing ghci {echo = silent}
 
-evalVerbose :: Interpreter -> String -> IO String
-evalVerbose ghci expr = putExpression ghci expr >> getResult ghci
+evalVerbose :: Extract a -> Interpreter -> String -> IO (String, [a])
+evalVerbose extract ghci expr = putExpression ghci expr >> getResult extract ghci
+
+reload :: Interpreter -> IO (String, ReloadStatus)
+reload ghci = evalVerbose extractReloadStatus ghci ":reload" <&> second \ case
+  [Ok] -> Ok
+  _ -> Failed
