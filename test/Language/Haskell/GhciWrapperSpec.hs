@@ -11,7 +11,7 @@ main :: IO ()
 main = hspec spec
 
 withInterpreter :: [String] -> (Interpreter -> IO a) -> IO a
-withInterpreter = Interpreter.withInterpreter ghciConfig
+withInterpreter = Interpreter.withInterpreter ghciConfig []
 
 withGhci :: ((String -> IO String) -> IO a) -> IO a
 withGhci action = withInterpreter [] $ action . Interpreter.eval
@@ -22,7 +22,7 @@ spec = do
     context "on shutdown" $ do
       it "drains `stdout` of the `ghci` process" $ do
         result <- withSpy $ \ spy -> do
-          Interpreter.withInterpreter ghciConfig {configEcho = spy} [] $ \ _ghci -> do
+          Interpreter.withInterpreter ghciConfig {configEcho = spy} [] [] $ \ _ghci -> do
             pass
         last (ByteString.lines $ mconcat result) `shouldBe` "Leaving GHCi."
 
@@ -33,7 +33,7 @@ spec = do
           let dotGhci = dir </> ".ghci"
           writeFile dotGhci ""
           callProcess "chmod" ["go+w", dotGhci]
-          Interpreter.withInterpreter config { configWorkingDirectory = Just dir } [] $ \ ghci -> Interpreter.eval ghci "23"
+          Interpreter.withInterpreter config { configWorkingDirectory = Just dir } [] [] $ \ ghci -> Interpreter.eval ghci "23"
 
       context "when configIgnoreDotGhci is False" $ do
         it "terminates with an error message" $ do
