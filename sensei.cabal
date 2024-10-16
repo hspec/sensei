@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.36.0.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -63,7 +63,7 @@ executable seito
     , fsnotify ==0.4.*
     , http-client >=0.5.0
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , process
     , stm
@@ -121,7 +121,7 @@ executable sensei
     , fsnotify ==0.4.*
     , http-client >=0.5.0
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , process
     , stm
@@ -179,7 +179,7 @@ executable sensei-web
     , fsnotify ==0.4.*
     , http-client >=0.5.0
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , process
     , stm
@@ -260,7 +260,7 @@ test-suite spec
     , http-client >=0.5.0
     , http-types
     , mockery
-    , mtl
+    , mtl >=2.3.1
     , network
     , process
     , stm

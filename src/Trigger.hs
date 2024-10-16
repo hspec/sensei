@@ -14,12 +14,8 @@ module Trigger (
 
 import           Imports
 
-#if MIN_VERSION_mtl(2,3,1)
 import           Control.Monad.Trans.Writer.CPS (runWriterT)
 import           Control.Monad.Writer.CPS hiding (pass)
-#else
-import           Control.Monad.Writer.Strict hiding (pass)
-#endif
 
 import           Control.Monad.Except
 
