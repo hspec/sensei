@@ -47,6 +47,14 @@ withInterpreter config envDefaults args action = do
       , ":unset +m +r +s +t +c"
       , ":seti -XHaskell2010"
       , ":seti -XNoOverloadedStrings"
+
+      -- GHCi uses NoBuffering for stdout and stderr by default:
+      -- https://downloads.haskell.org/ghc/9.4.4/docs/users_guide/ghci.html
+      , "GHC.IO.Handle.hSetBuffering System.IO.stdout GHC.IO.Handle.LineBuffering"
+      , "GHC.IO.Handle.hSetBuffering System.IO.stderr GHC.IO.Handle.LineBuffering"
+
+      , "GHC.IO.Handle.hSetEncoding System.IO.stdout GHC.IO.Encoding.utf8"
+      , "GHC.IO.Handle.hSetEncoding System.IO.stderr GHC.IO.Encoding.utf8"
       ]
     hClose h
     bracket (new startupFile config envDefaults args) close action
@@ -97,16 +105,7 @@ new startupFile Config{..} envDefaults args_ = do
   _ <- printStartupMessages interpreter
   getProcessExitCode processHandle >>= \ case
     Just _ -> exitFailure
-    Nothing -> do
-      -- GHCi uses NoBuffering for stdout and stderr by default:
-      -- https://downloads.haskell.org/ghc/9.4.4/docs/users_guide/ghci.html
-      evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stdout GHC.IO.Handle.LineBuffering"
-      evalThrow interpreter "GHC.IO.Handle.hSetBuffering System.IO.stderr GHC.IO.Handle.LineBuffering"
-
-      evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stdout GHC.IO.Encoding.utf8"
-      evalThrow interpreter "GHC.IO.Handle.hSetEncoding System.IO.stderr GHC.IO.Encoding.utf8"
-
-      return interpreter
+    Nothing -> return interpreter
   where
     checkDotGhci = unless configIgnoreDotGhci $ do
       let dotGhci = fromMaybe "" configWorkingDirectory </> ".ghci"
@@ -126,13 +125,6 @@ new startupFile Config{..} envDefaults args_ = do
 
     printStartupMessages :: Interpreter -> IO String
     printStartupMessages interpreter = evalVerbose interpreter ""
-
-    evalThrow :: Interpreter -> String -> IO ()
-    evalThrow interpreter expr = do
-      output <- eval interpreter expr
-      unless (null output) $ do
-        close interpreter
-        die output
 
 close :: Interpreter -> IO ()
 close Interpreter{..} = do
