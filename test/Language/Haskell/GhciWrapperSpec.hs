@@ -121,7 +121,7 @@ spec = do
 
     context "with -XNoImplicitPrelude" $ do
       it "works" $ withInterpreter ["-XNoImplicitPrelude"] $ \ ghci -> do
-        Interpreter.eval ghci "putStrLn \"foo\"" >>= (`shouldContain` "Variable not in scope: putStrLn")
+        (unwords . map (dropWhile isSpace) . lines <$> Interpreter.eval ghci "putStrLn \"foo\"") >>= (`shouldContain` "Variable not in scope: putStrLn")
         Interpreter.eval ghci "23" `shouldReturn` "23\n"
 
   describe "reload" do
