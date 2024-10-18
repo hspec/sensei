@@ -26,6 +26,10 @@ import           Control.Monad.IO.Class as Imports
 import           System.IO (Handle)
 import           GHC.IO.Handle.Internals (wantReadableHandle_)
 
+import           Data.Version as Imports (Version(..), showVersion, makeVersion)
+import qualified Data.Version as Version
+import           Text.ParserCombinators.ReadP
+
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 
@@ -55,3 +59,11 @@ encodeUtf8 = T.encodeUtf8 . T.pack
 
 decodeUtf8 :: ByteString -> String
 decodeUtf8 = T.unpack . T.decodeUtf8
+
+strip :: String -> String
+strip = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
+parseVersion :: String -> Maybe Version
+parseVersion xs = case [v | (v, "") <- readP_to_S Version.parseVersion xs] of
+  [v] -> Just v
+  _ -> Nothing

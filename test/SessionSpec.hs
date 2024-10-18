@@ -39,7 +39,7 @@ spec = do
   describe "reload" $ do
     it "reloads" $ do
       withSession [] $ \ session -> do
-        Session.reload session `shouldReturn` ("", Ok)
+        Session.reload session `shouldReturn` ("", (Ok, []))
 
   describe "hasSpec" $ around withSomeSpec $ do
     context "when module contains spec" $ do

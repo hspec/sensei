@@ -2,6 +2,7 @@
 {-# LANGUAGE BlockArguments #-}
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
+import           Prelude hiding (span)
 import           Helper
 import qualified Data.ByteString.Char8 as ByteString
 
@@ -137,7 +138,7 @@ spec = do
     it "indicates success" do
       withModule \ file -> do
         withInterpreter [file] \ ghci -> do
-          Interpreter.reload ghci `shouldReturn` ("", Ok)
+          Interpreter.reload ghci `shouldReturn` ("", (Ok, []))
 
     it "indicates failure" do
       withModule \ file -> do
@@ -146,4 +147,11 @@ spec = do
               "module Foo where"
             , "foo = bar"
             ]
-          snd <$> Interpreter.reload ghci `shouldReturn` Failed
+          snd <$> Interpreter.reload ghci `shouldReturn` (Failed, [
+#if __GLASGOW_HASKELL__ >= 910
+              (diagnostic (Span file (Location 2 7) (Location 2 10)) Error) {
+                code = Just 88464
+              , message = ["Variable not in scope: bar"]
+              }
+#endif
+            ])

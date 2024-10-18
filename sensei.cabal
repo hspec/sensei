@@ -25,6 +25,7 @@ executable seito
       Client
       Config
       EventQueue
+      GHC.Diagnostic
       HTTP
       Imports
       Input
@@ -83,6 +84,7 @@ executable sensei
       Client
       Config
       EventQueue
+      GHC.Diagnostic
       HTTP
       Imports
       Input
@@ -141,6 +143,7 @@ executable sensei-web
       Client
       Config
       EventQueue
+      GHC.Diagnostic
       HTTP
       Imports
       Input
@@ -200,6 +203,7 @@ test-suite spec
       Client
       Config
       EventQueue
+      GHC.Diagnostic
       HTTP
       Imports
       Input

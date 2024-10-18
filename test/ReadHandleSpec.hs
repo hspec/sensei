@@ -1,14 +1,20 @@
 module ReadHandleSpec (spec) where
 
+import           Prelude hiding (span)
 import           Helper
 
 import           Test.QuickCheck
 import qualified Data.ByteString as ByteString
 
 import           Session (Summary(..), extractSummary)
-import           Language.Haskell.GhciWrapper (extractReloadStatus)
+import           Language.Haskell.GhciWrapper (extractReloadDiagnostics)
 
 import           ReadHandle
+
+import qualified Data.Aeson as Aeson
+import           Data.ByteString.Lazy (toStrict)
+
+import qualified GHC.Diagnostic as Diagnostic
 
 chunkByteString :: (Int, Int) -> ByteString -> Gen [ByteString]
 chunkByteString size = go
@@ -50,7 +56,7 @@ spec = do
   describe "drain" $ do
     it "drains all remaining input" $ do
       h <- fakeHandle ["foo", marker, "bar", marker, "baz", marker, ""]
-      withSpy (drain extractReloadStatus h) `shouldReturn` ["foo", "bar", "baz"]
+      withSpy (drain extractReloadDiagnostics h) `shouldReturn` ["foo", "bar", "baz"]
 
   describe "getResult" $ do
     context "with a single result" $ do
@@ -59,14 +65,14 @@ spec = do
       it "returns result" $ do
         withSpy $ \ echo -> do
           h <- fakeHandle input
-          getResult extractReloadStatus h echo `shouldReturn` ("foobarbaz", [])
+          getResult extractReloadDiagnostics h echo `shouldReturn` ("foobarbaz", [])
         `shouldReturn` ["foo", "bar", "baz"]
 
       context "with chunks of arbitrary size" $ do
         it "returns result" $ do
           withRandomChunkSizes input $ \ h -> do
             fmap mconcat . withSpy $ \ echo -> do
-              getResult extractReloadStatus h echo `shouldReturn` ("foobarbaz", [])
+              getResult extractReloadDiagnostics h echo `shouldReturn` ("foobarbaz", [])
             `shouldReturn` "foobarbaz"
 
       context "with extractSummary" $ do
@@ -110,52 +116,100 @@ spec = do
                 getResult extract h echo `shouldReturn` ("foo\nbar\nSummary baz\n", [])
               `shouldReturn` "foo\nbar\nSummary baz\n"
 
+      context "" $ do
+        let
+          extract = extractReloadDiagnostics {
+            parseMessage = \ xs -> flip (,) "" <$> Diagnostic.parse xs
+          }
+
+        it "" $ do
+          let
+            start :: Location
+            start = Location 23 42
+
+            span :: Span
+            span = Span "Foo.hs" start start
+
+            err :: Diagnostic
+            err = Diagnostic "" "" span Error Nothing [] []
+
+            bar :: ByteString
+            bar = toStrict $ Aeson.encode err
+
+            foo :: [ByteString]
+            foo = [
+                "foo\n"
+              , "bar\n"
+              , bar <> "\n"
+              , "baz\n"
+              , marker
+              ]
+          withRandomChunkSizes foo $ \ h -> do
+            fmap mconcat . withSpy $ \ echo -> do
+              getResult extract h echo `shouldReturn` ("foo\nbar\nbaz\n", [err])
+            `shouldReturn` "foo\nbar\nbaz\n"
+
+        it "" $ do
+          let
+            foo :: [ByteString]
+            foo = [
+                "foo\n"
+              , "bar\n"
+              , "{..."
+              , marker
+              ]
+          withRandomChunkSizes foo $ \ h -> do
+            fmap mconcat . withSpy $ \ echo -> do
+              getResult extract h echo `shouldReturn` ("foo\nbar\n{...", [])
+            `shouldReturn` "foo\nbar\n{..."
+
+
     context "with multiple results" $ do
       let input = ["foo", marker, "bar", marker, "baz", marker]
 
       it "returns one result at a time" $ do
         withSpy $ \ echo -> do
           h <- fakeHandle input
-          getResult extractReloadStatus h echo `shouldReturn` ("foo", [])
-          getResult extractReloadStatus h echo `shouldReturn` ("bar", [])
-          getResult extractReloadStatus h echo `shouldReturn` ("baz", [])
+          getResult extractReloadDiagnostics h echo `shouldReturn` ("foo", [])
+          getResult extractReloadDiagnostics h echo `shouldReturn` ("bar", [])
+          getResult extractReloadDiagnostics h echo `shouldReturn` ("baz", [])
         `shouldReturn` ["foo", "bar", "baz"]
 
       context "with chunks of arbitrary size" $ do
         it "returns one result at a time" $ do
           withRandomChunkSizes input $ \ h -> do
             fmap mconcat . withSpy $ \ echo -> do
-              getResult extractReloadStatus h echo `shouldReturn` ("foo", [])
-              getResult extractReloadStatus h echo `shouldReturn` ("bar", [])
-              getResult extractReloadStatus h echo `shouldReturn` ("baz", [])
+              getResult extractReloadDiagnostics h echo `shouldReturn` ("foo", [])
+              getResult extractReloadDiagnostics h echo `shouldReturn` ("bar", [])
+              getResult extractReloadDiagnostics h echo `shouldReturn` ("baz", [])
             `shouldReturn` "foobarbaz"
 
     context "when a chunk that contains a marker ends with a partial marker" $ do
       it "correctly gives the marker precedence over the partial marker" $ do
         withSpy $ \ echo -> do
           h <- fakeHandle ["foo" <> marker <> "bar" <> partialMarker, ""]
-          getResult extractReloadStatus h echo `shouldReturn` ("foo", [])
-          getResult extractReloadStatus h echo `shouldReturn` ("bar" <> partialMarker, [])
+          getResult extractReloadDiagnostics h echo `shouldReturn` ("foo", [])
+          getResult extractReloadDiagnostics h echo `shouldReturn` ("bar" <> partialMarker, [])
         `shouldReturn` ["foo", "bar", partialMarker]
 
     context "on EOF" $ do
       it "returns all remaining input" $ do
         withSpy $ \ echo -> do
           h <- fakeHandle ["foo", "bar", "baz", ""]
-          getResult extractReloadStatus h echo `shouldReturn` ("foobarbaz", [])
+          getResult extractReloadDiagnostics h echo `shouldReturn` ("foobarbaz", [])
         `shouldReturn` ["foo", "bar", "baz"]
 
       context "with a partialMarker at the end" $ do
         it "includes the partial marker in the output" $ do
           withSpy $ \ echo -> do
             h <- fakeHandle ["foo", "bar", "baz", partialMarker, ""]
-            getResult extractReloadStatus h echo `shouldReturn` ("foobarbaz" <> partialMarker, [])
+            getResult extractReloadDiagnostics h echo `shouldReturn` ("foobarbaz" <> partialMarker, [])
           `shouldReturn` ["foo", "bar", "baz", partialMarker]
 
       context "after a marker" $ do
         it "returns all remaining input" $ do
           withSpy $ \ echo -> do
             h <- fakeHandle ["foo", "bar", "baz", marker, "qux", ""]
-            getResult extractReloadStatus h echo `shouldReturn` ("foobarbaz", [])
-            getResult extractReloadStatus h echo `shouldReturn` ("qux", [])
+            getResult extractReloadDiagnostics h echo `shouldReturn` ("foobarbaz", [])
+            getResult extractReloadDiagnostics h echo `shouldReturn` ("qux", [])
           `shouldReturn` ["foo", "bar", "baz", "qux"]

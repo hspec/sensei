@@ -13,9 +13,16 @@ module Helper (
 , withColor
 
 , timeout
+
+, Diagnostic(..)
+, Span(..)
+, Location(..)
+, Severity(..)
+, diagnostic
 ) where
 
-import           Imports
+import           Prelude hiding (span)
+import           Imports hiding (span)
 
 import           System.Directory as Imports
 import           System.IO.Temp (withSystemTempDirectory)
@@ -30,6 +37,8 @@ import qualified System.Timeout
 import           Run ()
 import           Util
 import           Language.Haskell.GhciWrapper (Config(..))
+
+import           GHC.Diagnostic
 
 timeout :: IO a -> IO (Maybe a)
 timeout action = lookupEnv "CI" >>= \ case
@@ -90,3 +99,14 @@ failingSpec = unlines [
   , "  it \"foo\" True"
   , "  it \"bar\" False"
   ]
+
+diagnostic :: Span -> Severity -> Diagnostic
+diagnostic span severity = Diagnostic {
+  version = "1.0"
+, ghcVersion = "ghc-9.10.1"
+, span
+, severity
+, code = Nothing
+, message = []
+, hints = []
+}

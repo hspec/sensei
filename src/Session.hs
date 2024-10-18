@@ -36,6 +36,7 @@ import qualified Language.Haskell.GhciWrapper as Interpreter
 
 import           Util
 import           Options
+import           GHC.Diagnostic
 
 data Session = Session {
   interpreter :: Interpreter
@@ -63,7 +64,7 @@ withSession config args action = do
   where
     (ghciArgs, hspecArgs) = splitArgs args
 
-reload :: MonadIO m => Session -> m (String, ReloadStatus)
+reload :: MonadIO m => Session -> m (String, (ReloadStatus, [Diagnostic]))
 reload session = liftIO $ Interpreter.reload session.interpreter
 
 data Summary = Summary {
