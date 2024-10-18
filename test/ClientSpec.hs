@@ -32,7 +32,7 @@ spec = do
 
     it "indicates failure" $ do
       withFailure $ \ dir -> do
-        client dir [] `shouldReturn` (False, "failure")
+        client dir ["--color"] `shouldReturn` (False, fromString $ withColor Red "failure")
 
     context "when server socket is missing" $ do
       it "reports error" $ do

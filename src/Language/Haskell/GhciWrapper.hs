@@ -82,16 +82,19 @@ new startupFile Config{..} envDefaults args_ = do
 
   let
     mandatoryArgs :: [String]
-    mandatoryArgs = ["-fshow-loaded-modules"]
+    mandatoryArgs = ["-fshow-loaded-modules", "--interactive"]
 
     args :: [String]
     args = "-ghci-script" : startupFile : args_ ++ catMaybes [
         if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
       ] ++ mandatoryArgs
 
+    ghc :: String
+    ghc = fromMaybe "ghc" $ lookup "SENSEI_GHC" env
+
   (stdoutReadEnd, stdoutWriteEnd) <- createPipe
 
-  (Just stdin_, Nothing, Nothing, processHandle ) <- createProcess (proc "ghci" args) {
+  (Just stdin_, Nothing, Nothing, processHandle ) <- createProcess (proc ghc args) {
     cwd = configWorkingDirectory
   , env = Just $ envDefaults ++ env
   , std_in  = CreatePipe
