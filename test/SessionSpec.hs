@@ -88,3 +88,18 @@ spec = do
       withSession [name, "--no-color", "-m", "foo"] $ \session -> do
         _ <- runSpec session >> runSpec session
         hspecPreviousSummary session `shouldReturn` Just (Summary 1 0)
+
+  describe "extractSummary" $ do
+    let
+      summary :: Summary
+      summary = Summary 0 0
+
+      input :: ByteString
+      input = fromString $ show summary
+
+    it "extracts summary" $ do
+      extractSummary.parseMessage input `shouldBe` Just (summary, "")
+
+    context "when the input starts with the ANSI \"show cursor\"-sequence" $ do
+      it "extracts summary" $ do
+        extractSummary.parseMessage (ansiShowCursor <> input) `shouldBe` Just (summary, ansiShowCursor)
