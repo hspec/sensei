@@ -20,7 +20,9 @@ module Session (
 , hasSpec
 , hasHspecCommandSignature
 , hspecCommand
+, Extract(..)
 , extractSummary
+, ansiShowCursor
 #endif
 ) where
 
@@ -123,16 +125,21 @@ isSuccess = not . isFailure
 extractSummary :: Extract Summary
 extractSummary = Extract {
   isPartialMessage = partialMessageStartsWithOneOf [summaryPrefix, ansiShowCursor <> summaryPrefix]
-, parseMessage = fmap (flip (,) "") . parseSummary
+, parseMessage
 } where
     summaryPrefix :: ByteString
     summaryPrefix = "Summary {"
 
+    parseMessage :: ByteString -> Maybe (Summary, ByteString)
+    parseMessage input = case ByteString.stripPrefix ansiShowCursor input of
+      Nothing -> flip (,) "" <$> parseSummary input
+      Just i -> flip (,) ansiShowCursor <$> parseSummary i
+
     parseSummary :: ByteString -> Maybe Summary
     parseSummary = readMaybe . decodeUtf8 . stripAnsiShowCursor
 
-    ansiShowCursor :: ByteString
-    ansiShowCursor = "\ESC[?25h"
-
     stripAnsiShowCursor :: ByteString -> ByteString
     stripAnsiShowCursor input = fromMaybe input $ ByteString.stripPrefix ansiShowCursor input
+
+ansiShowCursor :: ByteString
+ansiShowCursor = "\ESC[?25h"
