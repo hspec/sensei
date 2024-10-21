@@ -4,6 +4,7 @@ module ReadHandle (
 , toReadHandle
 , marker
 , Extract(..)
+, (<+>)
 , partialMessageStartsWith
 , partialMessageStartsWithOneOf
 , getResult
@@ -80,6 +81,12 @@ newEmptyBuffer = newIORef BufferEmpty
 data Extract a = Extract {
   isPartialMessage :: ByteString -> Bool
 , parseMessage :: ByteString -> Maybe (a, ByteString)
+}
+
+(<+>) :: Extract a -> Extract b -> Extract (Either a b)
+(<+>) a b = Extract {
+  isPartialMessage = \ input -> a.isPartialMessage input || b.isPartialMessage input
+, parseMessage = \ input -> first Left <$> a.parseMessage input <|> first Right <$> b.parseMessage input
 }
 
 partialMessageStartsWith :: ByteString -> ByteString -> Bool

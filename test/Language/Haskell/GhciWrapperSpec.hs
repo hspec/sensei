@@ -134,16 +134,37 @@ spec = do
         writeFile file "module Foo where"
         action file
 
+      failingModule :: String -> IO ()
+      failingModule file = writeFile file $ unlines [
+          "module Foo where"
+        , "foo = bar"
+        ]
+
     it "indicates success" do
       withModule \ file -> do
         withInterpreter [file] \ ghci -> do
-          Interpreter.reload ghci `shouldReturn` ("", Ok)
+          Interpreter.reload ghci `shouldReturn` ("", (Ok, []))
 
     it "indicates failure" do
       withModule \ file -> do
         withInterpreter [file] \ ghci -> do
-          writeFile file $ unlines [
-              "module Foo where"
-            , "foo = bar"
-            ]
-          snd <$> Interpreter.reload ghci `shouldReturn` Failed
+          failingModule file
+          snd <$> Interpreter.reload ghci `shouldReturn` (Failed, [
+#if __GLASGOW_HASKELL__ >= 910
+              (diagnostic Error) {
+                span = Just $ Span file (Location 2 7) (Location 2 10)
+              , code = Just 88464
+              , message = ["Variable not in scope: bar"]
+              }
+#endif
+            ])
+
+    context "with -fno-diagnostics-as-json" $ do
+      it "does not extract diagnostics" do
+#if __GLASGOW_HASKELL__ < 910
+        pending
+#endif
+        withModule \ file -> do
+          withInterpreter ["-fno-diagnostics-as-json", file] \ ghci -> do
+            failingModule file
+            snd <$> Interpreter.reload ghci `shouldReturn` (Failed, [])

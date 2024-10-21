@@ -36,11 +36,6 @@ spec = do
         withSession ["-XOverloadedStrings", "-Wall", "-Werror"] $ \ Session{..} -> do
           eval interpreter "23 :: Int" `shouldReturn` "23\n"
 
-  describe "reload" $ do
-    it "reloads" $ do
-      withSession [] $ \ session -> do
-        Session.reload session `shouldReturn` ("", Ok)
-
   describe "hasSpec" $ around withSomeSpec $ do
     context "when module contains spec" $ do
       it "returns True" $ \ name -> do
