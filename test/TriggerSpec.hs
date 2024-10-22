@@ -44,18 +44,6 @@ triggerWithHooks session hooks = fmap normalize <$> Trigger.trigger session hook
 triggerAll :: Session -> IO (Result, [String])
 triggerAll session = fmap normalize <$> Trigger.triggerAll session defaultHooks
 
-requiresHspecMeta :: IO () -> IO ()
-requiresHspecMeta action = try action >>= \ case
-  Left (ExitFailure 1) -> expectationFailure $ unlines [
-      "This tests requires `hspec-meta`, which is not available.  To address this run"
-    , ""
-    , "    echo | cabal repl sensei --build-depends hspec-meta"
-    , ""
-    , "once."
-    ]
-  Left err -> throwIO err
-  Right () -> pass
-
 data HookExecuted = BeforeReloadSucceeded | AfterReloadSucceeded
   deriving (Eq, Show)
 
@@ -245,7 +233,7 @@ spec = do
 
     context "with an hspec-meta spec" $ do
       it "reloads and runs spec" $ \ name -> do
-        requiresHspecMeta $ withSession name ["-package hspec-meta"] $ \ session -> do
+        withSession name [] $ \ session -> do
           writeFile name passingMetaSpec
           (trigger session >> trigger session) `shouldReturn` (Success, [
               withColor Green "RELOADING SUCCEEDED"

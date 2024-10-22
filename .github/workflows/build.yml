@@ -54,10 +54,7 @@ jobs:
         run: cabal build all
 
       - shell: bash
-        run: echo | cabal repl sensei --build-depends hspec-meta
-
-      - shell: bash
-        run: cabal exec -- $(cabal list-bin spec) --times --print-slow
+        run: $(cabal list-bin spec) --times --print-slow
         env:
           HSPEC_OPTIONS: --color
 

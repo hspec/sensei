@@ -3,6 +3,7 @@
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
 import           Helper
+import           Util
 import qualified Data.ByteString.Char8 as ByteString
 
 import           Language.Haskell.GhciWrapper (Config(..), Interpreter(..), ReloadStatus(..), extractNothing)
@@ -121,7 +122,7 @@ spec = do
 
     context "with -XNoImplicitPrelude" $ do
       it "works" $ withInterpreter ["-XNoImplicitPrelude"] $ \ ghci -> do
-        Interpreter.eval ghci "putStrLn \"foo\"" >>= (`shouldContain` "Variable not in scope: putStrLn")
+        normalizeTypeSignatures <$> Interpreter.eval ghci "putStrLn \"foo\"" >>= (`shouldContain` "Variable not in scope: putStrLn")
         Interpreter.eval ghci "23" `shouldReturn` "23\n"
 
   describe "reload" do

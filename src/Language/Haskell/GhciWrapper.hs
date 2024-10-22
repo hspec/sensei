@@ -14,6 +14,7 @@ module Language.Haskell.GhciWrapper (
 , reload
 
 #ifdef TEST
+, lookupGhc
 , extractReloadStatus
 , extractNothing
 #endif
@@ -31,6 +32,9 @@ import           System.Exit (exitFailure)
 import           Util (isWritableByOthers)
 import qualified ReadHandle
 import           ReadHandle (ReadHandle, toReadHandle, Extract(..), partialMessageStartsWithOneOf)
+
+lookupGhc :: [(String, String)] -> FilePath
+lookupGhc = fromMaybe "ghc" . lookup "SENSEI_GHC"
 
 data Config = Config {
   configIgnoreDotGhci :: Bool
@@ -90,7 +94,7 @@ new startupFile Config{..} envDefaults args_ = do
       ] ++ mandatoryArgs
 
     ghc :: String
-    ghc = fromMaybe "ghc" $ lookup "SENSEI_GHC" env
+    ghc = lookupGhc env
 
   (stdoutReadEnd, stdoutWriteEnd) <- createPipe
 
