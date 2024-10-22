@@ -55,3 +55,6 @@ encodeUtf8 = T.encodeUtf8 . T.pack
 
 decodeUtf8 :: ByteString -> String
 decodeUtf8 = T.unpack . T.decodeUtf8
+
+strip :: String -> String
+strip = reverse . dropWhile isSpace . reverse . dropWhile isSpace
