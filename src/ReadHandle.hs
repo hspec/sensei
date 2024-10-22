@@ -80,7 +80,7 @@ newEmptyBuffer = newIORef BufferEmpty
 data Extract a = Extract {
   isPartialMessage :: ByteString -> Bool
 , parseMessage :: ByteString -> Maybe (a, ByteString)
-}
+} deriving Functor
 
 partialMessageStartsWith :: ByteString -> ByteString -> Bool
 partialMessageStartsWith prefix chunk = ByteString.isPrefixOf chunk prefix || ByteString.isPrefixOf prefix chunk
