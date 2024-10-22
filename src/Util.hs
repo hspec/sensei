@@ -71,11 +71,13 @@ gitCheckIgnoreFeedback err
 normalizeTypeSignatures :: String -> String
 normalizeTypeSignatures = normalize . concatMap replace
   where
+    normalize :: [Char] -> [Char]
     normalize = \case
-      '\n' : ' ' : ' ' : xs -> normalizeTypeSignatures (' ' : dropWhile (== ' ') xs)
-      x : xs -> x : normalizeTypeSignatures xs
+      '\n' : ' ' : ' ' : xs -> normalize (' ' : dropWhile (== ' ') xs)
+      x : xs -> x : normalize xs
       [] -> []
 
+    replace :: Char -> [Char]
     replace c = case c of
       '\8759' -> "::"
       '\8594' -> "->"
