@@ -28,7 +28,7 @@ test name = it name $ do
       bin <- lookupGhc <$> getEnvironment
       let
         process :: CreateProcess
-        process = proc bin (args ++ [dir </> "Foo.hs"])
+        process = proc bin ("-fno-code" : args ++ [dir </> "Foo.hs"])
       (_, _, err) <- readCreateProcessWithExitCode process ""
       return err
 
@@ -51,3 +51,6 @@ spec = do
     test "variable-not-in-scope-perhaps-use"
     test "use-BlockArguments"
     test "non-existing"
+    test "parse-error"
+    test "lex-error"
+    test "multiple-error-messages"

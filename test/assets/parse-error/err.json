@@ -1,0 +1,1 @@
+{"version":"1.0","ghcVersion":"ghc-9.10.1","span":{"file":"test/assets/parse-error/Foo.hs","start":{"line":3,"column":6},"end":{"line":3,"column":9}},"severity":"Error","code":47568,"message":["Malformed head of type or class declaration: foo"],"hints":[]}
