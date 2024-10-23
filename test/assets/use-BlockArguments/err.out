@@ -1,0 +1,7 @@
+test/assets/use-BlockArguments/Foo.hs:5:10: error: [GHC-52095]
+    Unexpected do block in function application:
+        do return ()
+    Suggested fixes:
+      • Use parentheses.
+      • Perhaps you intended to use BlockArguments
+
