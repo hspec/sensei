@@ -13,16 +13,22 @@ import           GHC.Diagnostic
 test :: HasCallStack => FilePath -> Spec
 test name = it name $ do
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
-  Just diagnostic <- parse . encodeUtf8 <$> ghc ["-fdiagnostics-as-json"]
+  json <- encodeUtf8 <$> ghc ["-fdiagnostics-as-json"]
+  ensureFile (dir </> "err.out") (encodeUtf8 err)
+  ensureFile (dir </> "err.json") json
+  Just diagnostic <- return $ parse json
   decodeUtf8 (format diagnostic) `shouldBe` err
   where
+    dir :: FilePath
+    dir = "test" </> "assets" </> name
+
     ghc :: [String] -> IO String
     ghc args = do
       requireGhc [9,10]
       bin <- lookupGhc <$> getEnvironment
       let
         process :: CreateProcess
-        process = proc bin (args ++ ["test/assets" </> name </> "Foo.hs"])
+        process = proc bin (args ++ [dir </> "Foo.hs"])
       (_, _, err) <- readCreateProcessWithExitCode process ""
       return err
 

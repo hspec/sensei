@@ -24,6 +24,7 @@ module Helper (
 , to_json
 
 , requireGhc
+, ensureFile
 ) where
 
 import           Prelude hiding (span)
@@ -39,10 +40,12 @@ import           Test.Mockery.Directory as Imports (touch)
 import           System.Environment
 import qualified System.Timeout
 
+import qualified Data.ByteString as ByteString
 import           Data.ByteString.Lazy (toStrict)
 import           Data.Aeson (ToJSON, encode)
 
 import           Run ()
+import           Config (tryReadFile)
 import           Util
 import           Language.Haskell.GhciWrapper
 
@@ -127,3 +130,9 @@ requireGhc (makeVersion -> required) = do
   env <- getEnvironment
   let Just ghcVersion = lookupGhcVersion env >>= parseVersion
   when (ghcVersion < required) pending
+
+ensureFile :: FilePath -> ByteString -> IO ()
+ensureFile name new = do
+  old <- tryReadFile name
+  unless (old == Just new) $ do
+    ByteString.writeFile name new

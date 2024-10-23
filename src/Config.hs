@@ -8,6 +8,7 @@ module Config (
 #ifdef TEST
 , ConfigFile(..)
 , readConfigFilesFrom
+, tryReadFile
 #endif
 ) where
 

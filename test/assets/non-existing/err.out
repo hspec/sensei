@@ -1,0 +1,3 @@
+<no location info>: error: [GHC-49196]
+    Can't find test/assets/non-existing/Foo.hs
+
