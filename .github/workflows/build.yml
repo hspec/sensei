@@ -17,6 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: true
       matrix:
         os:
           - ubuntu-latest
@@ -29,7 +30,8 @@ jobs:
           - os: macos-12
             ghc: system
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - uses: hspec/setup-haskell@v1
         with:
           ghc-version: ${{ matrix.ghc }}
@@ -58,6 +60,23 @@ jobs:
         env:
           HSPEC_OPTIONS: --color
 
+      - run: vim/test/run.vim
+        if: runner.os == 'Linux'
+
+      - run: vim/test/assets/generate.sh
+        if: ${{ runner.os == 'Linux' && matrix.ghc != '9.4' }}
+
+      - run: git diff --exit-code
+
+      - shell: bash
+        run: |
+          untracked=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked" ]; then
+            echo "Untracked files:"
+            echo "$untracked"
+            exit 1
+          fi
+
   success:
     needs: build
     runs-on: ubuntu-latest
@@ -67,6 +86,6 @@ jobs:
       - run: false
         if: needs.build.result != 'success'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Check for trailing whitespace
-        run: '! git grep -I "\s\+$"'
+        run: "! git grep -nI '[[:blank:]]$' -- . ':!vim/test/assets'"
