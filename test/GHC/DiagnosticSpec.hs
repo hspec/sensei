@@ -13,7 +13,7 @@ import           GHC.Diagnostic
 test :: HasCallStack => FilePath -> Spec
 test name = it name $ do
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
-  json <- encodeUtf8 <$> ghc ["-fdiagnostics-as-json"]
+  json <- encodeUtf8 <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
   ensureFile (dir </> "err.out") (encodeUtf8 err)
   ensureFile (dir </> "err.json") json
   Just diagnostic <- return $ parse json

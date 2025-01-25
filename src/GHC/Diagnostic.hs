@@ -40,7 +40,7 @@ data Severity = Warning | Error
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 parse :: ByteString -> Maybe Diagnostic
-parse = decode . fromStrict
+parse = fmap removeGhciSpecificHints . decode . fromStrict
 
 format :: Diagnostic -> ByteString
 format diagnostic = encodeUtf8 . render $ unlines [
@@ -90,3 +90,11 @@ format diagnostic = encodeUtf8 . render $ unlines [
 
     unlines :: [Doc] -> Doc
     unlines = foldr ($+$) empty
+
+removeGhciSpecificHints :: Diagnostic -> Diagnostic
+removeGhciSpecificHints diagnostic = diagnostic { hints = map f diagnostic.hints }
+  where
+    f :: String -> String
+    f input = case lines input of
+      [hint, "You may enable this language extension in GHCi with:", ghciHint] | "  :set -X" `isPrefixOf` ghciHint -> hint
+      _ -> input
