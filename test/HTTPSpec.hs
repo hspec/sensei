@@ -5,7 +5,6 @@ import           Helper
 
 import           Network.Wai (Application)
 import           Test.Hspec.Wai
-import qualified System.Console.ANSI as Ansi
 
 import           HTTP
 import qualified Trigger
@@ -71,10 +70,3 @@ spec = do
           request "GET" "/foo" [("Accept", "application/json")] "" `shouldRespondWith` 404 {
             matchBody = "{\"title\":\"Not Found\",\"status\":404}"
           }
-
-  describe "stripAnsi" $ do
-    it "removes ANSI color sequences" $ do
-      stripAnsi ("some " <> withColor Green "colorized" <> " text") `shouldBe` "some colorized text"
-
-    it "removes DEC private mode sequences" $ do
-      stripAnsi (Ansi.hideCursorCode <> "some text" <> Ansi.showCursorCode) `shouldBe` "some text"
