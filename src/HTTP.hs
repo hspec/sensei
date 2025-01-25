@@ -7,16 +7,14 @@ module HTTP (
 
 #ifdef TEST
 , app
-, stripAnsi
 #endif
 ) where
 
 import           Imports hiding (strip, encodeUtf8)
 
 import           System.Directory
-import           Data.Aeson (ToJSON(..), encode)
+import           Data.Aeson
 import           Data.ByteString.Builder
-import           Data.Text.Lazy.Encoding (encodeUtf8)
 import           Network.Wai
 import           Network.HTTP.Types
 import qualified Network.HTTP.Types.Status as Status
@@ -24,6 +22,7 @@ import           Network.HTTP.Media
 import           Network.Wai.Handler.Warp (runSettingsSocket, defaultSettings)
 import           Network.Socket
 
+import           Util
 import qualified Trigger
 import           GHC.Diagnostic
 
@@ -73,6 +72,12 @@ app getLastResult request respond = case pathInfo request of
     (_, _, diagnostics) <- getLastResult
     respond $ json diagnostics
 
+  ["quick-fix"] -> requireMethod "POST" $ do
+    getLastResult >>= \ case
+      (_, _, (analyze -> Just action) : _) -> apply action
+      _ -> pass
+    respond $ jsonResponse Status.ok200 "{}"
+
   _ -> do
     respond $ genericStatus Status.notFound404 request
 
@@ -86,8 +91,8 @@ app getLastResult request respond = case pathInfo request of
 
     textPlain :: (Trigger.Result, FilePath, [Diagnostic]) -> IO ResponseReceived
     textPlain (result, xs, _diagnostics) = case color of
-      Left err -> respond $ responseBuilder Status.badRequest400 [(hContentType, "text/plain")] err
-      Right c -> respond $ responseLBS status [(hContentType, "text/plain")] (encodeUtf8 . fromString $ strip xs)
+      Left err -> respond $ textResponse Status.badRequest400 err
+      Right c -> respond . textResponse status . stringUtf8 $ strip xs
         where
           strip :: String -> String
           strip
@@ -106,7 +111,7 @@ app getLastResult request respond = case pathInfo request of
       _ -> respond $ genericRfc7807Response Status.methodNotAllowed405
 
     json :: ToJSON a => a -> Response
-    json = responseLBS Status.ok200 [(hContentType, "application/json")] . encode
+    json = jsonResponse Status.ok200 . fromEncoding . toEncoding
 
 genericStatus :: Status -> Request -> Response
 genericStatus status@(Status number message) request = fromMaybe text $ mapAcceptMedia [
@@ -115,42 +120,19 @@ genericStatus status@(Status number message) request = fromMaybe text $ mapAccep
   ] =<< lookup "Accept" request.requestHeaders
   where
     text :: Response
-    text = responseBuilder
-      status
-      [(hContentType, "text/plain")]
-      body
-      where
-        body :: Builder
-        body = intDec number <> " " <> byteString message
+    text = textResponse status $ intDec number <> " " <> byteString message
 
     json :: Response
     json = genericRfc7807Response status
 
 genericRfc7807Response :: Status -> Response
-genericRfc7807Response status@(Status number message) = responseBuilder
-  status
-  [(hContentType, "application/json")]
-  body
+genericRfc7807Response status@(Status number message) = jsonResponse status body
   where
     body :: Builder
     body = "{\"title\":\"" <> byteString message <> "\",\"status\":" <> intDec number <> "}"
 
--- |
--- Remove terminal sequences.
-stripAnsi :: String -> String
-stripAnsi = go
-  where
-    go input = case input of
-      '\ESC' : '[' :       (dropNumericParameters -> c : xs) | isCommand c -> go xs
-      '\ESC' : '[' : '?' : (dropNumericParameters -> c : xs) | isCommand c -> go xs
-      x : xs -> x : go xs
-      [] -> []
+jsonResponse :: Status -> Builder -> Response
+jsonResponse status body = responseBuilder status [(hContentType, "application/json")] body
 
-    dropNumericParameters :: FilePath -> FilePath
-    dropNumericParameters = dropWhile (`elem` ("0123456789;" :: [Char]))
-
-    isCommand :: Char -> Bool
-    isCommand = (`elem` commands)
-
-    commands :: FilePath
-    commands = ['A'..'Z'] <> ['a'..'z']
+textResponse :: Status -> Builder -> Response
+textResponse status = responseBuilder status [(hContentType, "text/plain")]

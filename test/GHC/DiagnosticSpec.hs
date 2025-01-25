@@ -10,14 +10,15 @@ import           Language.Haskell.GhciWrapper (lookupGhc)
 
 import           GHC.Diagnostic
 
-test :: HasCallStack => FilePath -> Spec
-test name = it name $ do
+test :: HasCallStack => FilePath -> Maybe Action -> Spec
+test name edit = it name $ do
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
   json <- encodeUtf8 <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
   ensureFile (dir </> "err.out") (encodeUtf8 err)
   ensureFile (dir </> "err.json") json
   Just diagnostic <- return $ parse json
   decodeUtf8 (format diagnostic) `shouldBe` err
+  analyze diagnostic `shouldBe` edit
   where
     dir :: FilePath
     dir = "test" </> "assets" </> name
@@ -38,20 +39,20 @@ test name = it name $ do
       '’' -> '\''
       c -> c
 
-ftest :: HasCallStack => FilePath -> Spec
-ftest = focus . test
+ftest :: HasCallStack => FilePath -> Maybe Action -> Spec
+ftest name = focus . test name
 
-_ignore :: HasCallStack => FilePath -> Spec
+_ignore :: HasCallStack => FilePath -> Maybe Action -> Spec
 _ignore = ftest
 
 spec :: Spec
 spec = do
   describe "format" $ do
-    test "variable-not-in-scope"
-    test "variable-not-in-scope-perhaps-use"
-    test "use-BlockArguments"
-    test "use-TemplateHaskellQuotes"
-    test "non-existing"
-    test "parse-error"
-    test "lex-error"
-    test "multiple-error-messages"
+    test "variable-not-in-scope" Nothing
+    test "variable-not-in-scope-perhaps-use" Nothing
+    test "use-BlockArguments" (Just $ AddExtension "test/assets/use-BlockArguments/Foo.hs" "BlockArguments")
+    test "use-TemplateHaskellQuotes" (Just $ AddExtension "test/assets/use-TemplateHaskellQuotes/Foo.hs" "TemplateHaskellQuotes")
+    test "non-existing" Nothing
+    test "parse-error" Nothing
+    test "lex-error" Nothing
+    test "multiple-error-messages" Nothing

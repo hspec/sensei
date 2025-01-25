@@ -3,6 +3,7 @@ module Util (
   Color(..)
 , withColor
 , withInfoColor
+, stripAnsi
 , isBoring
 , filterGitIgnoredFiles
 , normalizeTypeSignatures
@@ -31,6 +32,26 @@ withColor c string =  set <> string <> reset
   where
     set = setSGRCode [SetColor Foreground Dull c]
     reset = setSGRCode []
+
+-- |
+-- Remove terminal sequences.
+stripAnsi :: String -> String
+stripAnsi = go
+  where
+    go input = case input of
+      '\ESC' : '[' :       (dropNumericParameters -> c : xs) | isCommand c -> go xs
+      '\ESC' : '[' : '?' : (dropNumericParameters -> c : xs) | isCommand c -> go xs
+      x : xs -> x : go xs
+      [] -> []
+
+    dropNumericParameters :: FilePath -> FilePath
+    dropNumericParameters = dropWhile (`elem` ("0123456789;" :: [Char]))
+
+    isCommand :: Char -> Bool
+    isCommand = (`elem` commands)
+
+    commands :: FilePath
+    commands = ['A'..'Z'] <> ['a'..'z']
 
 isBoring :: FilePath -> Bool
 isBoring p = ".git" `elem` dirs || "dist" `elem` dirs || isEmacsAutoSave p
