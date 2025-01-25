@@ -50,6 +50,7 @@ spec = do
     test "variable-not-in-scope"
     test "variable-not-in-scope-perhaps-use"
     test "use-BlockArguments"
+    test "use-TemplateHaskellQuotes"
     test "non-existing"
     test "parse-error"
     test "lex-error"

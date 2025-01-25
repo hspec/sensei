@@ -1,5 +1,5 @@
 {-# LANGUAGE NoBlockArguments #-}
-module BlockArguments.Foo where
+module Foo where
 
 foo :: IO ()
 foo = id do return ()
