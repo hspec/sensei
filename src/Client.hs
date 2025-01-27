@@ -20,6 +20,7 @@ client dir args = case args of
     hPutStrLn stderr $ "Usage: seito [ --color | --no-color ]"
     return (False, "")
   where
+    run :: Bool -> IO (Bool, L.ByteString)
     run color = handleSocketFileDoesNotExist name $ do
       manager <- newManager defaultManagerSettings {managerRawConnection = return newConnection}
       let

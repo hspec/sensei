@@ -15,10 +15,12 @@ import           Imports hiding (strip, encodeUtf8)
 
 import           System.Directory
 import           Data.Aeson (ToJSON(..), encode)
-import qualified Data.ByteString.Lazy as L
+import           Data.ByteString.Builder
 import           Data.Text.Lazy.Encoding (encodeUtf8)
 import           Network.Wai
 import           Network.HTTP.Types
+import qualified Network.HTTP.Types.Status as Status
+import           Network.HTTP.Media
 import           Network.Wai.Handler.Warp (runSettingsSocket, defaultSettings)
 import           Network.Socket
 
@@ -63,21 +65,28 @@ withThread asyncAction action = do
 
 app :: IO (Trigger.Result, String, [Diagnostic]) -> Application
 app getLastResult request respond = case pathInfo request of
-  ["diagnostics"] -> do
+
+  [] -> requireMethod "GET" $ do
+    getLastResult >>= textPlain
+
+  ["diagnostics"] -> requireMethod "GET" $ do
     (_, _, diagnostics) <- getLastResult
     respond $ json diagnostics
-  _ -> getLastResult >>= textPlain
+
+  _ -> do
+    respond $ genericStatus Status.notFound404 request
+
   where
-    color :: Either ByteString Bool
+    color :: Either Builder Bool
     color = case join $ lookup "color" $ queryString request of
       Nothing -> Right True
       Just "false" -> Right False
       Just "true" -> Right True
-      Just value -> Left $ "invalid value for color: " <> urlEncode True value
+      Just value -> Left $ "invalid value for color: " <> urlEncodeBuilder True value
 
     textPlain :: (Trigger.Result, FilePath, [Diagnostic]) -> IO ResponseReceived
     textPlain (result, xs, _diagnostics) = case color of
-      Left err -> respond $ responseLBS status400 [(hContentType, "text/plain")] (L.fromStrict err)
+      Left err -> respond $ responseBuilder Status.badRequest400 [(hContentType, "text/plain")] err
       Right c -> respond $ responseLBS status [(hContentType, "text/plain")] (encodeUtf8 . fromString $ strip xs)
         where
           strip :: String -> String
@@ -85,16 +94,46 @@ app getLastResult request respond = case pathInfo request of
             | c = id
             | otherwise = stripAnsi
 
+          status :: Status
           status = case result of
-            Trigger.HookFailed -> status500
-            Trigger.Failure -> status500
-            Trigger.Success -> status200
+            Trigger.HookFailed -> Status.internalServerError500
+            Trigger.Failure -> Status.internalServerError500
+            Trigger.Success -> Status.ok200
 
-json :: ToJSON a => a -> Response
-json value = responseLBS
-  status200
-  [("Content-Type", "application/json")]
-  (encode value)
+    requireMethod :: Method -> IO ResponseReceived -> IO ResponseReceived
+    requireMethod required action = case requestMethod request of
+      method | method == required -> action
+      _ -> respond $ genericRfc7807Response Status.methodNotAllowed405
+
+    json :: ToJSON a => a -> Response
+    json = responseLBS Status.ok200 [(hContentType, "application/json")] . encode
+
+genericStatus :: Status -> Request -> Response
+genericStatus status@(Status number message) request = fromMaybe text $ mapAcceptMedia [
+    ("text/plain", text)
+  , ("application/json", json)
+  ] =<< lookup "Accept" request.requestHeaders
+  where
+    text :: Response
+    text = responseBuilder
+      status
+      [(hContentType, "text/plain")]
+      body
+      where
+        body :: Builder
+        body = intDec number <> " " <> byteString message
+
+    json :: Response
+    json = genericRfc7807Response status
+
+genericRfc7807Response :: Status -> Response
+genericRfc7807Response status@(Status number message) = responseBuilder
+  status
+  [(hContentType, "application/json")]
+  body
+  where
+    body :: Builder
+    body = "{\"title\":\"" <> byteString message <> "\",\"status\":" <> intDec number <> "}"
 
 -- |
 -- Remove terminal sequences.

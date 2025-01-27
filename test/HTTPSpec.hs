@@ -35,7 +35,7 @@ spec = do
             it "removes terminal sequences" $ do
               get "/?color=false" `shouldRespondWith` "success"
 
-          context "with an in invalid value for ?color" $ do
+          context "with an invalid value for ?color" $ do
             it "returns status 400" $ do
               get "/?color=some%20value" `shouldRespondWith` 400 { matchBody = "invalid value for color: some%20value" }
 
@@ -61,6 +61,16 @@ spec = do
       withApp (Trigger.Failure, "", [err]) $ do
         it "returns GHC diagnostics" $ do
           get "/diagnostics" `shouldRespondWith` expected
+
+    context "when querying a non-existing endpoint" $ withApp undefined $ do
+      it "returns status 404" $ do
+        get "/foo" `shouldRespondWith` 404 {matchBody = "404 Not Found"}
+
+      context "with \"Accept: application/json\"" $ do
+        it "returns a JSON error" $ do
+          request "GET" "/foo" [("Accept", "application/json")] "" `shouldRespondWith` 404 {
+            matchBody = "{\"title\":\"Not Found\",\"status\":404}"
+          }
 
   describe "stripAnsi" $ do
     it "removes ANSI color sequences" $ do
