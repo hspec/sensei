@@ -29,6 +29,7 @@ dependencies:
   - wai
   - warp
   - http-types
+  - http-media
   - stm
   - text
   - network
