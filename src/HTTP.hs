@@ -76,7 +76,7 @@ app getLastResult request respond = case pathInfo request of
     getLastResult >>= \ case
       (_, _, (analyze -> Just action) : _) -> apply action
       _ -> pass
-    respond $ jsonResponse Status.ok200 "{}"
+    respond $ jsonResponse Status.noContent204 ""
 
   _ -> do
     respond $ genericStatus Status.notFound404 request
