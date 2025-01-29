@@ -96,7 +96,7 @@ partialMessageStartsWithOneOf :: [ByteString] -> ByteString -> Bool
 partialMessageStartsWithOneOf xs x = any ($ x) $ map partialMessageStartsWith xs
 
 getResult :: Extract a -> ReadHandle -> (ByteString -> IO ()) -> IO (ByteString, [a])
-getResult extract h echo = do
+getResult extract h echo = fmap reverse <$> do
   ref <- newIORef []
 
   let

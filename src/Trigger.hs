@@ -66,8 +66,8 @@ trigger session hooks = runWriterT (runExceptT go) >>= \ case
     go :: Trigger ()
     go = do
       runHook hooks.beforeReload
-      (output, (r, err)) <- Session.reload session
-      tell (output, err)
+      (output, (r, diagnostics)) <- Session.reload session
+      tell (output, diagnostics)
       case r of
         Failed -> do
           echo $ withColor Red "RELOADING FAILED" <> "\n"

@@ -126,20 +126,24 @@ spec = do
             span :: Maybe Span
             span = Just $ Span "Foo.hs" start start
 
-            err :: Diagnostic
-            err = (diagnostic Error) { span }
+            err1 :: Diagnostic
+            err1 = (diagnostic Error) { span }
+
+            err2 :: Diagnostic
+            err2 = err1 { code = Just 23 }
 
             chunks :: [ByteString]
             chunks = [
                 "foo\n"
               , "bar\n"
-              , to_json err <> "\n"
+              , to_json err1 <> "\n"
               , "baz\n"
+              , to_json err2 { code = Just 23 } <> "\n"
               , marker
               ]
           withRandomChunkSizes chunks $ \ h -> do
             fmap mconcat . withSpy $ \ echo -> do
-              getResult extract h echo `shouldReturn` ("foo\nbar\nbaz\n", [err])
+              getResult extract h echo `shouldReturn` ("foo\nbar\nbaz\n", [err1, err2])
             `shouldReturn` "foo\nbar\nbaz\n"
 
         context "with a partial match" $ do
