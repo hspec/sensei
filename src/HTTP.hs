@@ -10,6 +10,7 @@ module HTTP (
 #endif
 ) where
 
+import           Prelude hiding (putStrLn)
 import           Imports hiding (strip, encodeUtf8)
 
 import           System.Directory
@@ -24,6 +25,9 @@ import           Network.Socket
 
 import           Util
 import qualified Trigger
+import           Config (Config)
+import qualified Config
+import qualified DeepSeek
 import           GHC.Diagnostic
 
 socketName :: FilePath -> String
@@ -38,8 +42,8 @@ newSocket = socket AF_UNIX Stream 0
 withSocket :: (Socket -> IO a) -> IO a
 withSocket = bracket newSocket close
 
-withServer :: FilePath -> IO (Trigger.Result, String, [Diagnostic]) -> IO a -> IO a
-withServer dir = withApplication dir . app
+withServer :: (String -> IO ()) -> Config -> FilePath -> IO (Trigger.Result, String, [Diagnostic]) -> IO a -> IO a
+withServer putStrLn config dir = withApplication dir . app putStrLn config dir
 
 withApplication :: FilePath -> Application -> IO a -> IO a
 withApplication dir application action = do
@@ -62,8 +66,15 @@ withThread asyncAction action = do
   takeMVar mvar
   return r
 
-app :: IO (Trigger.Result, String, [Diagnostic]) -> Application
-app getLastResult request respond = case pathInfo request of
+data QuickFixRequest = QuickFixRequest {
+  deepSeek :: Maybe Bool
+} deriving (Eq, Show, Generic)
+
+instance FromJSON QuickFixRequest where
+  parseJSON = genericKebabDecode
+
+app :: (String -> IO ()) -> Config -> FilePath -> IO (Trigger.Result, String, [Diagnostic]) -> Application
+app putStrLn config dir getLastResult request respond = case pathInfo request of
 
   [] -> requireMethod "GET" $ do
     getLastResult >>= textPlain
@@ -73,15 +84,34 @@ app getLastResult request respond = case pathInfo request of
     respond $ json diagnostics
 
   ["quick-fix"] -> requireMethod "POST" $ do
-    getLastResult >>= \ case
-      (_, _, (analyze -> Just action) : _) -> apply action
-      _ -> pass
-    respond $ jsonResponse Status.noContent204 ""
+    consumeRequestBodyLazy request <&> eitherDecode @QuickFixRequest >>= \ case
+      Right quickFixRequest -> getLastResult >>= \ case
+        (_, _, diagnostic : _) | quickFixRequest.deepSeek == Just True -> case config.deepSeek of
+          Just conf -> do
+            DeepSeek.apply putStrLn conf dir diagnostic
+            noContent
+          Nothing -> do
+            serviceUnavailable "missing config value deep-seek.auth"
+        (_, _, (analyze -> Just action) : _) -> do
+          apply dir action
+          noContent
+        _ -> do
+          noContent
+      Left err -> badRequest err
 
   _ -> do
     respond $ genericStatus Status.notFound404 request
 
   where
+    noContent :: IO ResponseReceived
+    noContent = respond $ jsonResponse Status.noContent204 ""
+
+    serviceUnavailable :: String -> IO ResponseReceived
+    serviceUnavailable = respond . genericRfc7807Response Status.serviceUnavailable503 . Just
+
+    badRequest :: String -> IO ResponseReceived
+    badRequest = respond . genericRfc7807Response Status.badRequest400 . Just
+
     color :: Either Builder Bool
     color = case join $ lookup "color" $ queryString request of
       Nothing -> Right True
@@ -108,7 +138,7 @@ app getLastResult request respond = case pathInfo request of
     requireMethod :: Method -> IO ResponseReceived -> IO ResponseReceived
     requireMethod required action = case requestMethod request of
       method | method == required -> action
-      _ -> respond $ genericRfc7807Response Status.methodNotAllowed405
+      _ -> respond $ genericRfc7807Response Status.methodNotAllowed405 Nothing
 
     json :: ToJSON a => a -> Response
     json = jsonResponse Status.ok200 . fromEncoding . toEncoding
@@ -123,13 +153,18 @@ genericStatus status@(Status number message) request = fromMaybe text $ mapAccep
     text = textResponse status $ intDec number <> " " <> byteString message
 
     json :: Response
-    json = genericRfc7807Response status
+    json = genericRfc7807Response status Nothing
 
-genericRfc7807Response :: Status -> Response
-genericRfc7807Response status@(Status number message) = jsonResponse status body
+genericRfc7807Response :: Status -> Maybe String -> Response
+genericRfc7807Response status@(Status number message) detail = jsonResponse status body
   where
     body :: Builder
-    body = "{\"title\":\"" <> byteString message <> "\",\"status\":" <> intDec number <> "}"
+    body = "{\n  \"title\": \"" <> byteString message <> "\",\n  \"status\": " <> intDec number <> renderedDetail <> "\n}"
+
+    renderedDetail :: Builder
+    renderedDetail = case detail of
+      Nothing -> ""
+      Just err -> ",\n  \"detail\": " <> lazyByteString (encode err)
 
 jsonResponse :: Status -> Builder -> Response
 jsonResponse status body = responseBuilder status [(hContentType, "application/json")] body

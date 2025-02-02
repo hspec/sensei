@@ -14,15 +14,14 @@ module Config (
 
 import Imports
 
-import GHC.Generics
 import Data.ByteString qualified as ByteString
 import System.Directory
 import System.Process
-import Text.Casing
 import Data.Aeson
 import Data.Yaml
 
 import Util
+import Config.DeepSeek
 
 configFilename :: FilePath
 configFilename = "sensei.yaml"
@@ -40,7 +39,8 @@ data ConfigFile = ConfigFile {
   -- | Shell command to run after the trigger cycle successfully completed. Has access to the result
   -- via seito.
 , onSuccess :: Maybe String
-} deriving (Generic, Show, Eq)
+, deepSeek :: Maybe DeepSeek
+} deriving (Eq, Show, Generic)
 
 instance Semigroup ConfigFile where
   a <> b = ConfigFile {
@@ -48,18 +48,16 @@ instance Semigroup ConfigFile where
   , afterReload = a.afterReload <|> b.afterReload
   , onFailure = a.onFailure <|> b.onFailure
   , onSuccess = a.onSuccess <|> b.onSuccess
+  , deepSeek = a.deepSeek <|> b.deepSeek
   }
 
 instance Monoid ConfigFile where
-  mempty = ConfigFile Nothing Nothing Nothing Nothing
+  mempty = ConfigFile Nothing Nothing Nothing Nothing Nothing
 
 instance FromJSON ConfigFile where
   parseJSON = \ case
     Null -> return mempty
-    value -> genericParseJSON defaultOptions {
-        fieldLabelModifier = kebab
-      , rejectUnknownFields = True
-      } value
+    value -> genericKebabDecode value
 
 type Hook = IO HookResult
 
@@ -70,6 +68,7 @@ data Config = Config {
 , senseiHooksAfterReload :: Hook
 , senseiHooksOnSuccess :: Hook
 , senseiHooksOnFailure :: Hook
+, deepSeek :: Maybe DeepSeek
 }
 
 tryReadFile :: FilePath -> IO (Maybe ByteString)
@@ -97,6 +96,7 @@ toConfig ConfigFile{..} = Config {
 , senseiHooksAfterReload = maybeToHook "after-reload" afterReload
 , senseiHooksOnSuccess = maybeToHook "on-success" onSuccess
 , senseiHooksOnFailure = maybeToHook "on-failure" onFailure
+, deepSeek
 } where
     maybeToHook :: String -> Maybe String -> Hook
     maybeToHook name = maybe (return HookSuccess) (toHook name)

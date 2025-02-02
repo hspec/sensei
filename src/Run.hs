@@ -10,11 +10,13 @@ module Run (
 #endif
 ) where
 
+import           Prelude hiding (putStrLn)
+import qualified Prelude
 import           Imports
 
 import qualified Data.ByteString as ByteString
 import           Data.IORef
-import           System.IO
+import           System.IO hiding (putStrLn)
 import qualified System.FSNotify as FSNotify
 
 import qualified HTTP
@@ -61,8 +63,15 @@ data Mode = Lenient | Strict
 run :: [String] -> IO ()
 run args = do
   config <- loadConfig
-  runArgs@RunArgs{dir, lastOutput, queue} <- defaultRunArgs
-  HTTP.withServer dir (readMVar lastOutput) $ do
+  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction} <- defaultRunArgs
+
+  let
+    putStrLn :: String -> IO ()
+    putStrLn message = do
+      cleanupAction.add $ Prelude.putStrLn message
+      cleanupAction.run
+
+  HTTP.withServer putStrLn config dir (readMVar lastOutput) $ do
     watchFiles dir queue $ do
       mode <- newIORef Lenient
       Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
@@ -88,6 +97,7 @@ defaultRunArgs :: IO RunArgs
 defaultRunArgs = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "", [])
+  cleanupAction <- newCleanupAction
   return RunArgs {
     config = defaultConfig
   , dir = ""
@@ -96,6 +106,7 @@ defaultRunArgs = do
   , queue = queue
   , sessionConfig = defaultSessionConfig
   , withSession = Session.withSession
+  , cleanupAction
   }
 
 data RunArgs = RunArgs {
@@ -106,26 +117,36 @@ data RunArgs = RunArgs {
 , queue :: EventQueue
 , sessionConfig  :: Session.Config
 , withSession :: forall r. Session.Config -> [String] -> (Session.Session -> IO r) -> IO r
+, cleanupAction :: CleanupAction
 }
+
+data CleanupAction = CleanupAction {
+  run :: IO ()
+, add :: IO () -> IO ()
+}
+
+newCleanupAction :: IO CleanupAction
+newCleanupAction = do
+  mvar <- newMVar pass
+  return CleanupAction {
+    run = modifyMVar_ mvar \ action -> do
+      action
+      return pass
+  , add = \ new -> modifyMVar_ mvar \ existing -> do
+      return $ existing >> new
+  }
 
 runWith :: RunArgs -> IO ()
 runWith RunArgs {..} = do
-  cleanup <- newIORef pass
   let
-    runCleanupAction :: IO ()
-    runCleanupAction = join $ atomicModifyIORef' cleanup $ (,) pass
-
-    addCleanupAction :: IO () -> IO ()
-    addCleanupAction cleanupAction = atomicModifyIORef' cleanup $ \ action -> (action >> cleanupAction, ())
-
     saveOutput :: IO (Trigger.Result, String, [Diagnostic]) -> IO ()
     saveOutput action = do
-      runCleanupAction
+      cleanupAction.run
       result <- modifyMVar lastOutput $ \ _ -> (id &&& id) <$> action
       case result of
         (HookFailed, _output, _diagnostics) -> pass
         (Failure, output, _diagnostics) -> config.senseiHooksOnFailure >>= \ case
-          HookSuccess -> pager output >>= addCleanupAction
+          HookSuccess -> pager output >>= cleanupAction.add
           HookFailure message -> hPutStrLn stderr message
         (Success, _output, _diagnostics) -> config.senseiHooksOnSuccess >>= \ case
           HookSuccess -> pass
@@ -149,7 +170,7 @@ runWith RunArgs {..} = do
           triggerAllAction = saveOutput (triggerAll session hooks <* printExtraArgs)
 
         triggerAction
-        processQueue runCleanupAction (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
+        processQueue cleanupAction.run (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
       case status of
         Restart mExtraArgs -> go (fromMaybe extraArgs mExtraArgs)
         Terminate -> return ()
@@ -157,10 +178,11 @@ runWith RunArgs {..} = do
 
 runWeb :: [String] -> IO ()
 runWeb args = do
-  Session.withSession defaultSessionConfig args $ \session -> do
+  config <- loadConfig
+  Session.withSession defaultSessionConfig args $ \ session -> do
     _ <- trigger session defaultHooks
     lock <- newMVar ()
-    HTTP.withServer "" (withMVar lock $ \() -> trigger session defaultHooks) $ do
+    HTTP.withServer Prelude.putStrLn config "" (withMVar lock $ \() -> trigger session defaultHooks) $ do
       waitForever
 
 defaultSessionConfig :: Session.Config

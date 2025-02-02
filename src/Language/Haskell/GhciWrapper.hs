@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE BlockArguments #-}
 module Language.Haskell.GhciWrapper (
   Config(..)
 , Interpreter(echo)
@@ -207,7 +206,7 @@ extractReloadStatus = Extract {
 extractDiagnostics :: ReadHandle.Extract Diagnostic
 extractDiagnostics = ReadHandle.Extract {
   isPartialMessage = ByteString.isPrefixOf "{"
-, parseMessage = fmap (id &&& Diagnostic.format) . Diagnostic.parse
+, parseMessage = fmap (id &&& encodeUtf8 . Diagnostic.format) . Diagnostic.parse
 }
 
 getResult :: Extract a -> Interpreter -> IO (String, [a])

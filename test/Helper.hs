@@ -42,7 +42,7 @@ import qualified System.Timeout
 
 import qualified Data.ByteString as ByteString
 import           Data.ByteString.Lazy (toStrict)
-import           Data.Aeson (ToJSON, encode)
+import           Data.Aeson (encode)
 
 import           Run ()
 import           Config (tryReadFile)

@@ -1,5 +1,10 @@
 {-# LANGUAGE CPP #-}
-module Imports (module Imports) where
+module Imports (
+  module Imports
+, Generic
+, ToJSON(..)
+, FromJSON(..)
+) where
 
 import           Control.Arrow as Imports ((>>>), (&&&))
 import           Control.Concurrent as Imports
@@ -7,7 +12,7 @@ import           Control.Exception as Imports hiding (handle)
 import           Control.Monad as Imports
 import           Data.Function as Imports (fix)
 import           Control.Applicative as Imports
-import           Data.Functor as Imports ((<&>))
+import           Data.Functor as Imports ((<&>), ($>))
 import           Data.Bifunctor as Imports
 import           Data.Char as Imports
 import           Data.Either as Imports
@@ -15,23 +20,35 @@ import           Data.List as Imports hiding (span)
 import           Data.Maybe as Imports
 import           Data.String as Imports
 import           Data.ByteString.Char8 as Imports (ByteString, pack, unpack)
+import           Data.ByteString.Lazy as Imports (LazyByteString)
 import           Data.Tuple as Imports
 import           System.FilePath as Imports hiding (addExtension, combine)
 import           System.IO.Error as Imports (isDoesNotExistError)
 import           Text.Read as Imports (readMaybe)
 import           System.Exit as Imports (ExitCode(..))
-import           System.Process as Process
 import           Control.Monad.IO.Class as Imports
+import           Data.Version as Imports (Version(..), showVersion, makeVersion)
 
+import           System.Process as Process
 import           System.IO (Handle)
 import           GHC.IO.Handle.Internals (wantReadableHandle_)
+import           GHC.Generics
 
-import           Data.Version as Imports (Version(..), showVersion, makeVersion)
 import qualified Data.Version as Version
 import           Text.ParserCombinators.ReadP
 
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+
+import           Text.Casing
+import           Data.Aeson
+import           Data.Aeson.Types (Parser)
+
+genericKebabDecode :: (Generic a, GFromJSON Zero (Rep a)) => Value -> Parser a
+genericKebabDecode = genericParseJSON defaultOptions {
+  fieldLabelModifier = kebab
+, rejectUnknownFields = True
+}
 
 pass :: Applicative m => m ()
 pass = pure ()
