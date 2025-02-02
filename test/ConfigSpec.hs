@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
-
+{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 module ConfigSpec (spec) where
 
 import Helper
@@ -9,6 +9,7 @@ import Data.Yaml.TH
 import Data.ByteString.Lazy qualified as LB
 
 import Config
+import Config.DeepSeek
 
 spec :: Spec
 spec = do
@@ -84,6 +85,7 @@ spec = do
       , beforeReload = Just "blah"
       , onSuccess = Just "snafu"
       , onFailure = Just "failure"
+      , deepSeek = Nothing
       }
 
     it "supports null" $ do
@@ -97,6 +99,7 @@ spec = do
       , beforeReload = Just "blah"
       , onSuccess = Just "finally"
       , onFailure = Just "failure"
+      , deepSeek = Nothing
       }
 
     it "supports missing fields" $ do
@@ -107,8 +110,17 @@ spec = do
       , beforeReload = Nothing
       , onSuccess = Nothing
       , onFailure = Nothing
+      , deepSeek = Nothing
       }
 
-    it "accepts an emty config" $ do
+    it "accepts deep-seek configuration values" $ do
+      fromJSON [yamlQQ|
+        deep-seek:
+          auth: foo
+      |] `shouldBe` Success @ConfigFile mempty {
+        deepSeek = Just $ DeepSeek $ BearerToken "foo"
+      }
+
+    it "accepts an empty config" $ do
       fromJSON @ConfigFile [yamlQQ|
       |] `shouldBe` Success mempty

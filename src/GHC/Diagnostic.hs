@@ -57,8 +57,8 @@ analyze diagnostic = listToMaybe $ mapMaybe analyzeHint diagnostic.hints
             takeIdentifier :: Text -> Text
             takeIdentifier = T.takeWhile (/= '\'')
 
-apply :: Action -> IO ()
-apply = \ case
+apply :: FilePath -> Action -> IO ()
+apply dir = relativeTo dir >>> \ case
   AddExtension file name -> do
     old <- B.readFile file
     withFile file WriteMode $ \ h -> do
@@ -68,6 +68,11 @@ apply = \ case
     input <- B.readFile span.file <&> B.lines
     B.writeFile span.file . B.unlines $
       applyReplace span.start span.end substitute input
+
+relativeTo :: FilePath -> Action -> Action
+relativeTo dir = \ case
+  AddExtension file name -> AddExtension (dir </> file) name
+  Replace span substitute -> Replace span { file = dir </> span.file } substitute
 
 applyReplace :: Location -> Location -> Text -> [ByteString] -> [ByteString]
 applyReplace start end substitute input = case splitAt (start.line - 1) input of

@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments #-}
 module GHC.DiagnosticSpec (spec) where
 
 import           Prelude hiding (span)
@@ -19,7 +18,7 @@ test name action = it name $ do
   ensureFile (dir </> "err.out") (encodeUtf8 err)
   ensureFile (dir </> "err.json") json
   Just diagnostic <- return $ parse json
-  decodeUtf8 (format diagnostic) `shouldBe` err
+  format diagnostic `shouldBe` err
   normalizeFileName <$> analyze diagnostic `shouldBe` action
   where
     dir :: FilePath

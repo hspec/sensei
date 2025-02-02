@@ -2,6 +2,7 @@ module ClientSpec (spec) where
 
 import           Helper
 
+import           Config
 import           HTTP (socketName)
 import qualified HTTP
 import           Client
@@ -16,7 +17,7 @@ withFailure = withServer Trigger.Failure (withColor Red "failure")
 withServer :: Trigger.Result -> String -> (FilePath -> IO a) -> IO a
 withServer result text action = do
   withTempDirectory $ \ dir -> do
-    HTTP.withServer dir (return (result, text, [])) $ do
+    HTTP.withServer (\ _ -> pass) defaultConfig dir (return (result, text, [])) $ do
       action dir
 
 spec :: Spec

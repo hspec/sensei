@@ -10,8 +10,7 @@ module GHC.Diagnostic.Type (
 
 import           Prelude hiding ((<>), span, unlines)
 import           Imports hiding (empty, unlines)
-import           GHC.Generics (Generic)
-import           Data.Aeson (ToJSON(..), FromJSON(..), decode)
+import           Data.Aeson (decode)
 import           Data.ByteString.Lazy (fromStrict)
 import           Text.PrettyPrint
 
@@ -42,8 +41,8 @@ data Severity = Warning | Error
 parse :: ByteString -> Maybe Diagnostic
 parse = fmap removeGhciSpecificHints . decode . fromStrict
 
-format :: Diagnostic -> ByteString
-format diagnostic = encodeUtf8 . render $ unlines [
+format :: Diagnostic -> String
+format diagnostic = render $ unlines [
     hang header 4 messageWithHints
   , ""
   , ""

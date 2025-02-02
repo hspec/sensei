@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE BlockArguments #-}
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
 import           Helper

@@ -24,6 +24,9 @@ executable seito
   other-modules:
       Client
       Config
+      Config.DeepSeek
+      DeepSeek
+      DeepSeek.Types
       EventQueue
       GHC.Diagnostic
       GHC.Diagnostic.Type
@@ -49,6 +52,7 @@ executable seito
       OverloadedStrings
       RecordWildCards
       ViewPatterns
+      BlockArguments
   other-extensions:
       NoFieldSelectors
   ghc-options: -Wall -threaded
@@ -64,6 +68,7 @@ executable seito
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
+    , http-conduit
     , http-media
     , http-types
     , mtl
@@ -86,6 +91,9 @@ executable sensei
   other-modules:
       Client
       Config
+      Config.DeepSeek
+      DeepSeek
+      DeepSeek.Types
       EventQueue
       GHC.Diagnostic
       GHC.Diagnostic.Type
@@ -111,6 +119,7 @@ executable sensei
       OverloadedStrings
       RecordWildCards
       ViewPatterns
+      BlockArguments
   other-extensions:
       NoFieldSelectors
   ghc-options: -Wall -threaded
@@ -126,6 +135,7 @@ executable sensei
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
+    , http-conduit
     , http-media
     , http-types
     , mtl
@@ -148,6 +158,9 @@ executable sensei-web
   other-modules:
       Client
       Config
+      Config.DeepSeek
+      DeepSeek
+      DeepSeek.Types
       EventQueue
       GHC.Diagnostic
       GHC.Diagnostic.Type
@@ -173,6 +186,7 @@ executable sensei-web
       OverloadedStrings
       RecordWildCards
       ViewPatterns
+      BlockArguments
   other-extensions:
       NoFieldSelectors
   ghc-options: -Wall -threaded
@@ -188,6 +202,7 @@ executable sensei-web
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
+    , http-conduit
     , http-media
     , http-types
     , mtl
@@ -211,6 +226,9 @@ test-suite spec
   other-modules:
       Client
       Config
+      Config.DeepSeek
+      DeepSeek
+      DeepSeek.Types
       EventQueue
       GHC.Diagnostic
       GHC.Diagnostic.Type
@@ -227,6 +245,7 @@ test-suite spec
       Util
       ClientSpec
       ConfigSpec
+      DeepSeekSpec
       EventQueueSpec
       GHC.DiagnosticSpec
       Helper
@@ -251,6 +270,7 @@ test-suite spec
       OverloadedStrings
       RecordWildCards
       ViewPatterns
+      BlockArguments
   other-extensions:
       NoFieldSelectors
   ghc-options: -Wall -threaded
@@ -273,6 +293,7 @@ test-suite spec
     , hspec-contrib >=0.5.2
     , hspec-wai
     , http-client >=0.5.0
+    , http-conduit
     , http-media
     , http-types
     , mockery
@@ -286,7 +307,9 @@ test-suite spec
     , time
     , transformers
     , unix
+    , vcr
     , wai
+    , wai-extra
     , warp
     , yaml
   default-language: GHC2021
