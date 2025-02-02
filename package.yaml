@@ -42,7 +42,7 @@ dependencies:
   - async
   - containers
   - transformers
-  - mtl
+  - mtl >= 2.3.1
   - aeson
   - yaml
   - casing

@@ -66,7 +66,7 @@ executable seito
     , http-client >=0.5.0
     , http-media
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , pretty
     , process
@@ -128,7 +128,7 @@ executable sensei
     , http-client >=0.5.0
     , http-media
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , pretty
     , process
@@ -190,7 +190,7 @@ executable sensei-web
     , http-client >=0.5.0
     , http-media
     , http-types
-    , mtl
+    , mtl >=2.3.1
     , network
     , pretty
     , process
@@ -276,7 +276,7 @@ test-suite spec
     , http-media
     , http-types
     , mockery
-    , mtl
+    , mtl >=2.3.1
     , network
     , pretty
     , process
