@@ -60,12 +60,13 @@ data Mode = Lenient | Strict
 
 run :: [String] -> IO ()
 run args = do
+  config <- loadConfig
   runArgs@RunArgs{dir, lastOutput, queue} <- defaultRunArgs
   HTTP.withServer dir (readMVar lastOutput) $ do
     watchFiles dir queue $ do
       mode <- newIORef Lenient
       Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
-      runWith runArgs {args}
+      runWith runArgs {config, args}
   where
     dispatch :: IORef Mode -> EventQueue -> Char -> IO ()
     dispatch mode queue = \ case
@@ -88,17 +89,17 @@ defaultRunArgs = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "", [])
   return RunArgs {
-    ignoreConfig = False
+    config = defaultConfig
   , dir = ""
   , args = []
-  , lastOutput = lastOutput
+  , lastOutput
   , queue = queue
   , sessionConfig = defaultSessionConfig
   , withSession = Session.withSession
   }
 
 data RunArgs = RunArgs {
-  ignoreConfig :: Bool
+  config :: Config
 , dir :: FilePath
 , args :: [String]
 , lastOutput :: MVar (Result, String, [Diagnostic])
@@ -109,9 +110,6 @@ data RunArgs = RunArgs {
 
 runWith :: RunArgs -> IO ()
 runWith RunArgs {..} = do
-  config <- case ignoreConfig of
-    False -> loadConfig
-    True -> return defaultConfig
   cleanup <- newIORef pass
   let
     runCleanupAction :: IO ()

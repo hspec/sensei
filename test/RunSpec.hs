@@ -11,7 +11,7 @@ import qualified Run
 defaultRunArgs :: IO RunArgs
 defaultRunArgs = do
   args <- Run.defaultRunArgs
-  return args { ignoreConfig = True, sessionConfig = args.sessionConfig { configEcho = silent } }
+  return args { sessionConfig = args.sessionConfig { configEcho = silent } }
 
 spec :: Spec
 spec = do
@@ -28,7 +28,7 @@ spec = do
           RunArgs{..} <- defaultRunArgs
           let
             runArgs = RunArgs {
-              withSession = \ config sessionArgs action -> withSession config sessionArgs $ \ session -> do
+              withSession = \ conf sessionArgs action -> withSession conf sessionArgs $ \ session -> do
                 spy sessionArgs
                 action session <* emitEvent runArgs.queue Done
             , ..
@@ -43,7 +43,7 @@ spec = do
             RunArgs{..} <- defaultRunArgs
             let
               runArgs = RunArgs {
-                withSession = \ config sessionArgs action -> withSession config sessionArgs $ \ session -> do
+                withSession = \ conf sessionArgs action -> withSession conf sessionArgs $ \ session -> do
                   spy sessionArgs
                   action session <* emitEvent runArgs.queue Done
               , ..
@@ -60,7 +60,7 @@ spec = do
             RunArgs{..} <- defaultRunArgs
             let
               runArgs = RunArgs {
-                withSession = \ config sessionArgs action -> withSession config sessionArgs $ \ session -> do
+                withSession = \ conf sessionArgs action -> withSession conf sessionArgs $ \ session -> do
                   spy sessionArgs
                   nextEvent >>= emitEvent runArgs.queue
                   action session
