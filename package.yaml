@@ -54,6 +54,9 @@ ghc-options: -Wall -threaded
 source-dirs:
   - src
 
+library:
+  exposed-modules: Sensei.API
+
 executables:
   sensei:
     source-dirs: driver

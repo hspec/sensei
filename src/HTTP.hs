@@ -5,6 +5,8 @@ module HTTP (
 , newSocket
 , socketAddr
 
+, QuickFixRequest(..)
+
 #ifdef TEST
 , app
 #endif
@@ -69,6 +71,9 @@ withThread asyncAction action = do
 data QuickFixRequest = QuickFixRequest {
   deepSeek :: Maybe Bool
 } deriving (Eq, Show, Generic)
+
+instance ToJSON QuickFixRequest where
+  toJSON = genericKebabEncode
 
 instance FromJSON QuickFixRequest where
   parseJSON = genericKebabDecode

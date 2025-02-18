@@ -6,6 +6,8 @@ import           GHC.Conc
 
 import qualified Language.Haskell.GhciWrapper as Interpreter
 
+import           Sensei.API ()
+
 installPackageEnvironment :: FilePath -> FilePath -> IO ()
 installPackageEnvironment ghc file = callProcess "cabal" ["install", "-v0", "-w", ghc, "-z", "--lib", "hspec", "hspec-meta", "--package-env", file]
 

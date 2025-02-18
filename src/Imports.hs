@@ -45,7 +45,13 @@ import           Data.Aeson
 import           Data.Aeson.Types (Parser)
 
 genericKebabDecode :: (Generic a, GFromJSON Zero (Rep a)) => Value -> Parser a
-genericKebabDecode = genericParseJSON defaultOptions {
+genericKebabDecode = genericParseJSON kebabAesonOptions
+
+genericKebabEncode :: (Generic a, GToJSON' Value Zero (Rep a)) => a -> Value
+genericKebabEncode = genericToJSON kebabAesonOptions
+
+kebabAesonOptions :: Options
+kebabAesonOptions = defaultOptions {
   fieldLabelModifier = kebab
 , rejectUnknownFields = True
 }
