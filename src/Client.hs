@@ -1,4 +1,7 @@
-module Client (client) where
+module Client (
+  client
+, makeRequest
+) where
 
 import           Imports
 
@@ -11,24 +14,29 @@ import qualified Data.ByteString.Lazy as L
 
 import           HTTP (newSocket, socketName)
 
-client :: FilePath -> [String] -> IO (Bool, L.ByteString)
-client dir args = case args of
+client :: (FilePath -> IO FilePath) -> FilePath -> [String] -> IO (Bool, LazyByteString)
+client getDataFileName dir args = case args of
   [] -> hIsTerminalDevice stdout >>= run
   ["--no-color"] -> run False
   ["--color"] -> run True
+  ["--vim-config"] -> (,) True . fromString <$> getDataFileName "vim/sensei.vim"
   _ -> do
     hPutStrLn stderr $ "Usage: seito [ --color | --no-color ]"
     return (False, "")
   where
-    run :: Bool -> IO (Bool, L.ByteString)
-    run color = handleSocketFileDoesNotExist name $ do
-      manager <- newManager defaultManagerSettings {managerRawConnection = return newConnection}
+    run :: Bool -> IO (Bool, LazyByteString)
+    run color = do
       let
         url :: Request
         url = fromString $ "http://localhost/?color=" <> map toLower (show color)
-      Response{..} <- httpLbs url manager
-      return (statusIsSuccessful responseStatus, responseBody)
+      makeRequest dir url
 
+makeRequest :: FilePath -> Request -> IO (Bool, LazyByteString)
+makeRequest dir url = handleSocketFileDoesNotExist name $ do
+  manager <- newManager defaultManagerSettings {managerRawConnection = return newConnection}
+  Response{..} <- httpLbs url manager
+  return (statusIsSuccessful responseStatus, responseBody)
+  where
     name :: FilePath
     name = socketName dir
 
@@ -38,12 +46,12 @@ client dir args = case args of
       connect sock (SockAddrUnix name)
       socketConnection sock 8192
 
-handleSocketFileDoesNotExist :: String -> IO (Bool, L.ByteString) -> IO (Bool, L.ByteString)
+handleSocketFileDoesNotExist :: FilePath -> IO (Bool, LazyByteString) -> IO (Bool, LazyByteString)
 handleSocketFileDoesNotExist name = fmap (either id id) . tryJust doesNotExist
   where
-    doesNotExist :: HttpException -> Maybe (Bool, L.ByteString)
+    doesNotExist :: HttpException -> Maybe (Bool, LazyByteString)
     doesNotExist = \ case
-      HttpExceptionRequest _ (ConnectionFailure e) | isDoesNotExistException e -> Just (False, "could not connect to " <> fromString name <> "\n")
+      HttpExceptionRequest _ (ConnectionFailure e) | isDoesNotExistException e -> Just (False, "could not connect to " <> L.fromStrict (encodeUtf8 name) <> "\n")
       _ -> Nothing
 
     isDoesNotExistException :: SomeException -> Bool

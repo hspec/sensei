@@ -1,4 +1,4 @@
-cabal-version: 1.12
+cabal-version: 2.0
 
 -- This file has been generated from package.yaml by hpack version 0.38.0.
 --
@@ -14,13 +14,16 @@ maintainer:     Simon Hengel <sol@typeful.net>
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple
+data-files:
+    vim/sensei.vim
 
 source-repository head
   type: git
   location: https://github.com/hspec/sensei
 
-executable seito
-  main-is: seito.hs
+library
+  exposed-modules:
+      Sensei.API
   other-modules:
       Client
       Config
@@ -43,6 +46,74 @@ executable seito
       Util
   hs-source-dirs:
       src
+  default-extensions:
+      DuplicateRecordFields
+      LambdaCase
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedStrings
+      RecordWildCards
+      ViewPatterns
+      BlockArguments
+  ghc-options: -Wall -threaded
+  build-depends:
+      aeson
+    , ansi-terminal
+    , async
+    , base >=4.11 && <5
+    , bytestring >=0.11
+    , casing
+    , containers
+    , directory
+    , filepath
+    , fsnotify ==0.4.*
+    , http-client >=0.5.0
+    , http-conduit
+    , http-media
+    , http-types
+    , mtl
+    , network
+    , pretty
+    , process
+    , stm
+    , temporary
+    , text
+    , time
+    , transformers
+    , unix
+    , wai
+    , warp
+    , yaml
+  default-language: GHC2021
+
+executable seito
+  main-is: seito.hs
+  other-modules:
+      Client
+      Config
+      Config.DeepSeek
+      DeepSeek
+      DeepSeek.Types
+      EventQueue
+      GHC.Diagnostic
+      GHC.Diagnostic.Type
+      HTTP
+      Imports
+      Input
+      Language.Haskell.GhciWrapper
+      Options
+      Pager
+      ReadHandle
+      Run
+      Sensei.API
+      Session
+      Trigger
+      Util
+      Paths_sensei
+  autogen-modules:
+      Paths_sensei
+  hs-source-dirs:
+      src
       driver
   default-extensions:
       DuplicateRecordFields
@@ -53,8 +124,6 @@ executable seito
       RecordWildCards
       ViewPatterns
       BlockArguments
-  other-extensions:
-      NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -105,6 +174,7 @@ executable sensei
       Pager
       ReadHandle
       Run
+      Sensei.API
       Session
       Trigger
       Util
@@ -120,8 +190,6 @@ executable sensei
       RecordWildCards
       ViewPatterns
       BlockArguments
-  other-extensions:
-      NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -172,6 +240,7 @@ executable sensei-web
       Pager
       ReadHandle
       Run
+      Sensei.API
       Session
       Trigger
       Util
@@ -187,8 +256,6 @@ executable sensei-web
       RecordWildCards
       ViewPatterns
       BlockArguments
-  other-extensions:
-      NoFieldSelectors
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -240,6 +307,7 @@ test-suite spec
       Pager
       ReadHandle
       Run
+      Sensei.API
       Session
       Trigger
       Util
@@ -271,8 +339,6 @@ test-suite spec
       RecordWildCards
       ViewPatterns
       BlockArguments
-  other-extensions:
-      NoFieldSelectors
   ghc-options: -Wall -threaded
   cpp-options: -DTEST
   build-tool-depends:
