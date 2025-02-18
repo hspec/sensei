@@ -30,14 +30,11 @@ import qualified Config
 import qualified DeepSeek
 import           GHC.Diagnostic
 
-socketName :: FilePath -> String
-socketName dir = dir </> ".sensei.sock"
+import           HTTP.Util
+import           Sensei.API (QuickFixRequest(..))
 
 socketAddr :: FilePath -> SockAddr
 socketAddr = SockAddrUnix . socketName
-
-newSocket :: IO Socket
-newSocket = socket AF_UNIX Stream 0
 
 withSocket :: (Socket -> IO a) -> IO a
 withSocket = bracket newSocket close
@@ -65,13 +62,6 @@ withThread asyncAction action = do
   killThread tid
   takeMVar mvar
   return r
-
-data QuickFixRequest = QuickFixRequest {
-  deepSeek :: Maybe Bool
-} deriving (Eq, Show, Generic)
-
-instance FromJSON QuickFixRequest where
-  parseJSON = genericKebabDecode
 
 app :: (String -> IO ()) -> Config -> FilePath -> IO (Trigger.Result, String, [Diagnostic]) -> Application
 app putStrLn config dir getLastResult request respond = case pathInfo request of
