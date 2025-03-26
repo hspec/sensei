@@ -26,7 +26,7 @@ putStrLn
   | otherwise = \ _ -> pass
 
 withTape :: VCR.Tape -> WaiSession st a -> WaiSession st a
-withTape tape = lift (VCR.withTape tape)
+withTape tape = lift (VCR.with tape)
   where
     lift :: forall st a. (forall b. IO b -> IO b) -> WaiSession st a -> WaiSession st a
     lift f action = WaiSession $ ReaderT \ st -> ReaderT \ application -> StateT \ clientState -> do
