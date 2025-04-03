@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module GHC.DiagnosticSpec (spec) where
 
 import           Prelude hiding (span)
@@ -11,14 +12,20 @@ import           Data.Text (Text)
 import           Language.Haskell.GhciWrapper (lookupGhc)
 import           GHC.Diagnostic
 
-test :: HasCallStack => FilePath -> Maybe Action -> Spec
-test name action = it name $ do
+data Requirement = NoRequirement | RequireGhc912
+
+test :: HasCallStack => FilePath -> [String] -> Maybe Action -> Spec
+test name args = testWith name NoRequirement args
+
+testWith :: HasCallStack => FilePath -> Requirement -> [String] -> Maybe Action -> Spec
+testWith name requirement extraArgs action = it name $ do
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
   json <- encodeUtf8 <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
   ensureFile (dir </> "err.out") (encodeUtf8 err)
   ensureFile (dir </> "err.json") json
   Just diagnostic <- return $ parse json
-  format diagnostic `shouldBe` err
+  when shouldRun $ do
+    format diagnostic `shouldBe` err
   normalizeFileName <$> analyze diagnostic `shouldBe` action
   where
     dir :: FilePath
@@ -30,7 +37,7 @@ test name action = it name $ do
       bin <- lookupGhc <$> getEnvironment
       let
         process :: CreateProcess
-        process = proc bin ("-fno-code" : args ++ [dir </> "Foo.hs"])
+        process = proc bin ("-fno-code" : args ++ extraArgs ++ [dir </> "Foo.hs"])
       (_, _, err) <- readCreateProcessWithExitCode process ""
       return err
 
@@ -40,16 +47,29 @@ test name action = it name $ do
       '’' -> '\''
       c -> c
 
+    shouldRun :: Bool
+    shouldRun = case requirement of
+      NoRequirement -> True
+      RequireGhc912 ->
+#if __GLASGOW_HASKELL__ < 912
+        False
+#else
+        True
+#endif
+
 normalizeFileName :: Action -> Action
 normalizeFileName = \ case
   AddExtension _ name -> AddExtension "Foo.hs" name
   Replace span substitute -> Replace span {file = "Foo.hs"} substitute
 
-ftest :: HasCallStack => FilePath -> Maybe Action -> Spec
-ftest name = focus . test name
+ftest :: HasCallStack => FilePath -> [String] -> Maybe Action -> Spec
+ftest name args = focus . test name args
 
-_ignore :: HasCallStack => FilePath -> Maybe Action -> Spec
-_ignore = ftest
+xtest :: HasCallStack => FilePath -> [String] -> Maybe Action -> Spec
+xtest name args = before_ pending . test name args
+
+_ignore :: ()
+_ignore = let _ = (ftest, xtest) in ()
 
 replace :: Location -> Location -> Text -> Maybe Action
 replace start end = Just . Replace (Span "Foo.hs" start end)
@@ -60,16 +80,17 @@ addExtension = Just . AddExtension "Foo.hs"
 spec :: Spec
 spec = do
   describe "format" $ do
-    test "not-in-scope" Nothing
-    test "not-in-scope-perhaps-use" $ replace (Location 2 7) (Location 2 14) "filter"
-    test "not-in-scope-perhaps-use-one-of-these" $ replace (Location 2 7) (Location 2 11) "foldl"
-    test "not-in-scope-perhaps-use-multiline" $ replace (Location 3 7) (Location 3 11) "foldl"
-    test "use-BlockArguments" $ addExtension "BlockArguments"
-    test "use-TemplateHaskellQuotes" $ addExtension "TemplateHaskellQuotes"
-    test "non-existing" Nothing
-    test "parse-error" Nothing
-    test "lex-error" Nothing
-    test "multiple-error-messages" Nothing
+    test "not-in-scope" [] Nothing
+    test "not-in-scope-perhaps-use" [] $ replace (Location 2 7) (Location 2 14) "filter"
+    test "not-in-scope-perhaps-use-one-of-these" [] $ replace (Location 2 7) (Location 2 11) "foldl"
+    test "not-in-scope-perhaps-use-multiline" [] $ replace (Location 3 7) (Location 3 11) "foldl"
+    test "use-BlockArguments" [] $ addExtension "BlockArguments"
+    test "use-TemplateHaskellQuotes" [] $ addExtension "TemplateHaskellQuotes"
+    testWith "redundant-import" RequireGhc912 ["-Wall", "-Werror"] $ replace (Location 2 1) (Location 3 1) ""
+    test "non-existing" [] Nothing
+    test "parse-error" [] Nothing
+    test "lex-error" [] Nothing
+    test "multiple-error-messages" [] Nothing
 
   describe "applyReplace" $ do
     it "replaces a given source span with a substitute" $ do
@@ -79,4 +100,16 @@ spec = do
         ] `shouldBe` [
           "module Foo where"
         , "foo = filter p xs"
+        ]
+
+    it "correctly handles source spans that span over multiple lines" $ do
+      applyReplace (Location 2 8) (Location 3 7) "Ya" [
+          "module Foo where"
+        , "import Data.Maybe"
+        , "foo = bar"
+        , "one = two"
+        ] `shouldBe` [
+          "module Foo where"
+        , "import Yabar"
+        , "one = two"
         ]

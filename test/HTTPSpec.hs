@@ -1,9 +1,9 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 module HTTPSpec (spec) where
 
-import           Prelude hiding (putStrLn, span)
+import           Helper hiding (putStrLn, pending)
 import qualified Prelude
-import           Helper hiding (pending)
 import qualified VCR
 
 import           Network.Wai (Application)
