@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module GHC.Diagnostic (
   module Diagnostic
 , Action(..)
@@ -8,8 +9,6 @@ module GHC.Diagnostic (
 , applyReplace
 #endif
 ) where
-
-import           Prelude hiding (span)
 
 import           Imports
 
@@ -26,8 +25,31 @@ data Action = AddExtension FilePath Text | Replace Span Text
   deriving (Eq, Show)
 
 analyze :: Diagnostic -> Maybe Action
-analyze diagnostic = listToMaybe $ mapMaybe analyzeHint diagnostic.hints
+analyze diagnostic = analyzeCode <|> analyzeHints
   where
+    analyzeCode :: Maybe Action
+    analyzeCode = redundantImport
+      where
+        redundantImport :: Maybe Action
+        redundantImport = matchCode 66111 >> removeLines
+
+    matchCode :: Int -> Maybe ()
+    matchCode expected = guard $ diagnostic.code == Just expected
+
+    removeLines :: Maybe Action
+    removeLines = Replace <$> diagnosticLines <*> pure ""
+
+    diagnosticLines :: Maybe Span
+    diagnosticLines = do
+      span <- diagnostic.span
+      return span {
+        start = Location span.start.line 1
+      , end = Location (span.end.line + 1) 1
+      }
+
+    analyzeHints :: Maybe Action
+    analyzeHints = head $ mapMaybe analyzeHint diagnostic.hints
+
     analyzeHint :: String -> Maybe Action
     analyzeHint (T.pack -> hint) =
           perhapsYouIntendedToUse
@@ -43,7 +65,7 @@ analyze diagnostic = listToMaybe $ mapMaybe analyzeHint diagnostic.hints
         enableAnyOfTheFollowingExtensions = do
           file <- (.file) <$> diagnostic.span
           T.stripPrefix "Enable any of the following extensions: " hint
-            >>= listToMaybe . reverse . map (AddExtension file) . T.splitOn ", "
+            >>= head . reverse . map (AddExtension file) . T.splitOn ", "
 
         perhapsUse :: Maybe Action
         perhapsUse = mkPerhapsUse "Perhaps use `"
@@ -75,10 +97,19 @@ relativeTo dir = \ case
   Replace span substitute -> Replace span { file = dir </> span.file } substitute
 
 applyReplace :: Location -> Location -> Text -> [ByteString] -> [ByteString]
-applyReplace start end substitute input = case splitAt (start.line - 1) input of
-  (xs, y : ys) | start.line == end.line -> xs ++ replaceInLine y : ys
-  _ -> input
-  where
-    replaceInLine :: ByteString -> ByteString
-    replaceInLine = T.decodeUtf8Lenient >>> T.splitAt (start.column - 1) >>> \ case
-      (xs, ys) -> T.encodeUtf8 $ xs <> substitute <> T.drop (end.column - start.column) ys
+applyReplace start end substitute input =
+  let
+    (before, rest) = splitAt (start.line - 1) input
+
+    after :: [ByteString]
+    after = drop (end.line - start.line + 1) rest
+
+    decodedLines :: [Text]
+    decodedLines = map T.decodeUtf8Lenient rest
+  in case do
+    firstLine <- head $ decodedLines
+    lastLine <- head $ drop (end.line - start.line) decodedLines
+    return $ T.take (start.column - 1) firstLine <> substitute <> T.drop (end.column - 1) lastLine
+  of
+    Nothing -> input
+    Just substituted -> before ++ T.encodeUtf8 substituted : after

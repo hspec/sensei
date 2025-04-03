@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Run (
   run
 , runWeb
@@ -10,9 +11,8 @@ module Run (
 #endif
 ) where
 
-import           Prelude hiding (putStrLn)
 import qualified Prelude
-import           Imports
+import           Imports hiding (putStrLn)
 
 import qualified Data.ByteString as ByteString
 import           Data.IORef

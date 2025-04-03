@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module HTTP (
   withServer
 , socketName
@@ -10,8 +11,7 @@ module HTTP (
 #endif
 ) where
 
-import           Prelude hiding (putStrLn)
-import           Imports hiding (strip, encodeUtf8)
+import           Imports hiding (putStrLn, strip, encodeUtf8)
 
 import           System.Directory
 import           Data.Aeson

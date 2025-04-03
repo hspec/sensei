@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module DeepSeek (
   apply
 #ifdef TEST
@@ -7,8 +8,7 @@ module DeepSeek (
 #endif
 ) where
 
-import           Prelude hiding (putStrLn, span)
-import           Imports hiding (strip)
+import           Imports hiding (putStrLn, strip)
 
 import           Data.Ord
 import           System.Process

@@ -6,6 +6,7 @@ module Imports (
 , FromJSON(..)
 ) where
 
+import           Prelude as Imports hiding (span, head)
 import           Control.Arrow as Imports ((>>>), (&&&))
 import           Control.Concurrent as Imports
 import           Control.Exception as Imports hiding (handle)
@@ -16,7 +17,7 @@ import           Data.Functor as Imports ((<&>), ($>))
 import           Data.Bifunctor as Imports
 import           Data.Char as Imports
 import           Data.Either as Imports
-import           Data.List as Imports hiding (span)
+import           Data.List as Imports hiding (span, head)
 import           Data.Maybe as Imports
 import           Data.String as Imports
 import           Data.ByteString.Char8 as Imports (ByteString, pack, unpack)
@@ -90,3 +91,6 @@ parseVersion :: String -> Maybe Version
 parseVersion xs = case [v | (v, "") <- readP_to_S Version.parseVersion xs] of
   [v] -> Just v
   _ -> Nothing
+
+head :: [a] -> Maybe a
+head = listToMaybe

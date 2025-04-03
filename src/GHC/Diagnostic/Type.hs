@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module GHC.Diagnostic.Type (
   Diagnostic(..)
 , Span(..)
@@ -8,8 +9,8 @@ module GHC.Diagnostic.Type (
 , format
 ) where
 
-import           Prelude hiding ((<>), span, unlines)
-import           Imports hiding (empty, unlines)
+import           Imports hiding ((<>), unlines, empty, unlines)
+
 import           Data.Aeson (decode)
 import           Data.ByteString.Lazy (fromStrict)
 import           Text.PrettyPrint
