@@ -6,6 +6,7 @@ module GHC.Diagnostic (
 , analyze
 , apply
 #ifdef TEST
+, extractIdentifiers
 , applyReplace
 #endif
 ) where
@@ -21,7 +22,7 @@ import           Data.ByteString.Builder (hPutBuilder)
 
 import           GHC.Diagnostic.Type as Diagnostic
 
-data Action = AddExtension FilePath Text | Replace Span Text
+data Action = Choices [Action] | AddExtension FilePath Text | Replace Span Text
   deriving (Eq, Show)
 
 analyze :: Diagnostic -> Maybe Action
@@ -68,31 +69,42 @@ analyze diagnostic = analyzeCode <|> analyzeHints
             >>= head . reverse . map (AddExtension file) . T.splitOn ", "
 
         perhapsUse :: Maybe Action
-        perhapsUse = mkPerhapsUse "Perhaps use `"
-
-        perhapsUseOneOfThese :: Maybe Action
-        perhapsUseOneOfThese = mkPerhapsUse "Perhaps use one of these:\n  `"
-
-        mkPerhapsUse :: Text -> Maybe Action
-        mkPerhapsUse prefix = Replace <$> diagnostic.span <*> (takeIdentifier <$> T.stripPrefix prefix hint)
+        perhapsUse = Replace <$> diagnostic.span <*> (takeIdentifier <$> T.stripPrefix "Perhaps use `" hint)
           where
             takeIdentifier :: Text -> Text
             takeIdentifier = T.takeWhile (/= '\'')
 
-apply :: FilePath -> Action -> IO ()
-apply dir = relativeTo dir >>> \ case
-  AddExtension file name -> do
-    old <- B.readFile file
-    withFile file WriteMode $ \ h -> do
-      hPutBuilder h $ "{-# LANGUAGE " <> T.encodeUtf8Builder name <> " #-}\n"
-      B.hPutStr h old
-  Replace span substitute -> do
-    input <- B.readFile span.file <&> B.lines
-    B.writeFile span.file . B.unlines $
-      applyReplace span.start span.end substitute input
+        perhapsUseOneOfThese :: Maybe Action
+        perhapsUseOneOfThese = do
+          replaces <- Replace <$> diagnostic.span
+          Choices . map replaces . extractIdentifiers <$> T.stripPrefix "Perhaps use one of these:" hint
+
+extractIdentifiers :: Text -> [Text]
+extractIdentifiers input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ input of
+  (T.drop 1 -> identifier, rest)
+    | T.null rest -> []
+    | otherwise -> identifier : extractIdentifiers rest
+
+apply :: FilePath -> Maybe Int -> Action -> IO ()
+apply dir c = relativeTo dir >>> go c
+  where
+    go :: Maybe Int -> Action -> IO ()
+    go choice = \ case
+      Choices choices -> do
+        traverse_ (go Nothing) (head $ drop (maybe 0 pred choice) choices)
+      AddExtension file name -> do
+        old <- B.readFile file
+        withFile file WriteMode $ \ h -> do
+          hPutBuilder h $ "{-# LANGUAGE " <> T.encodeUtf8Builder name <> " #-}\n"
+          B.hPutStr h old
+      Replace span substitute -> do
+        input <- B.readFile span.file <&> B.lines
+        B.writeFile span.file . B.unlines $
+          applyReplace span.start span.end substitute input
 
 relativeTo :: FilePath -> Action -> Action
 relativeTo dir = \ case
+  Choices choices -> Choices $ map (relativeTo dir) choices
   AddExtension file name -> AddExtension (dir </> file) name
   Replace span substitute -> Replace span { file = dir </> span.file } substitute
 

@@ -83,7 +83,7 @@ app putStrLn config dir getLastResult request respond = case pathInfo request of
           Nothing -> do
             serviceUnavailable "missing config value deep-seek.auth"
         (_, _, (analyze -> Just action) : _) -> do
-          apply dir action
+          apply dir quickFixRequest.choice action
           noContent
         _ -> do
           noContent

@@ -12,6 +12,7 @@ import HTTP.Util (makeRequest)
 
 data QuickFixRequest = QuickFixRequest {
   deepSeek :: Maybe Bool
+, choice :: Maybe Int
 } deriving (Eq, Show, Generic)
 
 instance ToJSON QuickFixRequest where

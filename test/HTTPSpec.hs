@@ -11,11 +11,13 @@ import           Test.Hspec.Wai
 import           Test.Hspec.Wai.Internal (WaiSession(..))
 import           Control.Monad.Trans.State (StateT(..))
 import           Control.Monad.Trans.Reader (ReaderT(..))
+import qualified Data.ByteString as B
 
 import           Config
 import           Config.DeepSeek
 import qualified HTTP
 import qualified Trigger
+import qualified GHC.Diagnostic.Type as Diagnostic
 
 verbose :: Bool
 verbose = False
@@ -36,16 +38,43 @@ spec :: Spec
 spec = do
   describe "app" $ do
     let
+      file :: FilePath
+      file = "Foo.hs"
+
       withApp :: (Trigger.Result, String, [Diagnostic]) -> SpecWith (FilePath, Application) -> Spec
-      withApp (return -> lastResult) = around \ item -> withTempDirectory \ dir -> do
+      withApp lastResult = around \ item -> withTempDirectory \ dir -> do
+        item (dir, HTTP.app putStrLn defaultConfig dir $ return lastResult)
+
+      withAppWithFailure :: FilePath -> SpecWith (FilePath, Application) -> Spec
+      withAppWithFailure name = around \ item -> withTempDirectory \ dir -> do
+        let
+          testCaseDir :: FilePath
+          testCaseDir = "test/assets" </> name
+
+          copySource :: IO ()
+          copySource = readFile (testCaseDir </> file) >>= writeFile (dir </> file)
+
+          readErrFile :: IO (Maybe Diagnostic)
+          readErrFile = fmap normalizeFileName . Diagnostic.parse <$> B.readFile (testCaseDir </> "err.json")
+
+        copySource
+        Just err <- readErrFile
         config <- loadConfig
+
         let
           deepSeek :: Maybe DeepSeek
           deepSeek = config.deepSeek <|> Just (DeepSeek $ BearerToken "")
 
           app :: Application
-          app = HTTP.app putStrLn defaultConfig { deepSeek } dir lastResult
+          app = HTTP.app putStrLn defaultConfig { deepSeek } dir (return $ (Trigger.Failure, "", [err]))
+
         item (dir, app)
+        where
+          normalizeFileName :: Diagnostic -> Diagnostic
+          normalizeFileName err = err { span = normalizeSpan <$> err.span }
+
+          normalizeSpan :: Span -> Span
+          normalizeSpan span = span { file }
 
     describe "/" $ do
       context "on success" $ do
@@ -93,48 +122,33 @@ spec = do
           get "/diagnostics" `shouldRespondWith` expected
 
     describe "/quick-fix" $ do
-      let
-        file :: FilePath
-        file = "Foo.hs"
+      withAppWithFailure "use-TemplateHaskellQuotes" $ do
+        it "applies quick fixes" $ do
+          post "/quick-fix" "{}" `shouldRespondWith` "" { matchStatus = 204 }
+          dir <- getState
+          liftIO $ readFile (dir </> file) `shouldReturn` unlines [
+              "{-# LANGUAGE TemplateHaskellQuotes #-}"
+            , "module Foo where"
+            , "foo = [|23|]"
+            ]
 
-        err :: Diagnostic
-        err = (diagnostic Error) {
-          span = Just $ Span file (Location 3 7) (Location 3 16)
-        , code = Just 62330
-        , message = ["Illegal underscores in integer literals"]
-        , hints = ["Perhaps you intended to use NumericUnderscores"]
-        }
+        it "applies quick fixes using DeepSeek" >>> sequential $ withTape "test/vcr/tape.yaml" do
+          post "/quick-fix" "{\"deep-seek\":true}" `shouldRespondWith` "" { matchStatus = 204 }
+          dir <- getState
+          liftIO $ readFile (dir </> file) `shouldReturn` unlines [
+              "{-# LANGUAGE TemplateHaskell #-}"
+            , "module Foo where"
+            , "foo = [|23|]"
+            ]
 
-        source :: String
-        source = unlines [
-            "module Foo where"
-          , "foo :: Int"
-          , "foo = 1_000_000"
-          ]
-
-        writeSource :: FilePath -> IO ()
-        writeSource dir = writeFile (dir </> file) source
-
-      withApp (Trigger.Failure, "", [err]) $ do
-        beforeWith (\ st@(dir, _) -> writeSource dir >> return st) do
-          it "applies quick fixes" $ do
-            post "/quick-fix" "{}" `shouldRespondWith` "" { matchStatus = 204 }
+      withAppWithFailure "not-in-scope-perhaps-use-one-of-these" $ do
+        context "when \"choice\" is specified" $ do
+          it "applies the selected solution" $ do
+            post "/quick-fix" "{\"choice\":2}" `shouldRespondWith` "" { matchStatus = 204 }
             dir <- getState
             liftIO $ readFile (dir </> file) `shouldReturn` unlines [
-                "{-# LANGUAGE NumericUnderscores #-}"
-              , "module Foo where"
-              , "foo :: Int"
-              , "foo = 1_000_000"
-              ]
-
-          it "applies quick fixes using DeepSeek" >>> sequential $ withTape "test/vcr/tape.yaml" do
-            post "/quick-fix" "{\"deep-seek\":true}" `shouldRespondWith` "" { matchStatus = 204 }
-            dir <- getState
-            liftIO $ readFile (dir </> file) `shouldReturn` unlines [
-                "{-# LANGUAGE NumericUnderscores #-}"
-              , "module Foo where"
-              , "foo :: Int"
-              , "foo = 1_000_000"
+                "module Foo where"
+              , "foo = foldr"
               ]
 
     context "when querying a non-existing endpoint" $ withApp undefined $ do
