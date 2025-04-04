@@ -11,10 +11,11 @@
     body: '{"messages":[{"content":"Given the following GHC diagnostics message, please
       suggest a fix for the corresponding Haskell code.\nProduce your fix as a unified
       diff so that it can be applied with `patch -p1`.\nDon''t provide explanations.\n\nEnclose
-      you answer in:\n\n```diff\n...\n```\n\n```console\nFoo.hs:3:7: error: [GHC-62330]\n    Illegal
-      underscores in integer literals\n    Suggested fix: Perhaps you intended to
-      use NumericUnderscores\n\n\n```\n\n```haskell\nmodule Foo where\nfoo :: Int\nfoo
-      = 1_000_000\n\n```\n","role":"user"}],"model":"deepseek-chat","temperature":0}'
+      you answer in:\n\n```diff\n--- Foo.hs\n+++ Foo.hs\n...\n```\n\n(where ... is
+      the placeholder for your answer)\n\nGHC diagnostics message:\n\n```console\nFoo.hs:3:7:
+      error: [GHC-62330]\n    Illegal underscores in integer literals\n    Suggested
+      fix: Perhaps you intended to use NumericUnderscores\n\n\n```\n\nCorresponding
+      Haskell code:\n\n```haskell\nmodule Foo where\nfoo :: Int\nfoo = 1_000_000\n\n```\n","role":"user"}],"model":"deepseek-chat","temperature":0}'
   response:
     status:
       code: 200
@@ -22,6 +23,6 @@
     headers:
     - name: Content-Type
       value: application/json
-    body: '{"id":"504f621b-e351-4b8a-8be7-a360a23fa763","object":"chat.completion","created":1738658662,"model":"deepseek-chat","choices":[{"index":0,"message":{"role":"assistant","content":"```diff\n---
-      Foo.hs\n+++ Foo.hs\n@@ -1,5 +1,5 @@\n module Foo where\n foo :: Int\n-foo =
-      1_000_000\n+foo = 1000000\n\n```"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":124,"completion_tokens":52,"total_tokens":176,"prompt_tokens_details":{"cached_tokens":64},"prompt_cache_hit_tokens":64,"prompt_cache_miss_tokens":60},"system_fingerprint":"fp_3a5770e1b4"}'
+    body: '{"id":"c66870c5-cd17-4dee-a5cd-17c3d651850d","object":"chat.completion","created":1743762177,"model":"deepseek-chat","choices":[{"index":0,"message":{"role":"assistant","content":"```diff\n---
+      Foo.hs\n+++ Foo.hs\n@@ -1,4 +1,5 @@\n+{-# LANGUAGE NumericUnderscores #-}\n
+      module Foo where\n foo :: Int\n-foo = 1_000_000\n+foo = 1_000_000\n \n```"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":155,"completion_tokens":66,"total_tokens":221,"prompt_tokens_details":{"cached_tokens":128},"prompt_cache_hit_tokens":128,"prompt_cache_miss_tokens":27},"system_fingerprint":"fp_3d5141a69a_prod0225"}'

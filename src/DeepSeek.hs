@@ -131,12 +131,20 @@ createChatCompletion dir diagnostic = case diagnostic.span of
         , "Enclose you answer in:"
         , ""
         , "```diff"
+        , "--- " <> span.file
+        , "+++ " <> span.file
         , "..."
         , "```"
+        , ""
+        , "(where ... is the placeholder for your answer)"
+        , ""
+        , "GHC diagnostics message:"
         , ""
         , "```console"
         , Diagnostic.format diagnostic
         , "```"
+        , ""
+        , "Corresponding Haskell code:"
         , ""
         , "```haskell"
         , source
