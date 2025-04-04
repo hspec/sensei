@@ -46,7 +46,7 @@ spec = do
   describe "filterGitIgnoredFiles_" $ do
     it "discards files that are ignored by git" $ do
       withTempDirectory $ \ dir -> do
-        _ <- readProcess "git" ["-C", dir, "init"] ""
+        _ <- readProcess "git" ["-C", dir, "init", "--initial-branch=main"] ""
         writeFile (dir </> ".gitignore") "foo"
         filterGitIgnoredFiles_ dir ["foo", "bar"] `shouldReturn` (Nothing, ["bar"])
 

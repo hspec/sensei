@@ -5,6 +5,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -17,6 +20,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: true
       matrix:
         os:
           - ubuntu-latest
@@ -29,34 +33,13 @@ jobs:
           - os: macos-latest
             ghc: '9.10'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hspec/setup-haskell@v1
         with:
           ghc-version: ${{ matrix.ghc }}
-        id: setup-haskell
-
-      - uses: actions/cache@v3
+      - uses: sol/run-haskell-tests@v2
         with:
-          path: ${{ runner.os == 'Windows' && 'C:/cabal/store/' || runner.os == 'macOS' && '~/.cabal/store/' || '~/.local/state/cabal/store/' }}
-          key: ${{ runner.os }}-${{ steps.setup-haskell.outputs.ghc-version }}-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-${{ steps.setup-haskell.outputs.ghc-version }}-
-
-      - shell: bash
-        run: ghcup install cabal latest --set
-
-      - shell: bash
-        run: git config --global init.defaultBranch main
-
-      - shell: bash
-        run: cabal update
-
-      - shell: bash
-        run: cabal build all
-
-      - shell: bash
-        run: $(cabal list-bin spec) --times --print-slow
-        env:
-          HSPEC_OPTIONS: --color
+          caching: true
 
   success:
     needs: build
@@ -67,6 +50,9 @@ jobs:
       - run: false
         if: needs.build.result != 'success'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Check for trailing whitespace
         run: '! git grep -I "\s\+$"'
+
+      - run: curl -sSL https://raw.githubusercontent.com/sol/hpack/main/get-hpack.sh | bash
+      - run: hpack && git diff --exit-code
