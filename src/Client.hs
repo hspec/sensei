@@ -7,11 +7,12 @@ import Network.HTTP.Client
 
 import HTTP.Util (makeRequest)
 
-client :: FilePath -> [String] -> IO (Bool, LazyByteString)
-client dir args = case args of
+client :: (FilePath -> IO FilePath) -> FilePath -> [String] -> IO (Bool, LazyByteString)
+client getDataFileName dir args = case args of
   [] -> hIsTerminalDevice stdout >>= run
   ["--no-color"] -> run False
   ["--color"] -> run True
+  ["--vim-config"] -> (,) True . fromString <$> getDataFileName "vim/sensei.vim"
   _ -> do
     hPutStrLn stderr $ "Usage: seito [ --color | --no-color ]"
     return (False, "")
