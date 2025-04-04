@@ -76,12 +76,6 @@ app putStrLn config dir getLastResult request respond = case pathInfo request of
   ["quick-fix"] -> requireMethod "POST" $ do
     consumeRequestBodyLazy request <&> eitherDecode @QuickFixRequest >>= \ case
       Right quickFixRequest -> getLastResult >>= \ case
-        (_, _, diagnostic : _) | quickFixRequest.deepSeek == Just True -> case config.deepSeek of
-          Just conf -> do
-            DeepSeek.apply putStrLn conf dir diagnostic
-            noContent
-          Nothing -> do
-            serviceUnavailable "missing config value deep-seek.auth"
         (_, _, (analyze -> Just action) : _) -> do
           apply dir quickFixRequest.choice action
           noContent
@@ -89,6 +83,15 @@ app putStrLn config dir getLastResult request respond = case pathInfo request of
           noContent
       Left err -> badRequest err
 
+  ["deep-fix"] -> requireMethod "POST" $ getLastResult >>= \ case
+    (_, _, diagnostic : _) -> case config.deepSeek of
+      Just conf -> do
+        DeepSeek.apply putStrLn conf dir diagnostic
+        noContent
+      Nothing -> do
+        serviceUnavailable "missing config value deep-seek.auth"
+    _ -> do
+      noContent
   _ -> do
     respond $ genericStatus Status.notFound404 request
 

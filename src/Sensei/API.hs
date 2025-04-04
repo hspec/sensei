@@ -1,6 +1,7 @@
 module Sensei.API (
   QuickFixRequest(..)
 , quickFix
+, deepFix
 ) where
 
 import Imports
@@ -11,8 +12,7 @@ import Data.Aeson qualified as Aeson
 import HTTP.Util (makeRequest)
 
 data QuickFixRequest = QuickFixRequest {
-  deepSeek :: Maybe Bool
-, choice :: Maybe Int
+  choice :: Maybe Int
 } deriving (Eq, Show, Generic)
 
 instance ToJSON QuickFixRequest where
@@ -26,3 +26,9 @@ quickFix dir (RequestBodyLBS . Aeson.encode -> requestBody) = makeRequest dir re
   where
     request :: Request
     request = "http://localhost/quick-fix" { method = "POST", requestBody }
+
+deepFix :: FilePath -> IO (Bool, LazyByteString)
+deepFix dir = makeRequest dir request
+  where
+    request :: Request
+    request = "http://localhost/deep-fix" { method = "POST" }

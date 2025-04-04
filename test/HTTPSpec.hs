@@ -132,15 +132,6 @@ spec = do
             , "foo = [|23|]"
             ]
 
-        it "applies quick fixes using DeepSeek" >>> sequential $ withTape "test/vcr/tape.yaml" do
-          post "/quick-fix" "{\"deep-seek\":true}" `shouldRespondWith` "" { matchStatus = 204 }
-          dir <- getState
-          liftIO $ readFile (dir </> file) `shouldReturn` unlines [
-              "{-# LANGUAGE TemplateHaskell #-}"
-            , "module Foo where"
-            , "foo = [|23|]"
-            ]
-
       withAppWithFailure "not-in-scope-perhaps-use-one-of-these" $ do
         context "when \"choice\" is specified" $ do
           it "applies the selected solution" $ do
@@ -150,6 +141,17 @@ spec = do
                 "module Foo where"
               , "foo = foldr"
               ]
+
+    describe "/deep-fix" $ do
+      withAppWithFailure "use-TemplateHaskellQuotes" $ do
+        it "applies quick fixes using DeepSeek" >>> sequential $ withTape "test/vcr/tape.yaml" do
+          post "/deep-fix" "" `shouldRespondWith` "" { matchStatus = 204 }
+          dir <- getState
+          liftIO $ readFile (dir </> file) `shouldReturn` unlines [
+              "{-# LANGUAGE TemplateHaskell #-}"
+            , "module Foo where"
+            , "foo = [|23|]"
+            ]
 
     context "when querying a non-existing endpoint" $ withApp undefined $ do
       it "returns status 404" $ do
