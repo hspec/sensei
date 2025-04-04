@@ -59,6 +59,7 @@ testWith name requirement extraArgs action = it name $ do
 
 normalizeFileName :: Action -> Action
 normalizeFileName = \ case
+  Choices choices -> Choices $ map normalizeFileName choices
   AddExtension _ name -> AddExtension "Foo.hs" name
   Replace span substitute -> Replace span {file = "Foo.hs"} substitute
 
@@ -71,8 +72,11 @@ xtest name args = before_ pending . test name args
 _ignore :: ()
 _ignore = let _ = (ftest, xtest) in ()
 
-replace :: Location -> Location -> Text -> Maybe Action
-replace start end = Just . Replace (Span "Foo.hs" start end)
+replace :: Location -> Location -> Text -> Action
+replace start end = Replace (Span "Foo.hs" start end)
+
+replace_ :: Location -> Location -> Text -> Maybe Action
+replace_ start end = Just . replace start end
 
 addExtension :: Text -> Maybe Action
 addExtension = Just . AddExtension "Foo.hs"
@@ -81,16 +85,28 @@ spec :: Spec
 spec = do
   describe "format" $ do
     test "not-in-scope" [] Nothing
-    test "not-in-scope-perhaps-use" [] $ replace (Location 2 7) (Location 2 14) "filter"
-    test "not-in-scope-perhaps-use-one-of-these" [] $ replace (Location 2 7) (Location 2 11) "foldl"
-    test "not-in-scope-perhaps-use-multiline" [] $ replace (Location 3 7) (Location 3 11) "foldl"
+    test "not-in-scope-perhaps-use" [] $ replace_ (Location 2 7) (Location 2 14) "filter"
+    test "not-in-scope-perhaps-use-one-of-these" [] . Just . Choices $ map
+      (replace (Location 2 7) (Location 2 11)) [
+        "foldl"
+      , "foldr"
+      ]
+    test "not-in-scope-perhaps-use-multiline" [] . Just . Choices $ map
+      (replace (Location 3 7) (Location 3 11)) [
+        "foldl"
+      , "foldr"
+      ]
     test "use-BlockArguments" [] $ addExtension "BlockArguments"
     test "use-TemplateHaskellQuotes" [] $ addExtension "TemplateHaskellQuotes"
-    testWith "redundant-import" RequireGhc912 ["-Wall", "-Werror"] $ replace (Location 2 1) (Location 3 1) ""
+    testWith "redundant-import" RequireGhc912 ["-Wall", "-Werror"] $ replace_ (Location 2 1) (Location 3 1) ""
     test "non-existing" [] Nothing
     test "parse-error" [] Nothing
     test "lex-error" [] Nothing
     test "multiple-error-messages" [] Nothing
+
+  describe "extractIdentifiers" $ do
+    it "extracts identifiers" $ do
+      extractIdentifiers ".. `foldl' ..., `foldr' .." `shouldBe` ["foldl", "foldr"]
 
   describe "applyReplace" $ do
     it "replaces a given source span with a substitute" $ do
