@@ -131,9 +131,10 @@ spec = do
             post "/quick-fix" "{\"deep-seek\":true}" `shouldRespondWith` "" { matchStatus = 204 }
             dir <- getState
             liftIO $ readFile (dir </> file) `shouldReturn` unlines [
-                "module Foo where"
+                "{-# LANGUAGE NumericUnderscores #-}"
+              , "module Foo where"
               , "foo :: Int"
-              , "foo = 1000000"
+              , "foo = 1_000_000"
               ]
 
     context "when querying a non-existing endpoint" $ withApp undefined $ do
