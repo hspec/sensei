@@ -9,7 +9,7 @@ import           EventQueue
 
 withGitRepository :: (FilePath -> IO a) -> IO a
 withGitRepository action = withTempDirectory $ \ dir -> do
-  readProcess "git" ["-C", dir, "init"] "" >> action dir
+  readProcess "git" ["-C", dir, "init", "--initial-branch=main"] "" >> action dir
 
 spec :: Spec
 spec = do
