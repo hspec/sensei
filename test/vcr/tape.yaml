@@ -10,13 +10,14 @@
       value: '********'
     body: "{\"messages\":[{\"content\":\"Given the following GHC diagnostics message,
       please suggest a fix for the corresponding Haskell code.\\nProduce your fix
-      as a unified diff so that it can be applied with `patch -p1`.\\nDon't provide
-      explanations.\\n\\nEnclose you answer in:\\n\\n```diff\\n--- Foo.hs\\n+++ Foo.hs\\n...\\n```\\n\\n(where
-      ... is the placeholder for your answer)\\n\\nGHC diagnostics message:\\n\\n```console\\nFoo.hs:2:7:
-      error: [GHC-62558]\\n    â\x80¢ Syntax error on [| 23 |]\\n    â\x80¢ In the
-      Template Haskell quotation [| 23 |]\\n    Suggested fix:\\n      Enable any
-      of the following extensions: TemplateHaskell, TemplateHaskellQuotes\\n\\n\\n```\\n\\nCorresponding
-      Haskell code:\\n\\n```haskell\\nmodule Foo where\\nfoo = [|23|]\\n\\n```\\n\",\"role\":\"user\"}],\"model\":\"deepseek-chat\",\"temperature\":0}"
+      as a unified diff so that it can be applied with the `patch` program.\\nDon't
+      provide explanations.\\n\\nEnclose you answer in:\\n\\n```diff\\n--- Foo.hs\\n+++
+      Foo.hs\\n...\\n```\\n\\n(where ... is the placeholder for your answer)\\n\\nGHC
+      diagnostics message:\\n\\n```console\\nFoo.hs:2:7: error: [GHC-62558]\\n    â\x80¢
+      Syntax error on [| 23 |]\\n    â\x80¢ In the Template Haskell quotation [| 23
+      |]\\n    Suggested fix:\\n      Enable any of the following extensions: TemplateHaskell,
+      TemplateHaskellQuotes\\n\\n\\n```\\n\\nCorresponding Haskell code:\\n\\n```haskell\\nmodule
+      Foo where\\nfoo = [|23|]\\n\\n```\\n\",\"role\":\"user\"}],\"model\":\"deepseek-chat\",\"temperature\":0}"
   response:
     status:
       code: 200
@@ -24,6 +25,6 @@
     headers:
     - name: Content-Type
       value: application/json
-    body: '{"id":"0d37a570-defc-4357-8f21-848a859becb5","object":"chat.completion","created":1743764153,"model":"deepseek-chat","choices":[{"index":0,"message":{"role":"assistant","content":"```diff\n---
+    body: '{"id":"c0f908d9-6726-4864-b3e7-51b82f39e457","object":"chat.completion","created":1743858701,"model":"deepseek-chat","choices":[{"index":0,"message":{"role":"assistant","content":"```diff\n---
       Foo.hs\n+++ Foo.hs\n@@ -1,2 +1,3 @@\n+{-# LANGUAGE TemplateHaskell #-}\n module
-      Foo where\n foo = [|23|]\n```"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":172,"completion_tokens":47,"total_tokens":219,"prompt_tokens_details":{"cached_tokens":128},"prompt_cache_hit_tokens":128,"prompt_cache_miss_tokens":44},"system_fingerprint":"fp_3d5141a69a_prod0225"}'
+      Foo where\n foo = [|23|]\n```"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":172,"completion_tokens":47,"total_tokens":219,"prompt_tokens_details":{"cached_tokens":0},"prompt_cache_hit_tokens":0,"prompt_cache_miss_tokens":172},"system_fingerprint":"fp_3d5141a69a_prod0225"}'

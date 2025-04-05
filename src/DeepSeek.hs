@@ -116,45 +116,42 @@ query putStrLn config (RequestBodyLBS . encode -> requestBody) = do
           ]
 
 createChatCompletion :: FilePath -> Diagnostic -> IO (Maybe CreateChatCompletion)
-createChatCompletion dir diagnostic = case diagnostic.span of
-  Nothing -> do
-    return Nothing
-  Just span -> Just <$> do
-    source <- readFile (dir </> span.file)
-    let
-      content :: String
-      content = unlines [
-          "Given the following GHC diagnostics message, please suggest a fix for the corresponding Haskell code."
-        , "Produce your fix as a unified diff so that it can be applied with `patch -p1`."
-        , "Don't provide explanations."
-        , ""
-        , "Enclose you answer in:"
-        , ""
-        , "```diff"
-        , "--- " <> span.file
-        , "+++ " <> span.file
-        , "..."
-        , "```"
-        , ""
-        , "(where ... is the placeholder for your answer)"
-        , ""
-        , "GHC diagnostics message:"
-        , ""
-        , "```console"
-        , Diagnostic.format diagnostic
-        , "```"
-        , ""
-        , "Corresponding Haskell code:"
-        , ""
-        , "```haskell"
-        , source
-        , "```"
-        ]
-    return CreateChatCompletion {
-      messages = [ Message { role = User , content } ]
-    , model = "deepseek-chat"
-    , temperature = Just 0
-    }
+createChatCompletion dir diagnostic = sequence $ diagnostic.span <&> \ span -> do
+  source <- readFile (dir </> span.file)
+  let
+    content :: String
+    content = unlines [
+        "Given the following GHC diagnostics message, please suggest a fix for the corresponding Haskell code."
+      , "Produce your fix as a unified diff so that it can be applied with the `patch` program."
+      , "Don't provide explanations."
+      , ""
+      , "Enclose you answer in:"
+      , ""
+      , "```diff"
+      , "--- " <> span.file
+      , "+++ " <> span.file
+      , "..."
+      , "```"
+      , ""
+      , "(where ... is the placeholder for your answer)"
+      , ""
+      , "GHC diagnostics message:"
+      , ""
+      , "```console"
+      , Diagnostic.format diagnostic
+      , "```"
+      , ""
+      , "Corresponding Haskell code:"
+      , ""
+      , "```haskell"
+      , source
+      , "```"
+      ]
+  return CreateChatCompletion {
+    messages = [ Message { role = User , content } ]
+  , model = "deepseek-chat"
+  , temperature = Just 0
+  }
 
 data Patch = Patch {
   strip :: Int
