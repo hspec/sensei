@@ -2,19 +2,29 @@ name: publish
 
 permissions:
   contents: write
+  actions: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - build
+    types:
+      - completed
     branches:
       - main
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
-
-      - run: cabal check --ignore=missing-upper-bounds
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - uses: sol/haskell-autotag@v1
         id: autotag
@@ -29,17 +39,20 @@ jobs:
           publish: true
         if: steps.autotag.outputs.created
 
-      - name: publish binaries
-        run: |
-          cabal update
-          cabal build --disable-tests --disable-benchmarks --disable-documentation --enable-optimization
-          assets=()
-          for binary in sensei seito; do
-            asset="${binary}_linux.gz"
-            cat "$(cabal list-bin $binary)" | gzip > "$asset"
-            assets+=("$asset")
-          done
-          gh release create ${{ steps.autotag.outputs.name }} --title ${{ steps.autotag.outputs.name }} --verify-tag "${assets[@]}"
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Publish binaries
+        run: gh release create --verify-tag ${{ steps.autotag.outputs.name }} *.gz
         env:
           GH_TOKEN: ${{ github.token }}
         if: steps.autotag.outputs.created
+
+      - name: Publish preview binaries
+        run: gh release delete preview --cleanup-tag --yes && gh release create preview --prerelease *.gz
+        env:
+          GH_TOKEN: ${{ github.token }}
+        if: "!steps.autotag.outputs.created"
