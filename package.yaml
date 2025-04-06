@@ -1,7 +1,8 @@
 spec-version: 0.36.0
 name: sensei
-version: 0.8.0
+version: 0.9.0
 synopsis: Automatically run Hspec tests on file modifications
+author: Simon Hengel <sol@typeful.net>
 maintainer: Simon Hengel <sol@typeful.net>
 license: MIT
 github: hspec/sensei
