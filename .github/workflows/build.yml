@@ -26,7 +26,7 @@ jobs:
           - ubuntu-latest
           - macos-latest
         ghc:
-          - '9.10'
+          - 9.10.1
     steps:
       - uses: actions/checkout@v4
       - uses: hspec/setup-haskell@v1
@@ -35,6 +35,7 @@ jobs:
       - uses: sol/run-haskell-tests@v2
         with:
           caching: true
+
       - shell: bash
         run: |
           for GHC in 9.4 9.6 9.8
@@ -42,6 +43,19 @@ jobs:
             ghcup install ghc $GHC --no-set
             SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)
           done
+
+      - run: echo "name=sensei-$(uname -s)-$(uname -m).tar.gz" >> $GITHUB_OUTPUT
+        id: archive
+
+      - run: cp "$(cabal list-bin sensei)" .
+      - run: cp "$(cabal list-bin seito)" .
+      - run: tar cvzf ${{ steps.archive.outputs.name }} sensei seito
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.archive.outputs.name }}
+          path: ${{ steps.archive.outputs.name }}
+          compression-level: 0
 
   success:
     needs: build
@@ -58,3 +72,4 @@ jobs:
 
       - run: curl -sSL https://raw.githubusercontent.com/sol/hpack/main/get-hpack.sh | bash
       - run: hpack && git diff --exit-code
+      - run: cabal check --ignore=missing-upper-bounds
