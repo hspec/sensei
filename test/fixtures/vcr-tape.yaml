@@ -27,6 +27,37 @@
     body: '{"id":"2556bb15-8ecf-4060-952c-7485f788ea73","object":"chat.completion","created":1744161070,"model":"deepseek-chat","choices":[{"index":0,"message":{"role":"assistant","content":"```diff\n---
       Foo.hs\n+++ Foo.hs\n@@ -1,2 +1,3 @@\n+{-# LANGUAGE TemplateHaskell #-}\n module
       Foo where\n foo = [|23|]\n```"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":172,"completion_tokens":47,"total_tokens":219,"prompt_tokens_details":{"cached_tokens":0},"prompt_cache_hit_tokens":0,"prompt_cache_miss_tokens":172},"system_fingerprint":"fp_3d5141a69a_prod0225"}'
+
+- request:
+    method: POST
+    url: https://api.deepseek.com/chat/completions
+    headers:
+    - name: Accept
+      value: application/json
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: '********'
+    body: "{\"messages\":[{\"content\":\"Given a GHC diagnostics message, please suggest
+      a fix for the corresponding Haskell code.\\n\\nProduce your answer as a unified
+      diff so that it can be applied with the `patch` program.\\nDon't provide explanations.\\n\\nEnclose
+      your answer in:\\n\\n```diff\\n--- Foo.hs\\n+++ Foo.hs\\n...\\n```\\n\\n(where
+      ... is the placeholder for your answer)\\n\\nThe GHC diagnostics message:\\n\\n```console\\nFoo.hs:2:7:
+      error: [GHC-62558]\\n    â\x80¢ Syntax error on [| 23 |]\\n    â\x80¢ In the
+      Template Haskell quotation [| 23 |]\\n    Suggested fix:\\n      Perhaps you
+      intended to use the `TemplateHaskellQuotes' extension (implied by `TemplateHaskell')\\n```\\n\\nThe
+      corresponding Haskell code:\\n\\n```haskell\\nmodule Foo where\\nfoo = [|23|]\\n\\n```\\n\",\"role\":\"user\"}],\"model\":\"deepseek-chat\",\"temperature\":0}"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+    - name: Content-Type
+      value: application/json
+    body: '{"id":"2556bb15-8ecf-4060-952c-7485f788ea73","object":"chat.completion","created":1744161070,"model":"deepseek-chat","choices":[{"index":0,"message":{"role":"assistant","content":"```diff\n---
+      Foo.hs\n+++ Foo.hs\n@@ -1,2 +1,3 @@\n+{-# LANGUAGE TemplateHaskell #-}\n module
+      Foo where\n foo = [|23|]\n```"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":172,"completion_tokens":47,"total_tokens":219,"prompt_tokens_details":{"cached_tokens":0},"prompt_cache_hit_tokens":0,"prompt_cache_miss_tokens":172},"system_fingerprint":"fp_3d5141a69a_prod0225"}'
+
 - request:
     method: POST
     url: https://api.deepseek.com/chat/completions
@@ -46,6 +77,39 @@
       error: [GHC-62558]\\n    â\x80¢ Syntax error on [| 23 |]\\n    â\x80¢ In the
       Template Haskell quotation [| 23 |]\\n    Suggested fix:\\n      Enable any
       of the following extensions: TemplateHaskell, TemplateHaskellQuotes\\n```\\n\\nThe
+      instructions provided by the programmer: fix this by setting the offending definition
+      to undefined\\n\\nThe programmer is currently focusing on: Foo.hs:2:1\\n\\nThe
+      corresponding Haskell code:\\n\\n```haskell\\nmodule Foo where\\nfoo = [|23|]\\n\\n```\\n\",\"role\":\"user\"}],\"model\":\"deepseek-chat\",\"temperature\":0}"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+    - name: Content-Type
+      value: application/json
+    body: '{"id":"3fde0b48-f931-4abf-9afb-7d181faaf5a5","object":"chat.completion","created":1744161075,"model":"deepseek-chat","choices":[{"index":0,"message":{"role":"assistant","content":"```diff\n---
+      Foo.hs\n+++ Foo.hs\n@@ -1,3 +1,3 @@\n module Foo where\n-foo = [|23|]\n+foo
+      = undefined\n \n```"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":210,"completion_tokens":43,"total_tokens":253,"prompt_tokens_details":{"cached_tokens":0},"prompt_cache_hit_tokens":0,"prompt_cache_miss_tokens":210},"system_fingerprint":"fp_3d5141a69a_prod0225"}'
+
+- request:
+    method: POST
+    url: https://api.deepseek.com/chat/completions
+    headers:
+    - name: Accept
+      value: application/json
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: '********'
+    body: "{\"messages\":[{\"content\":\"Given a GHC diagnostics message and instructions
+      provided by a programmer, please suggest a fix for the corresponding Haskell
+      code.\\n\\nProduce your answer as a unified diff so that it can be applied with
+      the `patch` program.\\nDon't provide explanations.\\n\\nEnclose your answer
+      in:\\n\\n```diff\\n--- Foo.hs\\n+++ Foo.hs\\n...\\n```\\n\\n(where ... is the
+      placeholder for your answer)\\n\\nThe GHC diagnostics message:\\n\\n```console\\nFoo.hs:2:7:
+      error: [GHC-62558]\\n    â\x80¢ Syntax error on [| 23 |]\\n    â\x80¢ In the
+      Template Haskell quotation [| 23 |]\\n    Suggested fix:\\n      Perhaps you
+      intended to use the `TemplateHaskellQuotes' extension (implied by `TemplateHaskell')\\n```\\n\\nThe
       instructions provided by the programmer: fix this by setting the offending definition
       to undefined\\n\\nThe programmer is currently focusing on: Foo.hs:2:1\\n\\nThe
       corresponding Haskell code:\\n\\n```haskell\\nmodule Foo where\\nfoo = [|23|]\\n\\n```\\n\",\"role\":\"user\"}],\"model\":\"deepseek-chat\",\"temperature\":0}"

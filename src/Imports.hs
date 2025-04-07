@@ -132,3 +132,16 @@ that = \ case
 
 atomicReadIORef :: IORef a -> IO a
 atomicReadIORef ref = atomicModifyIORef' ref (id &&& id)
+
+data GHC =
+    ANY
+  | GHC_904
+  | GHC_906
+  | GHC_908
+  | GHC_910
+  | GHC_912
+  deriving (Eq, Ord, Bounded)
+
+requiredFor :: GHC -> a -> a
+requiredFor _ = id
+{-# INLINE requiredFor #-}

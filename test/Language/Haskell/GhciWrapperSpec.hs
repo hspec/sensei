@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
-import           Helper
+import           Helper hiding (diagnostic)
 import           Util
 import qualified Data.ByteString.Char8 as ByteString
 
@@ -115,8 +115,16 @@ spec = do
       ghci "hPutStrLn stderr \"λ\"" `shouldReturn` "λ\n"
 
     it "shows exceptions" $ withGhci $ \ ghci -> do
+      expected <- ifGhc GHC_912 <&> \ case
+        False -> requiredFor GHC_910 "*** Exception: divide by zero\n"
+        True -> unlines ["*** Exception: divide by zero"
+          , ""
+          , "HasCallStack backtrace:"
+          , "  throwIO, called at <interactive>:5:1 in interactive:Ghci8"
+          , ""
+          ]
       ghci "import Control.Exception" `shouldReturn` ""
-      ghci "throwIO DivideByZero" `shouldReturn` "*** Exception: divide by zero\n"
+      ghci "throwIO DivideByZero" `shouldReturn` expected
 
     it "shows exceptions (ExitCode)" $ withGhci $ \ ghci -> do
       ghci "import System.Exit" `shouldReturn` ""
@@ -155,20 +163,23 @@ spec = do
       withModule \ file -> do
         withInterpreter [file] \ ghci -> do
           failingModule file
-          diagnostics <- ifGhc [9,10] <&> \ case
-            True -> [
-                Annotated diagnostic {
-                  span = Just $ Span file (Location 2 7) (Location 2 10)
-                , code = Just 88464
-                , message = ["Variable not in scope: bar"]
-                } (Just $ NotInScope "bar") []
-              ]
-            False -> []
+          diagnostics <- ifGhc GHC_910 >>= \ case
+            True -> do
+              diagnostic <- diagnosticForGhc
+              return [
+                  Annotated diagnostic {
+                    span = Just $ Span file (Location 2 7) (Location 2 10)
+                  , code = Just 88464
+                  , message = ["Variable not in scope: bar"]
+                  } (Just $ NotInScope "bar") []
+                ]
+            False -> do
+              return []
           snd <$> Interpreter.reload ghci `shouldReturn` (Failed, diagnostics)
 
     context "with -fno-diagnostics-as-json" $ do
       it "does not extract diagnostics" do
-        requireGhc [9,10]
+        require GHC_910
         withModule \ file -> do
           withInterpreter ["-fno-diagnostics-as-json", file] \ ghci -> do
             failingModule file

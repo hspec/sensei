@@ -22,7 +22,7 @@ getGhcVersion ghc = do
 
 setPackageEnvironment :: IO ()
 setPackageEnvironment = do
-  lookupEnv "SENSEI_GHC_TEST" >>= maybe pass (setEnv Interpreter.sensei_ghc)
+  lookupEnv "SENSEI_TEST_GHC" >>= maybe pass (setEnv Interpreter.sensei_ghc)
   dir <- getCurrentDirectory
   env <- getEnvironment
   let ghc = Interpreter.lookupGhc env

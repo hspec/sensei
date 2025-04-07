@@ -17,11 +17,9 @@ import           Language.Haskell.GhciWrapper (lookupGhc)
 import           GHC.Diagnostic
 import           GHC.Diagnostic.Annotated
 
-data Requirement = NoRequirement | RequireGhc912
-
 test, ftest, xtest :: HasCallStack => FilePath -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
 
-test name = testWith name NoRequirement
+test name = testWith name minBound
 
 ftest name args code annotation = focus . test name args code annotation
 
@@ -33,20 +31,22 @@ _ignore = let _ = (ftest, xtest) in ()
 normalizeGhcVersion :: String -> String
 normalizeGhcVersion = T.unpack . T.replace __GLASGOW_HASKELL_FULL_VERSION__ "9.10.0" . T.pack
 
-testWith :: HasCallStack => FilePath -> Requirement -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
-testWith name requirement extraArgs (unindent -> code) annotation solutions = it name do
+testWith :: HasCallStack => FilePath -> GHC -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
+testWith name requiredVersion extraArgs (unindent -> code) annotation solutions = it name do
   unless (T.null code) do
     ensureFile src $ T.encodeUtf8 code
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
   json <- ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
   ensureFile (dir </> "err.out") (encodeUtf8 err)
   ensureFile (dir </> "err.json") (encodeUtf8 $ normalizeGhcVersion json)
-  Hspec.annotate (separator <> err <> separator) do
-    Just annotated <- return . parseAnnotated availableImports $ encodeUtf8 json
-    when shouldRun do
-      format annotated.diagnostic `shouldBe` err
-    annotated.annotation `shouldBe` annotation
-    annotated.solutions `shouldBe` solutions
+  case parseAnnotated availableImports $ encodeUtf8 json of
+    Nothing -> do
+      expectationFailure $ "Parsing JSON failed:\n\n" <> json
+    Just annotated -> Hspec.annotate (separator <> err <> separator) do
+      whenGhc requiredVersion do
+        format annotated.diagnostic `shouldBe` err
+      annotated.annotation `shouldBe` annotation
+      annotated.solutions `shouldBe` solutions
   where
     separator :: String
     separator = replicate 30 '*' <> "\n"
@@ -59,7 +59,7 @@ testWith name requirement extraArgs (unindent -> code) annotation solutions = it
 
     ghc :: [String] -> IO String
     ghc args = do
-      requireGhc [9,10]
+      require GHC_910
       bin <- lookupGhc <$> getEnvironment
       let
         process :: CreateProcess
@@ -72,16 +72,6 @@ testWith name requirement extraArgs (unindent -> code) annotation solutions = it
       '‘' -> '`'
       '’' -> '\''
       c -> c
-
-    shouldRun :: Bool
-    shouldRun = case requirement of
-      NoRequirement -> True
-      RequireGhc912 ->
-#if __GLASGOW_HASKELL__ < 912
-        False
-#else
-        True
-#endif
 
 availableImports :: AvailableImports
 availableImports = Map.fromList [
@@ -147,10 +137,25 @@ spec = do
       foo = [|23|~]
       |] Nothing [EnableExtension "TemplateHaskellQuotes", EnableExtension "TemplateHaskell"]
 
-    testWith "redundant-import" RequireGhc912 ["-Wall", "-Werror"] [r|
+    testWith "redundant-import" GHC_912 ["-Wall"] [r|
       module Foo where
       import Data.Maybe
       |] redundantImport [RemoveImport]
+
+    testWith "redundant-import-error" GHC_912 ["-Wall", "-Werror"] [r|
+      module Foo where
+      import Data.Maybe
+      |] redundantImport [RemoveImport]
+
+    testWith "x-partial" GHC_912 [] [r|
+      module Foo where
+      foo = head
+      |] Nothing []
+
+    testWith "x-partial-error" GHC_912 ["-Werror"] [r|
+      module Foo where
+      foo = head
+      |] Nothing []
 
     test "non-existing" [] [r|
       |] Nothing []
@@ -172,6 +177,30 @@ spec = do
 
       foo = "foo" + 23
       |] Nothing []
+
+  describe "analyzeHint" do
+    it "detects missing extension" do
+      let
+        inputs :: [Text]
+        inputs = [
+            requiredFor GHC_910 "Perhaps you intended to use BlockArguments"
+          , requiredFor GHC_912 "Perhaps you intended to use the `BlockArguments' extension"
+          ]
+      for_ inputs \ input -> analyzeHint input `shouldBe` Just [
+          EnableExtension "BlockArguments"
+        ]
+
+    it "detects missing extensions" do
+      let
+        inputs :: [Text]
+        inputs = [
+            requiredFor GHC_910 "Enable any of the following extensions: TemplateHaskell, TemplateHaskellQuotes"
+          , requiredFor GHC_912 "Perhaps you intended to use the `TemplateHaskellQuotes' extension (implied by `TemplateHaskell')"
+          ]
+      for_ inputs \ input -> analyzeHint input `shouldBe` Just [
+          EnableExtension "TemplateHaskellQuotes"
+        , EnableExtension "TemplateHaskell"
+        ]
 
   describe "extractIdentifiers" do
     it "extracts identifiers" do
