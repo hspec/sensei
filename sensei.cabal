@@ -24,6 +24,7 @@ library
   exposed-modules:
       Sensei.API
   other-modules:
+      Builder
       Client
       Config
       Config.DeepSeek
@@ -89,6 +90,7 @@ library
 executable seito
   main-is: seito.hs
   other-modules:
+      Builder
       Client
       Config
       Config.DeepSeek
@@ -156,6 +158,7 @@ executable seito
 executable sensei
   main-is: sensei.hs
   other-modules:
+      Builder
       Client
       Config
       Config.DeepSeek
@@ -223,6 +226,7 @@ executable sensei
 executable sensei-web
   main-is: sensei-web.hs
   other-modules:
+      Builder
       Client
       Config
       Config.DeepSeek
@@ -291,6 +295,7 @@ test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Builder
       Client
       Config
       Config.DeepSeek

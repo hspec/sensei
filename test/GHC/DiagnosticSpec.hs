@@ -7,7 +7,6 @@ import           Helper hiding (diagnostic)
 
 import           System.Process
 import           System.Environment
-import           Data.Text (Text)
 
 import           Language.Haskell.GhciWrapper (lookupGhc)
 import           GHC.Diagnostic
