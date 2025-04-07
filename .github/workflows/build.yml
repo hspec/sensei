@@ -41,6 +41,15 @@ jobs:
         with:
           caching: true
 
+      - shell: bash
+        run: |
+          for GHC in 9.4
+          do
+            ghcup install ghc $GHC --no-set
+            SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)
+          done
+        if: matrix.ghc == 'latest'
+
       - run: echo "name=sensei-$(uname -s)-$(uname -m).tar.gz" >> $GITHUB_OUTPUT
         id: archive
 
@@ -53,15 +62,6 @@ jobs:
           name: ${{ steps.archive.outputs.name }}
           path: ${{ steps.archive.outputs.name }}
           compression-level: 0
-        if: matrix.ghc == 'latest'
-
-      - shell: bash
-        run: |
-          for GHC in 9.4
-          do
-            ghcup install ghc $GHC --no-set
-            SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)
-          done
         if: matrix.ghc == 'latest'
 
   success:
