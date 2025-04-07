@@ -20,13 +20,18 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
         ghc:
-          - 9.10.1
+          - '9.4'
+          - '9.6'
+          - '9.8'
+          - '9.10'
+        include:
+          - os: macos-latest
+            ghc: '9.10'
     steps:
       - uses: actions/checkout@v4
       - uses: hspec/setup-haskell@v1
@@ -35,14 +40,6 @@ jobs:
       - uses: sol/run-haskell-tests@v2
         with:
           caching: true
-
-      - shell: bash
-        run: |
-          for GHC in 9.4 9.6 9.8
-          do
-            ghcup install ghc $GHC --no-set
-            SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)
-          done
 
       - run: echo "name=sensei-$(uname -s)-$(uname -m).tar.gz" >> $GITHUB_OUTPUT
         id: archive
@@ -56,6 +53,7 @@ jobs:
           name: ${{ steps.archive.outputs.name }}
           path: ${{ steps.archive.outputs.name }}
           compression-level: 0
+        if: matrix.ghc == '9.10'
 
   success:
     needs: build
