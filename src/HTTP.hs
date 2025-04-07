@@ -27,6 +27,7 @@ import           Util
 import qualified Trigger
 import           Config (Config)
 import qualified Config
+import qualified Config.DeepSeek as Config
 import qualified DeepSeek
 import           GHC.Diagnostic
 
@@ -70,32 +71,43 @@ app putStrLn config dir getLastResult request respond = case pathInfo request of
     getLastResult >>= textPlain
 
   ["diagnostics"] -> requireMethod "GET" $ do
-    (_, _, diagnostics) <- getLastResult
-    respond $ json diagnostics
+    getDiagnostics >>= respond . json
 
   ["quick-fix"] -> requireMethod "POST" $ do
-    consumeRequestBodyLazy request <&> eitherDecode @QuickFixRequest >>= \ case
-      Right quickFixRequest -> getLastResult >>= \ case
-        (_, _, (analyze -> Just action) : _) -> do
+    withJsonBody @QuickFixRequest \ quickFixRequest -> do
+      getDiagnostics <&> (head >=> analyze) >>= \ case
+        Just action -> do
           apply dir quickFixRequest.choice action
           noContent
-        _ -> do
+        Nothing -> do
           noContent
-      Left err -> badRequest err
 
-  ["deep-fix"] -> requireMethod "POST" $ getLastResult >>= \ case
-    (_, _, diagnostic : _) -> case config.deepSeek of
-      Just conf -> do
-        DeepSeek.apply putStrLn conf dir diagnostic
-        noContent
-      Nothing -> do
-        serviceUnavailable "missing config value deep-seek.auth"
-    _ -> do
+  ["deep-fix"] -> requireMethod "POST" $ getDiagnostics <&> head >>= \ case
+    Just diagnostic -> withDeepSeekConfig \ conf -> do
+      DeepSeek.apply putStrLn conf dir diagnostic
       noContent
+    Nothing -> do
+      noContent
+
   _ -> do
     respond $ genericStatus Status.notFound404 request
 
   where
+    withJsonBody :: FromJSON a => (a -> IO ResponseReceived) -> IO ResponseReceived
+    withJsonBody action = consumeRequestBodyLazy request <&> eitherDecode >>= \ case
+      Right quickFixRequest -> action quickFixRequest
+      Left err -> badRequest err
+
+    getDiagnostics :: IO [Diagnostic]
+    getDiagnostics = do
+      (_, _, diagnostics) <- getLastResult
+      return diagnostics
+
+    withDeepSeekConfig :: (Config.DeepSeek -> IO ResponseReceived) -> IO ResponseReceived
+    withDeepSeekConfig action = case config.deepSeek of
+      Just conf -> action conf
+      Nothing -> serviceUnavailable "missing config value deep-seek.auth"
+
     noContent :: IO ResponseReceived
     noContent = respond $ jsonResponse Status.noContent204 ""
 
