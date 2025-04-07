@@ -54,6 +54,15 @@ jobs:
           compression-level: 0
         if: matrix.ghc == '9.10'
 
+      - shell: bash
+        run: |
+          for GHC in 9.4
+          do
+            ghcup install ghc $GHC --no-set
+            SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)
+          done
+        if: matrix.ghc == '9.10'
+
   success:
     needs: build
     runs-on: ubuntu-latest
