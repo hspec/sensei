@@ -24,8 +24,6 @@ module Helper (
 , to_json
 
 , requireGhc
-, ifGhc
-
 , ensureFile
 ) where
 
@@ -128,18 +126,10 @@ to_json :: ToJSON a => a -> ByteString
 to_json = toStrict . encode
 
 requireGhc :: [Int] -> IO ()
-requireGhc = ifGhc >=> (`unless` pending)
-
-ifGhc :: [Int] -> IO Bool
-ifGhc (makeVersion -> required) = do
-  ghcVersion <- getGhcVersion
-  return (ghcVersion >= required)
-
-getGhcVersion :: IO Version
-getGhcVersion = do
+requireGhc (makeVersion -> required) = do
   env <- getEnvironment
   let Just ghcVersion = lookupGhcVersion env >>= parseVersion
-  return ghcVersion
+  when (ghcVersion < required) pending
 
 ensureFile :: FilePath -> ByteString -> IO ()
 ensureFile name new = do
