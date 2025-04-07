@@ -13,6 +13,7 @@ module Language.Haskell.GhciWrapper (
 , reload
 
 #ifdef TEST
+, sensei_ghc
 , sensei_ghc_version
 , lookupGhc
 , lookupGhcVersion
@@ -41,8 +42,11 @@ import qualified GHC.Diagnostic as Diagnostic
 sensei_ghc_version :: String
 sensei_ghc_version = "SENSEI_GHC_VERSION"
 
+sensei_ghc :: String
+sensei_ghc = "SENSEI_GHC"
+
 lookupGhc :: [(String, String)] -> FilePath
-lookupGhc = fromMaybe "ghc" . lookup "SENSEI_GHC"
+lookupGhc = fromMaybe "ghc" . lookup sensei_ghc
 
 lookupGhcVersion :: [(String, String)] -> Maybe String
 lookupGhcVersion = lookup sensei_ghc_version
