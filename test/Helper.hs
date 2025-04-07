@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 module Helper (
   module Imports
@@ -26,11 +25,13 @@ module Helper (
 , Location(..)
 , Severity(..)
 , diagnostic
+, diagnosticForGhc
 
 , to_json
 
-, requireGhc
+, require
 , ifGhc
+, whenGhc
 
 , ensureFile
 ) where
@@ -140,22 +141,39 @@ failingSpec = unlines [
 diagnostic :: Diagnostic
 diagnostic = Diagnostic {
   version = "1.0"
-, ghcVersion = "ghc-" <> __GLASGOW_HASKELL_FULL_VERSION__
+, ghcVersion = "ghc-9.10.0"
 , span = Nothing
 , severity = Error
 , code = Nothing
 , message = []
 , hints = []
+, reason = Nothing
 }
+
+diagnosticForGhc :: IO Diagnostic
+diagnosticForGhc = do
+  ghc <- getGhcVersion
+  let
+    version :: String
+    version
+      | ghc <= makeVersion [9,12] = "1.0"
+      | otherwise = "1.1"
+  return diagnostic {
+    version
+  , ghcVersion = "ghc-" <> showVersion ghc
+  }
 
 to_json :: ToJSON a => a -> ByteString
 to_json = toStrict . encode
 
-requireGhc :: [Int] -> IO ()
-requireGhc = ifGhc >=> (`unless` pending)
+require :: GHC -> IO ()
+require = ifGhc >=> (`unless` pending)
 
-ifGhc :: [Int] -> IO Bool
-ifGhc (makeVersion -> required) = do
+whenGhc :: GHC -> IO () -> IO ()
+whenGhc required action = ifGhc required >>= (`when` action)
+
+ifGhc :: GHC -> IO Bool
+ifGhc (toVersion -> required) = do
   ghcVersion <- getGhcVersion
   return (ghcVersion >= required)
 
@@ -164,6 +182,15 @@ getGhcVersion = do
   env <- getEnvironment
   let Just ghcVersion = lookupGhcVersion env >>= parseVersion
   return ghcVersion
+
+toVersion :: GHC -> Version
+toVersion = makeVersion . \ case
+  ANY -> [0]
+  GHC_904 -> [9,4]
+  GHC_906 -> [9,6]
+  GHC_908 -> [9,8]
+  GHC_910 -> [9,10]
+  GHC_912 -> [9,12]
 
 ensureFile :: FilePath -> ByteString -> IO ()
 ensureFile name new = do

@@ -1,0 +1,5 @@
+test/fixtures/x-partial-error/Foo.hs:2:7: error: [GHC-63394] [-Wx-partial, -Werror=x-partial]
+    In the use of `head'
+    (imported from Prelude, but defined in GHC.Internal.List):
+    "This is a partial function, it throws an error on empty lists. Use pattern matching, 'Data.List.uncons' or 'Data.Maybe.listToMaybe' instead. Consider refactoring to use "Data.List.NonEmpty"."
+

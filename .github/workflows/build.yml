@@ -28,9 +28,10 @@ jobs:
           - '9.6'
           - '9.8'
           - '9.10'
+          - 'latest'
         include:
           - os: macos-latest
-            ghc: '9.10'
+            ghc: system
     steps:
       - uses: actions/checkout@v4
       - uses: hspec/setup-haskell@v1
@@ -52,7 +53,7 @@ jobs:
           name: ${{ steps.archive.outputs.name }}
           path: ${{ steps.archive.outputs.name }}
           compression-level: 0
-        if: matrix.ghc == '9.10'
+        if: matrix.ghc == 'latest'
 
       - shell: bash
         run: |
@@ -61,7 +62,7 @@ jobs:
             ghcup install ghc $GHC --no-set
             SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)
           done
-        if: matrix.ghc == '9.10'
+        if: matrix.ghc == 'latest'
 
   success:
     needs: build

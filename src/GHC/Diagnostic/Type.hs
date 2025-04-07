@@ -4,6 +4,7 @@ module GHC.Diagnostic.Type (
 , Span(..)
 , Location(..)
 , Severity(..)
+, Reason(..)
 , parse
 , format
 ) where
@@ -23,6 +24,7 @@ data Diagnostic = Diagnostic {
 , code :: Maybe Int
 , message :: [Text]
 , hints :: [Text]
+, reason :: Maybe Reason
 } deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data Span = Span {
@@ -39,6 +41,27 @@ data Location = Location {
 data Severity = Warning | Error
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
+data Reason = ReasonFlags Flags | ReasonCategory Category
+  deriving (Eq, Show, Generic)
+
+instance ToJSON Reason where
+  toJSON = \ case
+    ReasonFlags value -> toJSON value
+    ReasonCategory value -> toJSON value
+
+instance FromJSON Reason where
+  parseJSON value =
+        ReasonFlags <$> parseJSON value
+    <|> ReasonCategory <$> parseJSON value
+
+data Flags = Flags {
+  flags :: [String]
+} deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+data Category = Category {
+  category :: String
+} deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
 parse :: ByteString -> Maybe Diagnostic
 parse = fmap removeGhciSpecificHints . decode . fromStrict
 
@@ -50,7 +73,7 @@ format diagnostic = render $ unlines [
   ]
   where
     header :: Doc
-    header = span <> colon <+> severity <> colon <+> code
+    header = span <> colon <+> severity <> colon <+> code <+> reason
 
     span :: Doc
     span = case diagnostic.span of
@@ -66,6 +89,24 @@ format diagnostic = render $ unlines [
     code = case diagnostic.code of
       Nothing -> empty
       Just c -> brackets $ "GHC-" <> int c
+
+    reason :: Doc
+    reason = case diagnostic.reason of
+      Nothing -> empty
+      Just r -> bracketed . concatMap formatFlag $ case r of
+        ReasonFlags (Flags flags) -> flags
+        ReasonCategory (Category category) -> [category]
+        where
+          formatFlag :: String -> [Doc]
+          formatFlag (text -> flag) =
+            "-W" <> flag : case diagnostic.severity of
+              Warning -> []
+              Error -> [errorFlag <> flag]
+
+          errorFlag :: Doc
+          errorFlag = case r of
+            ReasonFlags {} -> "Werror="
+            ReasonCategory {} -> "-Werror="
 
     message :: Doc
     message = bulleted $ map verbatim diagnostic.message
@@ -90,6 +131,12 @@ format diagnostic = render $ unlines [
 
     unlines :: [Doc] -> Doc
     unlines = foldr ($+$) empty
+
+    bracketed :: [Doc] -> Doc
+    bracketed xs = "[" <> punctuateComma xs <> "]"
+
+    punctuateComma :: [Doc] -> Doc
+    punctuateComma = hcat . punctuate (text ", ")
 
 removeGhciSpecificHints :: Diagnostic -> Diagnostic
 removeGhciSpecificHints diagnostic = diagnostic { hints = map processHint diagnostic.hints }

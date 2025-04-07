@@ -11,13 +11,14 @@ module GHC.Diagnostic (
 , apply
 
 #ifdef TEST
+, analyzeHint
 , extractIdentifiers
 , qualifiedName
 , applyReplace
 #endif
 ) where
 
-import           Imports hiding (stripPrefix)
+import           Imports hiding (stripPrefix, takeExtensions)
 import           Builder (Builder, Color(..))
 import qualified Builder
 
@@ -75,8 +76,10 @@ analyzeHints = concat . mapMaybe analyzeHint
 
 analyzeHint :: Text -> Maybe [Solution]
 analyzeHint hint = asum [
-    prefix "Perhaps you intended to use " <&> return . EnableExtension
-  , prefix "Enable any of the following extensions: " <&> map EnableExtension . reverse . T.splitOn ", "
+    prefix "Perhaps you intended to use " <&> takeExtensions
+
+  , requiredFor GHC_910 $ prefix "Enable any of the following extensions: " <&>
+      map EnableExtension . reverse . T.splitOn ", "
 
   , prefix "Perhaps use `" <&> return . takeIdentifier
   , prefix "Perhaps use one of these:" <&> extractIdentifiers
@@ -84,6 +87,21 @@ analyzeHint hint = asum [
   where
     prefix :: Text -> Maybe Text
     prefix p = stripPrefix p hint
+
+    takeExtensions :: Text -> [Solution]
+    takeExtensions input = fromMaybe takeExtensionGhc910 takeExtensionGhc912
+      where
+        takeExtensionGhc910 :: [Solution]
+        takeExtensionGhc910 = requiredFor GHC_910 [EnableExtension input]
+
+        takeExtensionGhc912 :: Maybe [Solution]
+        takeExtensionGhc912 = map EnableExtension <$> do
+          T.stripPrefix "the `" input <&> T.span (/= '\'') >>= \ case
+            (extension, "' extension") -> Just [extension]
+            (implied, impliedBy -> Just extension) -> Just [implied, extension]
+            _ -> Nothing
+          where
+            impliedBy = T.stripPrefix "' extension (implied by `" >=> T.stripSuffix "')"
 
     takeIdentifier :: Text -> Solution
     takeIdentifier = UseName . T.takeWhile (/= '\'')

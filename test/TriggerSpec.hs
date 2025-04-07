@@ -26,7 +26,7 @@ normalize = normalizeTiming . lines . forGhc9dot4
           | otherwise = line
 
     forGhc9dot4 :: String -> String
-    forGhc9dot4 = Text.unpack
+    forGhc9dot4 = requiredFor GHC_904 $ Text.unpack
       . Text.replace " error: Variable not in scope: " " error: [GHC-88464] Variable not in scope: "
       . Text.pack
 
