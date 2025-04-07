@@ -54,12 +54,17 @@ analyze diagnostic = analyzeCode <|> analyzeHints
     analyzeHint :: String -> Maybe Action
     analyzeHint (T.pack -> hint) =
           perhapsYouIntendedToUse
+      <|> perhapsYouIntendedToUse_before_ghc_912
       <|> enableAnyOfTheFollowingExtensions
       <|> perhapsUse
       <|> perhapsUseOneOfThese
       where
         perhapsYouIntendedToUse :: Maybe Action
         perhapsYouIntendedToUse = do
+          AddExtension . (.file) <$> diagnostic.span <*> (fst . T.breakOn "'" <$> T.stripPrefix "Perhaps you intended to use the `" hint)
+
+        perhapsYouIntendedToUse_before_ghc_912 :: Maybe Action
+        perhapsYouIntendedToUse_before_ghc_912 = do
           AddExtension . (.file) <$> diagnostic.span <*> T.stripPrefix "Perhaps you intended to use " hint
 
         enableAnyOfTheFollowingExtensions :: Maybe Action
