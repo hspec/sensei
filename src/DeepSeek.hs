@@ -16,11 +16,12 @@ import           System.Environment.Blank
 import           Data.ByteString.Lazy (toStrict)
 import           Data.Aeson
 import qualified Data.Yaml.Pretty as Yaml
-import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Network.HTTP.Types
 import           Network.HTTP.Client
 import           Network.HTTP.Simple
 
+import qualified Builder
 import           GHC.Diagnostic (Diagnostic)
 import qualified GHC.Diagnostic.Type as Diagnostic
 import qualified Config.DeepSeek as Config
@@ -44,7 +45,7 @@ apply putStrLn config dir diagnostic = createChatCompletion dir diagnostic >>= \
   where
     applyChoice :: Choice -> IO ()
     applyChoice choice = do
-      case extractPatch diagnostic choice.message.content of
+      case extractPatch diagnostic $ Text.unpack choice.message.content of
         Nothing -> putStrLn $ section "no patch"
         Just patch -> applyPatch putStrLn dir patch
       putStrLn separator
@@ -117,19 +118,19 @@ query putStrLn config (RequestBodyLBS . encode -> requestBody) = do
 
 createChatCompletion :: FilePath -> Diagnostic -> IO (Maybe CreateChatCompletion)
 createChatCompletion dir diagnostic = sequence $ diagnostic.span <&> \ span -> do
-  source <- readFile (dir </> span.file)
+  source <- Builder.readFile (dir </> span.file)
   let
-    content :: String
-    content = unlines [
+    content :: Text
+    content = Builder.toText . Builder.join "\n" $ [
         "Given the following GHC diagnostics message, please suggest a fix for the corresponding Haskell code."
-      , "Produce your fix as a unified diff so that it can be applied with the `patch` program."
+      , "Produce your answer as a unified diff so that it can be applied with the `patch` program."
       , "Don't provide explanations."
       , ""
-      , "Enclose you answer in:"
+      , "Enclose your answer in:"
       , ""
       , "```diff"
-      , "--- " <> span.file
-      , "+++ " <> span.file
+      , "--- " <> fromString span.file
+      , "+++ " <> fromString span.file
       , "..."
       , "```"
       , ""
@@ -138,7 +139,7 @@ createChatCompletion dir diagnostic = sequence $ diagnostic.span <&> \ span -> d
       , "GHC diagnostics message:"
       , ""
       , "```console"
-      , Diagnostic.format diagnostic
+      , fromString $ Diagnostic.format diagnostic
       , "```"
       , ""
       , "Corresponding Haskell code:"
@@ -148,7 +149,7 @@ createChatCompletion dir diagnostic = sequence $ diagnostic.span <&> \ span -> d
       , "```"
       ]
   return CreateChatCompletion {
-    messages = [ Message { role = User , content } ]
+    messages = [ Message { role = User, content } ]
   , model = "deepseek-chat"
   , temperature = Just 0
   }

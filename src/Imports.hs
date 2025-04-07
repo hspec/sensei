@@ -31,6 +31,7 @@ import           Text.Read as Imports (readMaybe)
 import           System.Exit as Imports (ExitCode(..))
 import           Control.Monad.IO.Class as Imports
 import           Data.Version as Imports (Version(..), showVersion, makeVersion)
+import           Data.Text as Imports (Text)
 
 import           System.Process as Process
 import           System.IO (Handle)

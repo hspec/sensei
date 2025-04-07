@@ -23,7 +23,7 @@ data CreateChatCompletion = CreateChatCompletion {
 } deriving (Eq, Show, Generic, FromJSON, ToJSON)
 
 data Message = Message {
-  content :: String
+  content :: Text
 , role :: Role
 } deriving (Eq, Show, Generic, FromJSON, ToJSON)
 

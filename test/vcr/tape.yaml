@@ -9,15 +9,15 @@
     - name: Authorization
       value: '********'
     body: "{\"messages\":[{\"content\":\"Given the following GHC diagnostics message,
-      please suggest a fix for the corresponding Haskell code.\\nProduce your fix
+      please suggest a fix for the corresponding Haskell code.\\nProduce your answer
       as a unified diff so that it can be applied with the `patch` program.\\nDon't
-      provide explanations.\\n\\nEnclose you answer in:\\n\\n```diff\\n--- Foo.hs\\n+++
+      provide explanations.\\n\\nEnclose your answer in:\\n\\n```diff\\n--- Foo.hs\\n+++
       Foo.hs\\n...\\n```\\n\\n(where ... is the placeholder for your answer)\\n\\nGHC
       diagnostics message:\\n\\n```console\\nFoo.hs:2:7: error: [GHC-62558]\\n    â\x80¢
       Syntax error on [| 23 |]\\n    â\x80¢ In the Template Haskell quotation [| 23
       |]\\n    Suggested fix:\\n      Enable any of the following extensions: TemplateHaskell,
       TemplateHaskellQuotes\\n\\n\\n```\\n\\nCorresponding Haskell code:\\n\\n```haskell\\nmodule
-      Foo where\\nfoo = [|23|]\\n\\n```\\n\",\"role\":\"user\"}],\"model\":\"deepseek-chat\",\"temperature\":0}"
+      Foo where\\nfoo = [|23|]\\n\\n```\",\"role\":\"user\"}],\"model\":\"deepseek-chat\",\"temperature\":0}"
   response:
     status:
       code: 200
