@@ -5,6 +5,7 @@ module GHC.Diagnostic.Type (
 , Span(..)
 , Location(..)
 , Severity(..)
+, Reason(..)
 , parse
 , format
 ) where
@@ -23,6 +24,7 @@ data Diagnostic = Diagnostic {
 , code :: Maybe Int
 , message :: [String]
 , hints :: [String]
+, reason :: Maybe Reason
 } deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data Span = Span {
@@ -39,6 +41,23 @@ data Location = Location {
 data Severity = Warning | Error
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
+data Reason = ReasonFlags Flags | ReasonCategory Category
+  deriving (Eq, Show, Generic)
+
+instance ToJSON Reason where
+  toJSON = undefined
+
+instance FromJSON Reason where
+  parseJSON value = ((ReasonFlags <$> parseJSON value) <|> (ReasonCategory <$> parseJSON value))
+
+data Flags = Flags {
+  flags :: [String]
+} deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+data Category = Category {
+  category :: String
+} deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
 parse :: ByteString -> Maybe Diagnostic
 parse = fmap removeGhciSpecificHints . decode . fromStrict
 
@@ -50,7 +69,7 @@ format diagnostic = render $ unlines [
   ]
   where
     header :: Doc
-    header = span <> colon <+> severity <> colon <+> code
+    header = span <> colon <+> severity <> colon <+> code <+> reason
 
     span :: Doc
     span = case diagnostic.span of
@@ -66,6 +85,15 @@ format diagnostic = render $ unlines [
     code = case diagnostic.code of
       Nothing -> empty
       Just c -> brackets $ "GHC-" <> int c
+
+    reason :: Doc
+    reason = case diagnostic.reason of
+      Nothing -> empty
+      Just (ReasonFlags (Flags flags)) -> "[" <> punctuateComma (concatMap formatFlag flags) <> "]"
+      Just (ReasonCategory category) -> "" -- FIXME
+
+    formatFlag :: String -> [Doc]
+    formatFlag (text -> flag) = ["-W" <> flag, "Werror=" <> flag]
 
     message :: Doc
     message = bulleted $ map verbatim diagnostic.message
@@ -104,3 +132,6 @@ removeGhciSpecificHints diagnostic = diagnostic { hints = map processHint diagno
       hint : "You may enable these language extensions in GHCi with:" : ghciHints
         | all isSetLanguageExtension ghciHints -> hint
       _ -> input
+
+punctuateComma :: [Doc] -> Doc
+punctuateComma = hcat . punctuate (text ", ")
