@@ -3,6 +3,8 @@
 module DeepSeek (
   apply
 #ifdef TEST
+, createPrompt
+, formatSpan
 , Patch(..)
 , extractPatch
 #endif
@@ -21,8 +23,10 @@ import           Network.HTTP.Types
 import           Network.HTTP.Client
 import           Network.HTTP.Simple
 
+import           Builder (Builder)
 import qualified Builder
-import           GHC.Diagnostic (Diagnostic)
+import           Sensei.API (Instructions(..))
+import           GHC.Diagnostic (Diagnostic, Span, Location)
 import qualified GHC.Diagnostic.Type as Diagnostic
 import qualified Config.DeepSeek as Config
 import           DeepSeek.Types
@@ -36,19 +40,25 @@ separator = take separatorLength $ repeat '#'
 section :: String -> String
 section name = take separatorLength $ take 3 separator ++ ' ' : name ++ ' ' : separator
 
-apply :: (String -> IO ()) -> Config.DeepSeek -> FilePath -> Diagnostic -> IO ()
-apply putStrLn config dir diagnostic = createChatCompletion dir diagnostic >>= \ case
+apply :: (String -> IO ()) -> Config.DeepSeek -> FilePath -> These Diagnostic Instructions -> IO ()
+apply putStrLn config dir instructions = case spanFromInstructions instructions of
   Nothing -> pass
-  Just request -> (.choices) <$> query putStrLn config request >>= \ case
-    [] -> pass
-    choice : _ -> applyChoice choice
-  where
-    applyChoice :: Choice -> IO ()
-    applyChoice choice = do
-      case extractPatch diagnostic $ Text.unpack choice.message.content of
-        Nothing -> putStrLn $ section "no patch"
-        Just patch -> applyPatch putStrLn dir patch
-      putStrLn separator
+  Just span -> do
+    request <- createChatCompletion dir span instructions
+    response <- query putStrLn config request
+    case response.choices of
+      [] -> pass
+      choice : _ -> do
+        case extractPatch span (Text.unpack choice.message.content) of
+          Nothing -> putStrLn $ section "no patch"
+          Just patch -> applyPatch putStrLn dir patch
+        putStrLn separator
+
+spanFromInstructions :: These Diagnostic Instructions -> Maybe Span
+spanFromInstructions = \ case
+  This diagnostic -> diagnostic.span
+  That instructions -> Just instructions.span
+  These _ instructions -> Just instructions.span
 
 applyPatch :: (String -> IO ()) -> String -> Patch -> IO ()
 applyPatch putStrLn dir patch = do
@@ -116,13 +126,48 @@ query putStrLn config (RequestBodyLBS . encode -> requestBody) = do
           , "completion_tokens_details"
           ]
 
-createChatCompletion :: FilePath -> Diagnostic -> IO (Maybe CreateChatCompletion)
-createChatCompletion dir diagnostic = sequence $ diagnostic.span <&> \ span -> do
+createPrompt :: FilePath -> Span -> These Diagnostic Instructions -> IO Text
+createPrompt dir span instructions = do
   source <- Builder.readFile (dir </> span.file)
   let
-    content :: Text
-    content = Builder.toText . Builder.join "\n" $ [
-        "Given the following GHC diagnostics message, please suggest a fix for the corresponding Haskell code."
+    aDiagnosticsMessageAndProgrammerInstructions :: Builder
+    aDiagnosticsMessageAndProgrammerInstructions = case instructions of
+      This (_ :: Diagnostic) -> aDiagnosticsMessage
+      That (_ :: Instructions) -> instructionsProvidedByAProgrammer
+      These (_ :: Diagnostic) (_ :: Instructions) -> aDiagnosticsMessage <> " and " <> instructionsProvidedByAProgrammer
+      where
+        aDiagnosticsMessage = "a GHC diagnostics message"
+        instructionsProvidedByAProgrammer = "instructions provided by a programmer"
+
+    diagnosticsMessage :: [Builder]
+    diagnosticsMessage = case this instructions of
+      Nothing -> []
+      Just diagnostic -> [
+          ""
+        , "The GHC diagnostics message:"
+        , ""
+        , "```console"
+        , Builder.fromText . Text.stripEnd . Text.pack $ Diagnostic.format diagnostic
+        , "```"
+        ]
+
+    programmerInstructions :: [Builder]
+    programmerInstructions = case that instructions of
+      Nothing -> []
+      Just programmer -> [
+          ""
+        , "The instructions provided by the programmer: " <> Builder.fromText programmer.instructions
+        , ""
+        , "The programmer is currently focusing on: " <> formatSpan span
+        ]
+
+    diagnosticsMessageAndProgrammerInstructions :: [Builder]
+    diagnosticsMessageAndProgrammerInstructions = diagnosticsMessage ++ programmerInstructions
+
+    prompt :: Text
+    prompt = Builder.toText . Builder.join "\n" $ [
+        "Given " <> aDiagnosticsMessageAndProgrammerInstructions <> ", please suggest a fix for the corresponding Haskell code."
+      , ""
       , "Produce your answer as a unified diff so that it can be applied with the `patch` program."
       , "Don't provide explanations."
       , ""
@@ -135,21 +180,49 @@ createChatCompletion dir diagnostic = sequence $ diagnostic.span <&> \ span -> d
       , "```"
       , ""
       , "(where ... is the placeholder for your answer)"
+      , Builder.join "\n" diagnosticsMessageAndProgrammerInstructions
       , ""
-      , "GHC diagnostics message:"
-      , ""
-      , "```console"
-      , fromString $ Diagnostic.format diagnostic
-      , "```"
-      , ""
-      , "Corresponding Haskell code:"
+      , "The corresponding Haskell code:"
       , ""
       , "```haskell"
       , source
       , "```"
+      , ""
       ]
+  return prompt
+
+formatSpan :: Span -> Builder
+formatSpan span
+  | start == end = file <> ":" <> startLine <> ":" <> startColumn
+  | start.line == end.line = file <> ":" <> startLine <> ":" <> startColumn <> "-" <> endColumn
+  | otherwise = file <> ":(" <> startLine <> "," <> startColumn <> "-" <> endLine <> "," <> endColumn <> ")"
+  where
+    start :: Location
+    start = span.start
+
+    end :: Location
+    end = span.end
+
+    file :: Builder
+    file = fromString span.file
+
+    startLine :: Builder
+    startLine = Builder.show start.line
+
+    startColumn :: Builder
+    startColumn = Builder.show start.column
+
+    endLine :: Builder
+    endLine = Builder.show end.line
+
+    endColumn :: Builder
+    endColumn = Builder.show end.column
+
+createChatCompletion :: FilePath -> Span -> These Diagnostic Instructions -> IO CreateChatCompletion
+createChatCompletion dir span instructions = do
+  prompt <- createPrompt dir span instructions
   return CreateChatCompletion {
-    messages = [ Message { role = User, content } ]
+    messages = [ Message { role = User, content = prompt } ]
   , model = "deepseek-chat"
   , temperature = Just 0
   }
@@ -159,10 +232,9 @@ data Patch = Patch {
 , diff :: String
 } deriving (Eq, Show)
 
-extractPatch :: Diagnostic -> String -> Maybe Patch
-extractPatch diagnostic input = do
+extractPatch :: Span -> String -> Maybe Patch
+extractPatch span input = do
   diff <- extractDiffCodeBlock input
-  span <- diagnostic.span
   file <- takeWhile (not . isSpace) . dropWhile isSpace <$> stripPrefix "--- " diff
   let strip = (length $ splitDirectories file) - (length $ splitDirectories span.file)
   Just Patch { strip, diff }

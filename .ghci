@@ -6,5 +6,6 @@
 :set -XRecordWildCards
 :set -XViewPatterns
 :set -XBlockArguments
+:set -XDerivingVia
 
 :set -DTEST -isrc -itest

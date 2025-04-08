@@ -1,6 +1,9 @@
 module Sensei.API (
   QuickFixRequest(..)
 , quickFix
+
+, DeepFixRequest(..)
+, Instructions(..)
 , deepFix
 ) where
 
@@ -9,26 +12,33 @@ import Imports
 import Network.HTTP.Client
 import Data.Aeson qualified as Aeson
 
+import GHC.Diagnostic.Type (Span)
 import HTTP.Util (makeRequest)
 
 data QuickFixRequest = QuickFixRequest {
   choice :: Maybe Int
 } deriving (Eq, Show, Generic)
-
-instance ToJSON QuickFixRequest where
-  toJSON = genericKebabEncode
-
-instance FromJSON QuickFixRequest where
-  parseJSON = genericKebabDecode
+  deriving (ToJSON, FromJSON) via (KebabOptions QuickFixRequest)
 
 quickFix :: FilePath -> QuickFixRequest -> IO (Bool, LazyByteString)
-quickFix dir (RequestBodyLBS . Aeson.encode -> requestBody) = makeRequest dir request
-  where
-    request :: Request
-    request = "http://localhost/quick-fix" { method = "POST", requestBody }
+quickFix = post "/quick-fix"
 
-deepFix :: FilePath -> IO (Bool, LazyByteString)
-deepFix dir = makeRequest dir request
+data DeepFixRequest = DeepFixRequest {
+  instructions :: Maybe Instructions
+} deriving (Eq, Show, Generic)
+  deriving (ToJSON, FromJSON) via (KebabOptions DeepFixRequest)
+
+data Instructions = Instructions {
+  span :: Span
+, instructions :: Text
+} deriving (Eq, Show, Generic)
+  deriving (ToJSON, FromJSON) via (KebabOptions Instructions)
+
+deepFix :: FilePath -> DeepFixRequest -> IO (Bool, LazyByteString)
+deepFix = post "/deep-fix"
+
+post :: ToJSON a => String -> FilePath -> a -> IO (Bool, LazyByteString)
+post endpoint dir (RequestBodyLBS . Aeson.encode -> requestBody) = makeRequest dir request
   where
     request :: Request
-    request = "http://localhost/deep-fix" { method = "POST" }
+    request = (fromString $ "http://localhost" <> endpoint) { method = "POST", requestBody }

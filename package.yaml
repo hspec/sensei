@@ -18,6 +18,7 @@ default-extensions:
   - RecordWildCards
   - ViewPatterns
   - BlockArguments
+  - DerivingVia
 
 dependencies:
   - base >= 4.11 && < 5

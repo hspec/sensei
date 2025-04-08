@@ -32,7 +32,7 @@ import qualified DeepSeek
 import           GHC.Diagnostic
 
 import           HTTP.Util
-import           Sensei.API (QuickFixRequest(..))
+import           Sensei.API (QuickFixRequest(..), DeepFixRequest(..))
 
 socketAddr :: FilePath -> SockAddr
 socketAddr = SockAddrUnix . socketName
@@ -82,12 +82,15 @@ app putStrLn config dir getLastResult request respond = case pathInfo request of
         Nothing -> do
           noContent
 
-  ["deep-fix"] -> requireMethod "POST" $ getDiagnostics <&> head >>= \ case
-    Just diagnostic -> withDeepSeekConfig \ conf -> do
-      DeepSeek.apply putStrLn conf dir diagnostic
-      noContent
-    Nothing -> do
-      noContent
+  ["deep-fix"] -> requireMethod "POST" $ do
+    withJsonBody @DeepFixRequest \ deepFixRequest -> do
+      diagnostics <- getDiagnostics
+      case theseFromMaybes (head diagnostics) deepFixRequest.instructions of
+        Just instructions -> withDeepSeekConfig \ conf -> do
+          DeepSeek.apply putStrLn conf dir instructions
+          noContent
+        Nothing -> do
+          noContent
 
   _ -> do
     respond $ genericStatus Status.notFound404 request
