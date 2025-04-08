@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Imports (
   module Imports
 , Generic
@@ -47,6 +48,14 @@ import qualified Data.Text.Encoding as T
 import           Text.Casing
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
+
+newtype KebabOptions a = KebabOptions a
+
+instance (Generic a, GFromJSON Zero (Rep a)) => FromJSON (KebabOptions a) where
+  parseJSON = fmap KebabOptions . genericKebabDecode
+
+instance (Generic a, GToJSON Zero (Rep a)) => ToJSON (KebabOptions a) where
+  toJSON (KebabOptions a) = genericKebabEncode a
 
 genericKebabDecode :: (Generic a, GFromJSON Zero (Rep a)) => Value -> Parser a
 genericKebabDecode = genericParseJSON kebabAesonOptions
@@ -97,3 +106,24 @@ parseVersion xs = case [v | (v, "") <- readP_to_S Version.parseVersion xs] of
 
 head :: [a] -> Maybe a
 head = listToMaybe
+
+data These a b = This a | That b | These a b
+
+theseFromMaybes :: Maybe a -> Maybe b -> Maybe (These a b)
+theseFromMaybes ma mb = case (ma, mb) of
+  (Nothing, Nothing) -> Nothing
+  (Just a, Nothing) -> Just $ This a
+  (Nothing, Just b) -> Just $ That b
+  (Just a, Just b) -> Just $ These a b
+
+this :: These a b -> Maybe a
+this = \ case
+  This a -> Just a
+  That _ -> Nothing
+  These a _ -> Just a
+
+that :: These a b -> Maybe b
+that = \ case
+  This _ -> Nothing
+  That b -> Just b
+  These _ b -> Just b

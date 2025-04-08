@@ -52,7 +52,10 @@ jobs:
         if: steps.autotag.outputs.created
 
       - name: Publish preview binaries
-        run: gh release delete preview --cleanup-tag --yes && gh release create preview --prerelease *.gz
+        run: |
+          git tag preview -f
+          git push origin preview -f
+          gh release upload preview --clobber *.gz
         env:
           GH_TOKEN: ${{ github.token }}
         if: "!steps.autotag.outputs.created"

@@ -8,13 +8,12 @@ import qualified VCR
 
 import           Network.Wai (Application)
 import           Test.Hspec.Wai
-import           Test.Hspec.Wai.Internal (WaiSession(..))
-import           Control.Monad.Trans.State (StateT(..))
-import           Control.Monad.Trans.Reader (ReaderT(..))
 import qualified Data.ByteString as B
+import           Data.Aeson (encode)
 
 import           Config
 import           Config.DeepSeek
+import           Sensei.API
 import qualified HTTP
 import qualified Trigger
 import qualified GHC.Diagnostic.Type as Diagnostic
@@ -26,13 +25,6 @@ putStrLn :: String -> IO ()
 putStrLn
   | verbose = Prelude.putStrLn
   | otherwise = \ _ -> pass
-
-withTape :: VCR.Tape -> WaiSession st a -> WaiSession st a
-withTape tape = lift (VCR.with tape)
-  where
-    lift :: forall st a. (forall b. IO b -> IO b) -> WaiSession st a -> WaiSession st a
-    lift f action = WaiSession $ ReaderT \ st -> ReaderT \ application -> StateT \ clientState -> do
-      f $ runStateT (runReaderT (runReaderT (unWaiSession action) st) application) clientState
 
 spec :: Spec
 spec = do
@@ -143,14 +135,35 @@ spec = do
               ]
 
     describe "/deep-fix" $ do
-      withAppWithFailure "use-TemplateHaskellQuotes" $ do
-        it "applies quick fixes using DeepSeek" >>> sequential $ withTape "test/vcr/tape.yaml" do
-          post "/deep-fix" "" `shouldRespondWith` "" { matchStatus = 204 }
+      aroundAll_ (VCR.with "test/vcr/tape.yaml") . withAppWithFailure "use-TemplateHaskellQuotes" $ do
+        it "applies quick fixes using DeepSeek" do
+          post "/deep-fix" "{}" `shouldRespondWith` "" { matchStatus = 204 }
           dir <- getState
           liftIO $ readFile (dir </> file) `shouldReturn` unlines [
               "{-# LANGUAGE TemplateHaskell #-}"
             , "module Foo where"
             , "foo = [|23|]"
+            ]
+
+        it "takes programmer instructions into account" do
+          let
+            body :: LazyByteString
+            body = encode $ DeepFixRequest (Just instructions)
+
+            instructions :: Instructions
+            instructions = Instructions span "fix this by setting the offending definition to undefined"
+
+            span :: Span
+            span = Span "Foo.hs" start start
+
+            start :: Location
+            start = Location 2 1
+
+          post "/deep-fix" body `shouldRespondWith` "" { matchStatus = 204 }
+          dir <- getState
+          liftIO $ readFile (dir </> file) `shouldReturn` unlines [
+              "module Foo where"
+            , "foo = undefined"
             ]
 
     context "when querying a non-existing endpoint" $ withApp undefined $ do

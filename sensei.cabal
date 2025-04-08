@@ -56,6 +56,7 @@ library
       RecordWildCards
       ViewPatterns
       BlockArguments
+      DerivingVia
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -124,6 +125,7 @@ executable seito
       RecordWildCards
       ViewPatterns
       BlockArguments
+      DerivingVia
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -192,6 +194,7 @@ executable sensei
       RecordWildCards
       ViewPatterns
       BlockArguments
+      DerivingVia
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -260,6 +263,7 @@ executable sensei-web
       RecordWildCards
       ViewPatterns
       BlockArguments
+      DerivingVia
   ghc-options: -Wall -threaded
   build-depends:
       aeson
@@ -345,6 +349,7 @@ test-suite spec
       RecordWildCards
       ViewPatterns
       BlockArguments
+      DerivingVia
   ghc-options: -Wall -threaded
   cpp-options: -DTEST
   build-tool-depends:

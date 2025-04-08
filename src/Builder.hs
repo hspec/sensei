@@ -27,5 +27,8 @@ readFile name = do
     True -> return . Builder $ StrictBuilder.unsafeFromByteString c
     False -> either throwIO (return . fromText) $ Text.decodeUtf8' c
 
+show :: Show a => a -> Builder
+show = fromString . Imports.show
+
 join :: Builder -> [Builder] -> Builder
 join sep = mconcat . List.intersperse sep
