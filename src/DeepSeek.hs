@@ -43,7 +43,7 @@ apply :: (String -> IO ()) -> Config.DeepSeek -> FilePath -> These Diagnostic In
 apply putStrLn config dir instructions = case spanFromInstructions instructions of
   Nothing -> pass
   Just span -> do
-    request <- createChatCompletion dir span instructions
+    request <- createChatCompletion putStrLn dir span instructions
     response <- query putStrLn config request
     case response.choices of
       [] -> pass
@@ -217,9 +217,11 @@ formatSpan span
     endColumn :: Builder
     endColumn = Builder.show end.column
 
-createChatCompletion :: FilePath -> Span -> These Diagnostic Instructions -> IO CreateChatCompletion
-createChatCompletion dir span instructions = do
+createChatCompletion :: (String -> IO ()) -> FilePath -> Span -> These Diagnostic Instructions -> IO CreateChatCompletion
+createChatCompletion putStrLn dir span instructions = do
   prompt <- createPrompt dir span instructions
+  putStrLn $ section "prompt"
+  putStrLn $ Text.unpack prompt
   return CreateChatCompletion {
     messages = [ Message { role = User, content = prompt } ]
   , model = "deepseek-chat"
