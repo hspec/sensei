@@ -1,10 +1,13 @@
 module Sensei.API (
-  QuickFixRequest(..)
-, quickFix
+  quickFix
+, deepFix
+
+, QuickFixRequest(..)
 
 , DeepFixRequest(..)
 , Instructions(..)
-, deepFix
+, Span(..)
+, Location(..)
 ) where
 
 import Imports
@@ -12,7 +15,7 @@ import Imports
 import Network.HTTP.Client
 import Data.Aeson qualified as Aeson
 
-import GHC.Diagnostic.Type (Span)
+import GHC.Diagnostic.Type (Span(..), Location(..))
 import HTTP.Util (makeRequest)
 
 data QuickFixRequest = QuickFixRequest {
