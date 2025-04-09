@@ -28,7 +28,7 @@ testWith name requirement extraArgs action = it name $ do
   normalizeFileName <$> analyze diagnostic `shouldBe` action
   where
     dir :: FilePath
-    dir = "test" </> "assets" </> name
+    dir = "test" </> "fixtures" </> name
 
     ghc :: [String] -> IO String
     ghc args = do
