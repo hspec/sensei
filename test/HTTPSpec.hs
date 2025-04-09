@@ -41,7 +41,7 @@ spec = do
       withAppWithFailure name = around \ item -> withTempDirectory \ dir -> do
         let
           testCaseDir :: FilePath
-          testCaseDir = "test/assets" </> name
+          testCaseDir = "test/fixtures" </> name
 
           copySource :: IO ()
           copySource = readFile (testCaseDir </> file) >>= writeFile (dir </> file)
@@ -135,7 +135,7 @@ spec = do
               ]
 
     describe "/deep-fix" $ do
-      aroundAll_ (VCR.with "test/vcr/tape.yaml") . withAppWithFailure "use-TemplateHaskellQuotes" $ do
+      aroundAll_ (VCR.with "test/fixtures/vcr-tape.yaml") . withAppWithFailure "use-TemplateHaskellQuotes" $ do
         it "applies quick fixes using DeepSeek" do
           post "/deep-fix" "{}" `shouldRespondWith` "" { matchStatus = 204 }
           dir <- getState

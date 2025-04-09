@@ -1,3 +1,0 @@
-test/assets/lex-error/Foo.hs:3:11: error: [GHC-21231]
-    lexical error in string/character literal at character '\n'
-
