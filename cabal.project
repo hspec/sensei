@@ -1,6 +1,6 @@
 packages: .
 
 program-options
-  ghc-options: -Werror
+  ghc-options: -Werror -fhide-source-paths
 
 tests: True

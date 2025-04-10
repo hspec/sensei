@@ -10,7 +10,7 @@ module DeepSeek (
 #endif
 ) where
 
-import           Imports hiding (putStrLn, strip)
+import           Imports hiding (strip)
 
 import           Data.Ord
 import           System.Process

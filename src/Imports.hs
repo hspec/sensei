@@ -7,7 +7,7 @@ module Imports (
 , FromJSON(..)
 ) where
 
-import           Prelude as Imports hiding (span, head)
+import           Prelude as Imports hiding (putStrLn, span, head)
 import           Control.Arrow as Imports ((>>>), (&&&))
 import           Control.Concurrent as Imports
 import           Control.Exception as Imports hiding (handle)

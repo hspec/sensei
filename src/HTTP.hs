@@ -1,17 +1,15 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 module HTTP (
-  withServer
-, socketName
-, newSocket
-, socketAddr
+  AppConfig(..)
+, withApp
 
 #ifdef TEST
 , app
 #endif
 ) where
 
-import           Imports hiding (putStrLn, strip, encodeUtf8)
+import           Imports hiding (strip, encodeUtf8)
 
 import           System.Directory
 import           Data.Aeson
@@ -25,8 +23,6 @@ import           Network.Socket
 
 import           Util
 import qualified Trigger
-import           Config (Config)
-import qualified Config
 import qualified Config.DeepSeek as Config
 import qualified DeepSeek
 import           GHC.Diagnostic
@@ -34,14 +30,21 @@ import           GHC.Diagnostic
 import           HTTP.Util
 import           Sensei.API (QuickFixRequest(..), DeepFixRequest(..))
 
+data AppConfig = AppConfig {
+  dir :: FilePath
+, putStrLn :: String -> IO ()
+, deepSeek :: Maybe Config.DeepSeek
+, getLastResult :: IO (Trigger.Result, String, [Diagnostic])
+}
+
 socketAddr :: FilePath -> SockAddr
 socketAddr = SockAddrUnix . socketName
 
 withSocket :: (Socket -> IO a) -> IO a
 withSocket = bracket newSocket close
 
-withServer :: (String -> IO ()) -> Config -> FilePath -> IO (Trigger.Result, String, [Diagnostic]) -> IO a -> IO a
-withServer putStrLn config dir = withApplication dir . app putStrLn config dir
+withApp :: AppConfig -> IO a -> IO a
+withApp config = withApplication config.dir $ app config
 
 withApplication :: FilePath -> Application -> IO a -> IO a
 withApplication dir application action = do
@@ -64,8 +67,8 @@ withThread asyncAction action = do
   takeMVar mvar
   return r
 
-app :: (String -> IO ()) -> Config -> FilePath -> IO (Trigger.Result, String, [Diagnostic]) -> Application
-app putStrLn config dir getLastResult request respond = case pathInfo request of
+app :: AppConfig -> Application
+app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pathInfo request of
 
   [] -> requireMethod "GET" $ do
     getLastResult >>= textPlain

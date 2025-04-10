@@ -2,7 +2,8 @@
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 module HTTPSpec (spec) where
 
-import           Helper hiding (putStrLn, pending)
+import           Helper hiding (appConfig, pending)
+import qualified Helper
 import qualified Prelude
 import qualified VCR
 
@@ -14,6 +15,7 @@ import           Data.Aeson (encode)
 import           Config
 import           Config.DeepSeek
 import           Sensei.API
+import           HTTP (AppConfig(..))
 import qualified HTTP
 import qualified Trigger
 import qualified GHC.Diagnostic.Type as Diagnostic
@@ -26,6 +28,9 @@ putStrLn
   | verbose = Prelude.putStrLn
   | otherwise = \ _ -> pass
 
+appConfig :: FilePath -> HTTP.AppConfig
+appConfig dir = (Helper.appConfig dir) { putStrLn }
+
 spec :: Spec
 spec = do
   describe "app" $ do
@@ -35,7 +40,7 @@ spec = do
 
       withApp :: (Trigger.Result, String, [Diagnostic]) -> SpecWith (FilePath, Application) -> Spec
       withApp lastResult = around \ item -> withTempDirectory \ dir -> do
-        item (dir, HTTP.app putStrLn defaultConfig dir $ return lastResult)
+        item (dir, HTTP.app (appConfig dir) { getLastResult = return lastResult })
 
       withAppWithFailure :: FilePath -> SpecWith (FilePath, Application) -> Spec
       withAppWithFailure name = around \ item -> withTempDirectory \ dir -> do
@@ -58,7 +63,7 @@ spec = do
           deepSeek = config.deepSeek <|> Just (DeepSeek $ BearerToken "")
 
           app :: Application
-          app = HTTP.app putStrLn defaultConfig { deepSeek } dir (return $ (Trigger.Failure, "", [err]))
+          app = HTTP.app (appConfig dir) { deepSeek, getLastResult = return (Trigger.Failure, "", [err]) }
 
         item (dir, app)
         where
