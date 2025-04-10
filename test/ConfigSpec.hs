@@ -74,14 +74,15 @@ spec = do
           readConfigFilesFrom global local `shouldReturn` Left "Aeson exception:\nError in $: parsing Config.ConfigFile(ConfigFile) failed, unknown fields: [\"some-field\"]"
 
   describe "ConfigFile" $ do
-    it "deserializes from yaml" $ do
+    it "deserializes from YAML" do
       fromJSON [yamlQQ|
         after-reload: foo bar baz
         before-reload: blah
         on-success: snafu
         on-failure: failure
       |] `shouldBe` Success ConfigFile {
-        afterReload = Just "foo bar baz"
+        watch = Nothing
+      , afterReload = Just "foo bar baz"
       , beforeReload = Just "blah"
       , onSuccess = Just "snafu"
       , onFailure = Just "failure"
@@ -90,15 +91,18 @@ spec = do
 
     it "supports null" $ do
       fromJSON [yamlQQ|
+        watch: null
         after-reload: null
-        before-reload: blah
-        on-success: finally
-        on-failure: failure
+        before-reload: null
+        on-success: null
+        on-failure: null
+        deep-seek: null
       |] `shouldBe` Success ConfigFile {
-        afterReload = Nothing
-      , beforeReload = Just "blah"
-      , onSuccess = Just "finally"
-      , onFailure = Just "failure"
+        watch = Nothing
+      , afterReload = Nothing
+      , beforeReload = Nothing
+      , onSuccess = Nothing
+      , onFailure = Nothing
       , deepSeek = Nothing
       }
 
@@ -106,11 +110,19 @@ spec = do
       fromJSON [yamlQQ|
         after-reload: blah
       |] `shouldBe` Success ConfigFile {
-        afterReload = Just "blah"
+        watch = Nothing
+      , afterReload = Just "blah"
       , beforeReload = Nothing
       , onSuccess = Nothing
       , onFailure = Nothing
       , deepSeek = Nothing
+      }
+
+    it "accepts `watch`" $ do
+      fromJSON [yamlQQ|
+        watch: false
+      |] `shouldBe` Success @ConfigFile mempty {
+        watch = Just False
       }
 
     it "accepts deep-seek configuration values" $ do
