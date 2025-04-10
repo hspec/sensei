@@ -12,7 +12,7 @@ module Run (
 ) where
 
 import qualified Prelude
-import           Imports hiding (putStrLn)
+import           Imports
 
 import qualified Data.ByteString as ByteString
 import           Data.IORef
@@ -71,7 +71,7 @@ run args = do
       cleanupAction.add $ Prelude.putStrLn message
       cleanupAction.run
 
-  HTTP.withServer putStrLn config dir (readMVar lastOutput) $ do
+  HTTP.withApp (HTTP.AppConfig dir putStrLn config.deepSeek (readMVar lastOutput)) $ do
     watchFiles dir queue $ do
       mode <- newIORef Lenient
       Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
@@ -182,7 +182,7 @@ runWeb args = do
   Session.withSession defaultSessionConfig args $ \ session -> do
     _ <- trigger session defaultHooks
     lock <- newMVar ()
-    HTTP.withServer Prelude.putStrLn config "" (withMVar lock $ \() -> trigger session defaultHooks) $ do
+    HTTP.withApp (HTTP.AppConfig "" Prelude.putStrLn config.deepSeek (withMVar lock $ \ () -> trigger session defaultHooks)) $ do
       waitForever
 
 defaultSessionConfig :: Session.Config

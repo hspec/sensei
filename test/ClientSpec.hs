@@ -2,22 +2,21 @@ module ClientSpec (spec) where
 
 import           Helper
 
-import           Config
-import           HTTP (socketName)
 import qualified HTTP
+import           HTTP.Util (socketName)
 import           Client
 import qualified Trigger
 
 withSuccess :: (FilePath -> IO a) -> IO a
-withSuccess = withServer Trigger.Success (withColor Green "success")
+withSuccess = withApp Trigger.Success (withColor Green "success")
 
 withFailure :: (FilePath -> IO a) -> IO a
-withFailure = withServer Trigger.Failure (withColor Red "failure")
+withFailure = withApp Trigger.Failure (withColor Red "failure")
 
-withServer :: Trigger.Result -> String -> (FilePath -> IO a) -> IO a
-withServer result text action = do
+withApp :: Trigger.Result -> String -> (FilePath -> IO a) -> IO a
+withApp result text action = do
   withTempDirectory $ \ dir -> do
-    HTTP.withServer (\ _ -> pass) defaultConfig dir (return (result, text, [])) $ do
+    HTTP.withApp (appConfig dir) { getLastResult = return (result, text, []) } $ do
       action dir
 
 spec :: Spec

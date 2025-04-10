@@ -4,6 +4,10 @@ module Helper (
   module Imports
 , silent
 , ghciConfig
+
+, AppConfig(..)
+, appConfig
+
 , withTempDirectory
 , withSomeSpec
 , passingSpec
@@ -27,7 +31,6 @@ module Helper (
 , ensureFile
 ) where
 
-import           Prelude hiding (span)
 import           Imports
 
 import           System.Directory as Imports
@@ -45,9 +48,11 @@ import           Data.ByteString.Lazy (toStrict)
 import           Data.Aeson (encode)
 
 import           Run ()
+import           HTTP (AppConfig(..))
 import           Config (tryReadFile)
 import           Util
 import           Language.Haskell.GhciWrapper
+import qualified Trigger
 
 import           GHC.Diagnostic
 
@@ -64,6 +69,14 @@ ghciConfig = Config {
   configIgnoreDotGhci = True
 , configWorkingDirectory = Nothing
 , configEcho = silent
+}
+
+appConfig :: FilePath -> HTTP.AppConfig
+appConfig dir = HTTP.AppConfig {
+  dir
+, putStrLn = \ _ -> pass
+, deepSeek = Nothing
+, getLastResult = return (Trigger.Success, "", [])
 }
 
 withTempDirectory :: (FilePath -> IO a) -> IO a
