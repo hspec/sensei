@@ -34,6 +34,7 @@ data AppConfig = AppConfig {
   dir :: FilePath
 , putStrLn :: String -> IO ()
 , deepSeek :: Maybe Config.DeepSeek
+, trigger :: IO ()
 , getLastResult :: IO (Trigger.Result, String, [Diagnostic])
 }
 
@@ -72,6 +73,10 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
 
   [] -> requireMethod "GET" $ do
     getLastResult >>= textPlain
+
+  ["trigger"] -> requireMethod "POST" do
+    config.trigger
+    noContent
 
   ["diagnostics"] -> requireMethod "GET" $ do
     getDiagnostics >>= respond . json

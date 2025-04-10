@@ -286,7 +286,8 @@ test-suite spec
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:
-      QuickCheck
+      HUnit
+    , QuickCheck
     , aeson
     , ansi-terminal
     , async

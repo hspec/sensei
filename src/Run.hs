@@ -7,6 +7,7 @@ module Run (
 , runWith
 , defaultRunArgs
 , watchFiles
+, emitTriggerAndWaitForDelivery
 #endif
 ) where
 
@@ -67,12 +68,21 @@ run args = do
       cleanupAction.add $ Prelude.putStrLn message
       cleanupAction.run
 
+    appConfig :: HTTP.AppConfig
+    appConfig = HTTP.AppConfig {
+      dir
+    , putStrLn
+    , deepSeek = config.deepSeek
+    , trigger = emitTriggerAndWaitForDelivery queue
+    , getLastResult = readMVar lastOutput
+    }
+
     watch :: IO () -> IO ()
     watch
       | config.watch = watchFiles dir queue
       | otherwise = id
 
-  HTTP.withApp (HTTP.AppConfig dir putStrLn config.deepSeek (readMVar lastOutput)) $ do
+  HTTP.withApp appConfig do
     watch do
       mode <- newIORef Lenient
       Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
@@ -93,6 +103,13 @@ run args = do
     toggle = \ case
       Lenient -> Strict
       Strict -> Lenient
+
+emitTriggerAndWaitForDelivery :: EventQueue -> IO ()
+emitTriggerAndWaitForDelivery queue = do
+  barrier <- newEmptyMVar
+  emitEvent queue . Trigger $ OnTestRunStarted do
+    putMVar barrier ()
+  takeMVar barrier
 
 defaultRunArgs :: IO RunArgs
 defaultRunArgs = do
@@ -140,10 +157,12 @@ newCleanupAction = do
 runWith :: RunArgs -> IO ()
 runWith RunArgs {..} = do
   let
-    saveOutput :: IO (Trigger.Result, String, [Diagnostic]) -> IO ()
-    saveOutput action = do
+    saveOutput :: IO (Trigger.Result, String, [Diagnostic]) -> OnTestRunStarted -> IO ()
+    saveOutput action onTestRunStarted = do
       cleanupAction.run
-      result <- modifyMVar lastOutput $ \ _ -> (id &&& id) <$> action
+      result <- modifyMVar lastOutput $ \ _ -> do
+        onTestRunStarted.notify
+        (id &&& id) <$> action
       case result of
         (HookFailed, _output, _diagnostics) -> pass
         (Failure, output, _diagnostics) -> config.senseiHooksOnFailure >>= \ case
@@ -159,23 +178,26 @@ runWith RunArgs {..} = do
     , afterReload = config.senseiHooksAfterReload
     }
 
-    go :: [String] -> IO ()
-    go extraArgs = do
+    go :: OnTestRunStarted -> [String] -> IO ()
+    go onTestRunStarted extraArgs = do
       status <- withSession sessionConfig (extraArgs <> args) $ \ session -> do
         let
           printExtraArgs :: IO ()
           printExtraArgs = forM_ extraArgs $ \ arg -> do
             sessionConfig.configEcho . encodeUtf8 . withColor Red $ arg <> "\n"
 
+          triggerAction :: OnTestRunStarted -> IO ()
           triggerAction = saveOutput (trigger session hooks <* printExtraArgs)
+
+          triggerAllAction :: OnTestRunStarted -> IO ()
           triggerAllAction = saveOutput (triggerAll session hooks <* printExtraArgs)
 
-        triggerAction
+        triggerAction onTestRunStarted
         processQueue cleanupAction.run (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction
       case status of
-        Restart mExtraArgs -> go (fromMaybe extraArgs mExtraArgs)
-        Terminate -> return ()
-  go []
+        (notify, Restart mExtraArgs) -> go notify (fromMaybe extraArgs mExtraArgs)
+        (OnTestRunStarted notify, Terminate) -> notify
+  go mempty []
 
 defaultSessionConfig :: Session.Config
 defaultSessionConfig = Session.Config {

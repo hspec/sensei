@@ -5,6 +5,7 @@ module EventQueue (
 , newQueue
 
 , Event(..)
+, OnTestRunStarted(..)
 , FileEventType(..)
 , emitEvent
 
@@ -32,11 +33,14 @@ import           Util
 type EventQueue = TChan Event
 
 data Event =
-    TriggerAll
+    Trigger OnTestRunStarted
+  | TriggerAll
   | FileEvent FileEventType FilePath
   | RestartWith [String]
   | Done
-  deriving (Eq, Show)
+
+newtype OnTestRunStarted = OnTestRunStarted { notify :: IO () }
+  deriving (Semigroup, Monoid)
 
 data FileEventType = FileAdded | FileRemoved | FileModified
   deriving (Eq, Show)
@@ -50,13 +54,14 @@ emitEvent chan = atomically . writeTChan chan
 readEvents :: EventQueue -> IO (NonEmpty Event)
 readEvents chan = do
   e <- atomically $ readTChan chan
-  unless (isKeyboardInput e) $ do
+  unless (isUserInput e) $ do
     threadDelay 100_000
   es <- atomically emptyQueue
   return (e :| es)
   where
-    isKeyboardInput :: Event -> Bool
-    isKeyboardInput = \ case
+    isUserInput :: Event -> Bool
+    isUserInput = \ case
+      Trigger {} -> True
       TriggerAll -> True
       FileEvent {} -> False
       RestartWith {} -> True
@@ -72,31 +77,33 @@ readEvents chan = do
 data Status = Terminate | Restart (Maybe [String])
   deriving (Eq, Show)
 
-processQueue :: IO () -> (String -> IO ()) -> FilePath -> EventQueue -> IO () -> IO () -> IO Status
+processQueue :: IO () -> (String -> IO ()) -> FilePath -> EventQueue -> (OnTestRunStarted -> IO ()) -> (OnTestRunStarted -> IO ()) -> IO (OnTestRunStarted, Status)
 processQueue cleanup echo dir chan triggerAll trigger = go
   where
-    nextEvent :: IO Action
-    nextEvent = readEvents chan >>= processEvents echo dir >>= maybe nextEvent return
+    nextEvent :: IO (OnTestRunStarted, Action)
+    nextEvent = readEvents chan >>= processEvents echo dir >>= \ case
+      (notify, Just action) -> return (notify, action)
+      (notify, Nothing) -> first (notify <>) <$> nextEvent
 
-    go :: IO Status
+    go :: IO (OnTestRunStarted, Status)
     go = do
-      action <- nextEvent
+      event <- nextEvent
       cleanup
-      case action of
-        TriggerAction files -> do
+      case event of
+        (notify, TriggerAction files) -> do
           output files
-          trigger
+          trigger notify
           go
-        TriggerAllAction -> do
-          triggerAll
+        (notify, TriggerAllAction) -> do
+          triggerAll notify
           go
-        RestartAction file t -> do
+        (notify, RestartAction file t) -> do
           output [file <> " (" <> show t <> ", restarting)"]
-          return $ Restart Nothing
-        RestartWithAction args -> do
-          return $ Restart (Just args)
-        DoneAction -> do
-          return Terminate
+          return $ (notify, Restart Nothing)
+        (notify, RestartWithAction args) -> do
+          return $ (notify, Restart (Just args))
+        (notify, DoneAction) -> do
+          return (notify, Terminate)
 
     output :: [String] -> IO ()
     output = mapM_ (\ name -> echo . withInfoColor $ "--> " <> name <> "\n")
@@ -109,14 +116,22 @@ data Action =
   | DoneAction
   deriving (Eq, Show)
 
-processEvents :: (String -> IO ()) -> FilePath -> NonEmpty Event -> IO (Maybe Action)
+processEvents :: (String -> IO ()) -> FilePath -> NonEmpty Event -> IO (OnTestRunStarted, Maybe Action)
 processEvents echo dir (NonEmpty.toList -> events) = do
   files <- fileEvents echo dir events
-  return $ if
-    | Done `elem` events -> Just DoneAction
+  let
+    triggerActions :: [OnTestRunStarted]
+    triggerActions = [notify | Trigger notify <- events]
+
+    onTestRunStarted :: OnTestRunStarted
+    onTestRunStarted = mconcat triggerActions
+
+  return . (,) onTestRunStarted $ if
+    | or [True | Done <- events] -> Just DoneAction
     | args : _ <- [args | RestartWith args <- reverse events] -> Just $ RestartWithAction args
     | (file, t) : _ <- filter shouldRestart files -> Just $ RestartAction file t
-    | TriggerAll `elem` events -> Just TriggerAllAction
+    | or [True | TriggerAll <- events] -> Just TriggerAllAction
+    | (not . null) triggerActions -> Just $ TriggerAction []
     | not (null files) -> Just . TriggerAction . Set.toList . Set.fromList $ map fst files
     | otherwise -> Nothing
 
