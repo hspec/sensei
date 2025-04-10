@@ -29,9 +29,11 @@ import           GHC.Diagnostic
 
 import           HTTP.Util
 import           Sensei.API (QuickFixRequest(..), DeepFixRequest(..))
+import qualified Sensei.API as API
 
 data AppConfig = AppConfig {
   dir :: FilePath
+, hieDir :: FilePath
 , putStrLn :: String -> IO ()
 , deepSeek :: Maybe Config.DeepSeek
 , trigger :: IO ()
@@ -74,12 +76,15 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
   [] -> requireMethod "GET" $ do
     getLastResult >>= textPlain
 
+  ["diagnostics"] -> requireMethod "GET" $ do
+    getDiagnostics >>= respond . json
+
+  ["config"] -> requireMethod "GET" do
+    respond $ json API.Config { hieDir = config.hieDir }
+
   ["trigger"] -> requireMethod "POST" do
     config.trigger
     noContent
-
-  ["diagnostics"] -> requireMethod "GET" $ do
-    getDiagnostics >>= respond . json
 
   ["quick-fix"] -> requireMethod "POST" $ do
     withJsonBody @QuickFixRequest \ quickFixRequest -> do
