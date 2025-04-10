@@ -12,7 +12,7 @@ import qualified Run
 
 defaultRunArgs :: IO RunArgs
 defaultRunArgs = do
-  args <- Run.defaultRunArgs
+  args <- Run.defaultRunArgs Nothing
   return args { sessionConfig = args.sessionConfig { configEcho = silent } }
 
 unwrapExceptionInLinkedThread :: IO a -> IO a

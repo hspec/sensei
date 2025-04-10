@@ -57,6 +57,7 @@ numericVersion ghc = strip <$> readProcess ghc ["--numeric-version"] ""
 data Config = Config {
   configIgnoreDotGhci :: Bool
 , configWorkingDirectory :: Maybe FilePath
+, configHieDirectory :: Maybe FilePath
 , configEcho :: ByteString -> IO ()
 }
 
@@ -114,13 +115,18 @@ new startupFile Config{..} envDefaults args_ = do
       | ghcVersion < Just (makeVersion [9,10]) = id
       | otherwise = ("-fdiagnostics-as-json" :)
 
+    writeIdeInfo :: [String]
+    writeIdeInfo = case configHieDirectory of
+      Just dir | ghcVersion >= Just (makeVersion [8,8]) -> ["-fwrite-ide-info", "-hiedir", dir]
+      _ -> []
+
     mandatoryArgs :: [String]
     mandatoryArgs = ["-fshow-loaded-modules", "--interactive"]
 
     args :: [String]
     args = "-ghci-script" : startupFile : diagnosticsAsJson args_ ++ catMaybes [
         if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
-      ] ++ mandatoryArgs
+      ] ++ writeIdeInfo ++ mandatoryArgs
 
   (stdoutReadEnd, stdoutWriteEnd) <- createPipe
 

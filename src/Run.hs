@@ -17,6 +17,7 @@ import           Imports
 import qualified Data.ByteString as ByteString
 import           Data.IORef
 import           System.IO hiding (putStrLn)
+import           System.IO.Temp (withSystemTempDirectory)
 import qualified System.FSNotify as FSNotify
 
 import qualified HTTP
@@ -58,9 +59,9 @@ watchFiles dir queue action = do
 data Mode = Lenient | Strict
 
 run :: [String] -> IO ()
-run args = do
+run args = withSystemTempDirectory "sensei" \ hieDir -> do
   config <- loadConfig
-  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction} <- defaultRunArgs
+  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction} <- defaultRunArgs (Just hieDir)
 
   let
     putStrLn :: String -> IO ()
@@ -71,6 +72,7 @@ run args = do
     appConfig :: HTTP.AppConfig
     appConfig = HTTP.AppConfig {
       dir
+    , hieDir
     , putStrLn
     , deepSeek = config.deepSeek
     , trigger = emitTriggerAndWaitForDelivery queue
@@ -111,8 +113,8 @@ emitTriggerAndWaitForDelivery queue = do
     putMVar barrier ()
   takeMVar barrier
 
-defaultRunArgs :: IO RunArgs
-defaultRunArgs = do
+defaultRunArgs :: Maybe FilePath -> IO RunArgs
+defaultRunArgs hieDir = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "", [])
   cleanupAction <- newCleanupAction
@@ -122,7 +124,12 @@ defaultRunArgs = do
   , args = []
   , lastOutput
   , queue = queue
-  , sessionConfig = defaultSessionConfig
+  , sessionConfig = Session.Config {
+      configIgnoreDotGhci = False
+    , configWorkingDirectory = Nothing
+    , configHieDirectory = hieDir
+    , configEcho = \ string -> ByteString.putStr string >> hFlush stdout
+    }
   , withSession = Session.withSession
   , cleanupAction
   }
@@ -198,10 +205,3 @@ runWith RunArgs {..} = do
         (notify, Restart mExtraArgs) -> go notify (fromMaybe extraArgs mExtraArgs)
         (OnTestRunStarted notify, Terminate) -> notify
   go mempty []
-
-defaultSessionConfig :: Session.Config
-defaultSessionConfig = Session.Config {
-  configIgnoreDotGhci = False
-, configWorkingDirectory = Nothing
-, configEcho = \ string -> ByteString.putStr string >> hFlush stdout
-}

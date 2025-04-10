@@ -71,12 +71,14 @@ ghciConfig :: Config
 ghciConfig = Config {
   configIgnoreDotGhci = True
 , configWorkingDirectory = Nothing
+, configHieDirectory = Nothing
 , configEcho = silent
 }
 
 appConfig :: FilePath -> HTTP.AppConfig
 appConfig dir = HTTP.AppConfig {
   dir
+, hieDir = "hie"
 , putStrLn = \ _ -> pass
 , deepSeek = Nothing
 , trigger = pass
