@@ -35,7 +35,7 @@ spec = do
         process :: CreateProcess
         process = proc "sleep" ["1d"]
       cancel <- pagerWith process "foo"
-      timeout cancel `shouldReturn` Just ()
+      timeout cancel
 
     context "when writing to stdin of the subprocess blocks" $ do
       it "can still be canceled" $ do
@@ -48,4 +48,4 @@ spec = do
           input = cycle "foo\n"
 
         cancel <- pagerWith process input
-        timeout cancel `shouldReturn` Just ()
+        timeout cancel

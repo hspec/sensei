@@ -2,6 +2,8 @@ module RunSpec (spec) where
 
 import           Helper
 
+import           Control.Concurrent.Async
+
 import           EventQueue
 
 import           Language.Haskell.GhciWrapper (Config(..))
@@ -13,14 +15,38 @@ defaultRunArgs = do
   args <- Run.defaultRunArgs
   return args { sessionConfig = args.sessionConfig { configEcho = silent } }
 
+unwrapExceptionInLinkedThread :: IO a -> IO a
+unwrapExceptionInLinkedThread = try >=> \ case
+  Left (ExceptionInLinkedThread _ e) -> throwIO e
+  Right a -> return a
+
 spec :: Spec
-spec = do
+spec = around_ unwrapExceptionInLinkedThread do
+  describe "emitTriggerAndWaitForDelivery" do
+    it "blocks until the test run has started" $ do
+      runArgs <- defaultRunArgs
+
+      let
+        testRunInProgress :: IO Bool
+        testRunInProgress = isEmptyMVar runArgs.lastOutput
+
+        userInput :: IO ()
+        userInput = do
+          emitTriggerAndWaitForDelivery runArgs.queue
+          testRunInProgress `shouldReturn` True
+          emitEvent runArgs.queue Done
+
+      withAsync userInput \ user -> do
+        link user
+        timeout $ runWith runArgs
+        wait user
+
   describe "runWith" $ do
     context "on Done" $ do
       it "terminates" $ do
         runArgs <- defaultRunArgs
         emitEvent runArgs.queue Done
-        timeout (runWith runArgs) `shouldReturn` Just ()
+        timeout $ runWith runArgs
 
     context "on RestartWith" $ do
       it "restarts the session with the given extra arguments" $ do
@@ -34,7 +60,7 @@ spec = do
             , ..
             }
           emitEvent runArgs.queue (RestartWith ["-Wall"])
-          timeout (runWith runArgs) `shouldReturn` Just ()
+          timeout $ runWith runArgs
         `shouldReturn` [[], ["-Wall"]]
 
       context "with multiple occurrences of RestartWith" $ do
@@ -50,7 +76,7 @@ spec = do
               }
             emitEvent runArgs.queue (RestartWith ["-Wall"])
             emitEvent runArgs.queue (RestartWith ["-Wdefault"])
-            timeout (runWith runArgs) `shouldReturn` Just ()
+            timeout $ runWith runArgs
           `shouldReturn` [[], ["-Wdefault"]]
 
       context "after a restart without arguments" $ do
@@ -66,5 +92,5 @@ spec = do
                   action session
               , ..
               }
-            timeout (runWith runArgs) `shouldReturn` Just ()
+            timeout $ runWith runArgs
           `shouldReturn` [[], ["-Wall"], ["-Wall"]]

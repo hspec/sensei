@@ -1,5 +1,6 @@
 module Sensei.API (
-  quickFix
+  trigger
+, quickFix
 , deepFix
 
 , QuickFixRequest(..)
@@ -17,6 +18,9 @@ import Data.Aeson qualified as Aeson
 
 import GHC.Diagnostic.Type (Span(..), Location(..))
 import HTTP.Util (makeRequest)
+
+trigger :: FilePath -> IO (Bool, LazyByteString)
+trigger dir = post "/trigger" dir $ Aeson.object []
 
 data QuickFixRequest = QuickFixRequest {
   choice :: Maybe Int
