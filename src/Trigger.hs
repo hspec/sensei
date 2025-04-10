@@ -3,7 +3,6 @@ module Trigger (
   Hook
 , HookResult(..)
 , Hooks(..)
-, defaultHooks
 , Result(..)
 , trigger
 , triggerAll
@@ -28,12 +27,6 @@ import           GHC.Diagnostic
 data Hooks = Hooks {
   beforeReload :: Hook
 , afterReload :: Hook
-}
-
-defaultHooks :: Hooks
-defaultHooks = Hooks {
-  beforeReload = return HookSuccess
-, afterReload = return HookSuccess
 }
 
 data Result = HookFailed | Failure | Success
