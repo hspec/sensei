@@ -29,6 +29,7 @@ import           GHC.Diagnostic
 
 import           HTTP.Util
 import           Sensei.API (QuickFixRequest(..), DeepFixRequest(..))
+import qualified Sensei.API as API
 
 data AppConfig = AppConfig {
   dir :: FilePath
@@ -73,6 +74,12 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
 
   [] -> requireMethod "GET" $ do
     getLastResult >>= textPlain
+
+  ["config"] -> requireMethod "GET" do
+    cwd <- getCurrentDirectory
+    respond $ json API.Config {
+      hieDir = cwd </> "hie"
+    }
 
   ["trigger"] -> requireMethod "POST" do
     config.trigger
