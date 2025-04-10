@@ -2,7 +2,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Run (
   run
-, runWeb
 #ifdef TEST
 , RunArgs(..)
 , runWith
@@ -29,9 +28,6 @@ import           Pager (pager)
 import           Util
 import           Config
 import           GHC.Diagnostic
-
-waitForever :: IO ()
-waitForever = forever $ threadDelay 10000000
 
 watchFiles :: FilePath -> EventQueue -> IO () -> IO ()
 watchFiles dir queue action = do
@@ -175,15 +171,6 @@ runWith RunArgs {..} = do
         Restart mExtraArgs -> go (fromMaybe extraArgs mExtraArgs)
         Terminate -> return ()
   go []
-
-runWeb :: [String] -> IO ()
-runWeb args = do
-  config <- loadConfig
-  Session.withSession defaultSessionConfig args $ \ session -> do
-    _ <- trigger session defaultHooks
-    lock <- newMVar ()
-    HTTP.withApp (HTTP.AppConfig "" Prelude.putStrLn config.deepSeek (withMVar lock $ \ () -> trigger session defaultHooks)) $ do
-      waitForever
 
 defaultSessionConfig :: Session.Config
 defaultSessionConfig = Session.Config {

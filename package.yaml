@@ -62,10 +62,6 @@ executables:
     source-dirs: driver
     main: sensei.hs
 
-  sensei-web:
-    source-dirs: driver
-    main: sensei-web.hs
-
   seito:
     source-dirs: driver
     main: seito.hs

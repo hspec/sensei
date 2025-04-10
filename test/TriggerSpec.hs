@@ -35,6 +35,12 @@ withSession specPath args = do
   where
     (dir, file) = splitFileName specPath
 
+defaultHooks :: Hooks
+defaultHooks = Hooks {
+  beforeReload = return HookSuccess
+, afterReload = return HookSuccess
+}
+
 trigger :: Session -> IO (Result, [String])
 trigger session = triggerWithHooks session defaultHooks
 
