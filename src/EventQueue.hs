@@ -20,6 +20,8 @@ module EventQueue (
 ) where
 
 import           Imports
+import           Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Set as Set
 
 import           Control.Monad.STM
@@ -45,13 +47,13 @@ newQueue = atomically newTChan
 emitEvent :: EventQueue -> Event -> IO ()
 emitEvent chan = atomically . writeTChan chan
 
-readEvents :: EventQueue -> IO [Event]
+readEvents :: EventQueue -> IO (NonEmpty Event)
 readEvents chan = do
   e <- atomically $ readTChan chan
   unless (isKeyboardInput e) $ do
     threadDelay 100_000
   es <- atomically emptyQueue
-  return (e : es)
+  return (e :| es)
   where
     isKeyboardInput :: Event -> Bool
     isKeyboardInput = \ case
@@ -73,13 +75,14 @@ data Status = Terminate | Restart (Maybe [String])
 processQueue :: IO () -> (String -> IO ()) -> FilePath -> EventQueue -> IO () -> IO () -> IO Status
 processQueue cleanup echo dir chan triggerAll trigger = go
   where
+    nextEvent :: IO Action
+    nextEvent = readEvents chan >>= processEvents echo dir >>= maybe nextEvent return
+
     go :: IO Status
     go = do
-      action <- readEvents chan >>= processEvents echo dir
-      runCleanup action
+      action <- nextEvent
+      cleanup
       case action of
-        NoneAction -> do
-          go
         TriggerAction files -> do
           output files
           trigger
@@ -95,37 +98,27 @@ processQueue cleanup echo dir chan triggerAll trigger = go
         DoneAction -> do
           return Terminate
 
-    runCleanup :: Action -> IO ()
-    runCleanup = \ case
-      NoneAction -> pass
-      TriggerAction {} -> cleanup
-      TriggerAllAction -> cleanup
-      RestartAction {} -> cleanup
-      RestartWithAction {} -> cleanup
-      DoneAction -> cleanup
-
     output :: [String] -> IO ()
     output = mapM_ (\ name -> echo . withInfoColor $ "--> " <> name <> "\n")
 
 data Action =
-    NoneAction
-  | TriggerAction [FilePath]
+    TriggerAction [FilePath]
   | TriggerAllAction
   | RestartAction FilePath FileEventType
   | RestartWithAction [String]
   | DoneAction
   deriving (Eq, Show)
 
-processEvents :: (String -> IO ()) -> FilePath -> [Event] -> IO Action
-processEvents echo dir events = do
+processEvents :: (String -> IO ()) -> FilePath -> NonEmpty Event -> IO (Maybe Action)
+processEvents echo dir (NonEmpty.toList -> events) = do
   files <- fileEvents echo dir events
   return $ if
-    | Done `elem` events -> DoneAction
-    | args : _ <- [args | RestartWith args <- reverse events] -> RestartWithAction args
-    | (file, t) : _ <- filter shouldRestart files -> RestartAction file t
-    | TriggerAll `elem` events -> TriggerAllAction
-    | not (null files) -> TriggerAction . Set.toList . Set.fromList $ map fst files
-    | otherwise -> NoneAction
+    | Done `elem` events -> Just DoneAction
+    | args : _ <- [args | RestartWith args <- reverse events] -> Just $ RestartWithAction args
+    | (file, t) : _ <- filter shouldRestart files -> Just $ RestartAction file t
+    | TriggerAll `elem` events -> Just TriggerAllAction
+    | not (null files) -> Just . TriggerAction . Set.toList . Set.fromList $ map fst files
+    | otherwise -> Nothing
 
 shouldRestart :: (FilePath, FileEventType) -> Bool
 shouldRestart = (||) <$> specAddedOrRemoved <*> dotGhciModified

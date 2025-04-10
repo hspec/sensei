@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 module EventQueueSpec (spec) where
 
 import           Helper
@@ -5,7 +6,8 @@ import qualified System.Info
 
 import           Run (watchFiles)
 
-import           EventQueue
+import           EventQueue hiding (processEvents)
+import qualified EventQueue
 
 withGitRepository :: (FilePath -> IO a) -> IO a
 withGitRepository action = withTempDirectory $ \ dir -> do
@@ -47,49 +49,52 @@ spec = do
             timeout (processQueue pass silent dir queue pass pass) `shouldReturn` Just (Restart Nothing)
 
   describe "processEvents" $ do
+    let
+      processEvents = EventQueue.processEvents silent
+
     around withGitRepository $ do
 
       context "with FileEvent" $ do
         it "returns TriggerAction" $ \ dir -> do
-          processEvents silent dir [FileEvent FileModified "test/FooSpec.hs"] `shouldReturn` TriggerAction ["test/FooSpec.hs"]
+          processEvents dir [FileEvent FileModified "test/FooSpec.hs"] `shouldReturn` Just (TriggerAction ["test/FooSpec.hs"])
 
         context "with git ignored files" $ do
           it "returns NoneAction" $ \ dir -> do
             writeFile (dir </> ".gitignore") "test/FooSpec.hs"
-            processEvents silent dir [FileEvent FileModified "test/FooSpec.hs"] `shouldReturn` NoneAction
+            processEvents dir [FileEvent FileModified "test/FooSpec.hs"] `shouldReturn` Nothing
 
         context "when a Spec file is added" $ do
           it "returns RestartAction" $ \ dir -> do
-            processEvents silent dir [FileEvent FileAdded "test/FooSpec.hs"] `shouldReturn` RestartAction "test/FooSpec.hs" FileAdded
+            processEvents dir [FileEvent FileAdded "test/FooSpec.hs"] `shouldReturn` Just (RestartAction "test/FooSpec.hs" FileAdded)
 
           it "takes precedence over TriggerAll" $ \ dir -> do
-            processEvents silent dir [TriggerAll, FileEvent FileAdded "test/FooSpec.hs", TriggerAll] `shouldReturn` RestartAction "test/FooSpec.hs" FileAdded
+            processEvents dir [TriggerAll, FileEvent FileAdded "test/FooSpec.hs", TriggerAll] `shouldReturn` Just (RestartAction "test/FooSpec.hs" FileAdded)
 
           it "is overruled by Done" $ \ dir -> do
-            processEvents silent dir [Done, FileEvent FileAdded "test/FooSpec.hs", Done] `shouldReturn` DoneAction
+            processEvents dir [Done, FileEvent FileAdded "test/FooSpec.hs", Done] `shouldReturn` Just DoneAction
 
         context "when a Spec file is removed" $ do
           it "returns RestartAction" $ \ dir -> do
-            processEvents silent dir [FileEvent FileRemoved "test/FooSpec.hs"] `shouldReturn` RestartAction "test/FooSpec.hs" FileRemoved
+            processEvents dir [FileEvent FileRemoved "test/FooSpec.hs"] `shouldReturn` Just (RestartAction "test/FooSpec.hs" FileRemoved)
 
         context "when file is first removed and then added" $ do
           it "returns TriggerAction" $ \ dir -> do
-            processEvents silent dir [FileEvent FileRemoved "test/FooSpec.hs", FileEvent FileAdded "test/FooSpec.hs"] `shouldReturn` TriggerAction ["test/FooSpec.hs"]
+            processEvents dir [FileEvent FileRemoved "test/FooSpec.hs", FileEvent FileAdded "test/FooSpec.hs"] `shouldReturn` Just (TriggerAction ["test/FooSpec.hs"])
 
         context "when file is first added and then removed" $ do
           it "returns NoneAction" $ \ dir -> do
-            processEvents silent dir [FileEvent FileAdded "test/FooSpec.hs", FileEvent FileRemoved "test/FooSpec.hs"] `shouldReturn` NoneAction
+            processEvents dir [FileEvent FileAdded "test/FooSpec.hs", FileEvent FileRemoved "test/FooSpec.hs"] `shouldReturn` Nothing
 
       context "with TriggerAll" $ do
         it "returns TriggerAllAction" $ \ dir -> do
-          processEvents silent dir [TriggerAll] `shouldReturn` TriggerAllAction
+          processEvents dir [TriggerAll] `shouldReturn` Just TriggerAllAction
 
         it "takes precedence over FileEvent" $ \ dir -> do
-          processEvents silent dir [FileEvent FileModified "foo", TriggerAll, FileEvent FileModified "foo"] `shouldReturn` TriggerAllAction
+          processEvents dir [FileEvent FileModified "foo", TriggerAll, FileEvent FileModified "foo"] `shouldReturn` Just TriggerAllAction
 
       context "with Done" $ do
         it "returns DoneAction" $ \ dir -> do
-          processEvents silent dir [Done] `shouldReturn` DoneAction
+          processEvents dir [Done] `shouldReturn` Just DoneAction
 
   describe "combineFileEvents" $ do
     it "combines removed/added to modified" $ do
