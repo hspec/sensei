@@ -27,24 +27,32 @@ configFilename :: FilePath
 configFilename = "sensei.yaml"
 
 data ConfigFile = ConfigFile {
+  -- | Setting this to `False` disables file watching.
+  watch :: Maybe Bool
+
   -- | Shell command to run after a file has changed, but before reloading. Cancels the current
   -- trigger cycle when exiting with non-zero exit code.
-  beforeReload :: Maybe String
+, beforeReload :: Maybe String
+
   -- | Shell command to run after a successful reload, but before running the tests. Cancels the
   -- current trigger cycle when exiting with non-zero exit code.
 , afterReload :: Maybe String
+
   -- | Shell command to run after the trigger cycle completed with failure. Has access to the result
   -- via seito.
 , onFailure :: Maybe String
+
   -- | Shell command to run after the trigger cycle successfully completed. Has access to the result
   -- via seito.
 , onSuccess :: Maybe String
+
 , deepSeek :: Maybe DeepSeek
 } deriving (Eq, Show, Generic)
 
 instance Semigroup ConfigFile where
   a <> b = ConfigFile {
-    beforeReload = a.beforeReload <|> b.beforeReload
+    watch = a.watch <|> b.watch
+  , beforeReload = a.beforeReload <|> b.beforeReload
   , afterReload = a.afterReload <|> b.afterReload
   , onFailure = a.onFailure <|> b.onFailure
   , onSuccess = a.onSuccess <|> b.onSuccess
@@ -52,7 +60,7 @@ instance Semigroup ConfigFile where
   }
 
 instance Monoid ConfigFile where
-  mempty = ConfigFile Nothing Nothing Nothing Nothing Nothing
+  mempty = ConfigFile Nothing Nothing Nothing Nothing Nothing Nothing
 
 instance FromJSON ConfigFile where
   parseJSON = \ case
@@ -64,7 +72,8 @@ type Hook = IO HookResult
 data HookResult = HookSuccess | HookFailure String
 
 data Config = Config {
-  senseiHooksBeforeReload :: Hook
+  watch :: Bool
+, senseiHooksBeforeReload :: Hook
 , senseiHooksAfterReload :: Hook
 , senseiHooksOnSuccess :: Hook
 , senseiHooksOnFailure :: Hook
@@ -92,7 +101,8 @@ readConfigFilesFrom global local = fmap mconcat . sequence <$> sequence [
 
 toConfig :: ConfigFile -> Config
 toConfig ConfigFile{..} = Config {
-  senseiHooksBeforeReload = maybeToHook "before-reload" beforeReload
+  watch = fromMaybe True watch
+, senseiHooksBeforeReload = maybeToHook "before-reload" beforeReload
 , senseiHooksAfterReload = maybeToHook "after-reload" afterReload
 , senseiHooksOnSuccess = maybeToHook "on-success" onSuccess
 , senseiHooksOnFailure = maybeToHook "on-failure" onFailure

@@ -67,8 +67,13 @@ run args = do
       cleanupAction.add $ Prelude.putStrLn message
       cleanupAction.run
 
+    watch :: IO () -> IO ()
+    watch
+      | config.watch = watchFiles dir queue
+      | otherwise = id
+
   HTTP.withApp (HTTP.AppConfig dir putStrLn config.deepSeek (readMVar lastOutput)) $ do
-    watchFiles dir queue $ do
+    watch do
       mode <- newIORef Lenient
       Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
       runWith runArgs {config, args}
