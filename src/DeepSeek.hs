@@ -49,6 +49,7 @@ apply putStrLn config dir instructions = case spanFromInstructions instructions 
     case response.choices of
       [] -> pass
       choice : _ -> do
+        putStrLn $ section "making DeepSeek API request"
         case extractPatch span (unpack choice.message.content) of
           Nothing -> putStrLn $ section "no patch"
           Just patch -> applyPatch putStrLn dir patch
