@@ -203,5 +203,6 @@ defaultSessionConfig :: Session.Config
 defaultSessionConfig = Session.Config {
   configIgnoreDotGhci = False
 , configWorkingDirectory = Nothing
+, configHieDirectory = Just "hie"
 , configEcho = \ string -> ByteString.putStr string >> hFlush stdout
 }

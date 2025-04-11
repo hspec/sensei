@@ -71,6 +71,7 @@ ghciConfig :: Config
 ghciConfig = Config {
   configIgnoreDotGhci = True
 , configWorkingDirectory = Nothing
+, configHieDirectory = Nothing
 , configEcho = silent
 }
 

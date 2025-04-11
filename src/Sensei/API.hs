@@ -1,7 +1,10 @@
 module Sensei.API (
-  trigger
+  config
+, trigger
 , quickFix
 , deepFix
+
+, Config(..)
 
 , QuickFixRequest(..)
 
@@ -14,10 +17,19 @@ module Sensei.API (
 import Imports
 
 import Network.HTTP.Client
+import Data.ByteString.Builder qualified as Builder
 import Data.Aeson qualified as Aeson
 
 import GHC.Diagnostic.Type (Span(..), Location(..))
 import HTTP.Util (makeRequest)
+
+data Config = Config {
+  hieDir :: FilePath
+} deriving (Eq, Show, Generic)
+  deriving (ToJSON, FromJSON) via (KebabOptions Config)
+
+config :: FilePath -> IO (Either LazyByteString Config)
+config = get "/config"
 
 trigger :: FilePath -> IO (Bool, LazyByteString)
 trigger dir = post "/trigger" dir $ Aeson.object []
@@ -48,4 +60,16 @@ post :: ToJSON a => String -> FilePath -> a -> IO (Bool, LazyByteString)
 post endpoint dir (RequestBodyLBS . Aeson.encode -> requestBody) = makeRequest dir request
   where
     request :: Request
-    request = (fromString $ "http://localhost" <> endpoint) { method = "POST", requestBody }
+    request = (mkRequest endpoint) { method = "POST", requestBody }
+
+get :: FromJSON a => String -> FilePath -> IO (Either LazyByteString a)
+get endpoint dir = do
+  makeRequest dir request <&> \ case
+    (False, body) -> Left body
+    (True, body) -> bimap (Builder.toLazyByteString . Builder.stringUtf8) id $ Aeson.eitherDecode body
+  where
+    request :: Request
+    request = mkRequest endpoint
+
+mkRequest :: FilePath -> Request
+mkRequest endpoint = (fromString $ "http://localhost" <> endpoint)
