@@ -1,2 +1,2 @@
 *.cabal linguist-generated=true
-/vim/test/assets/*.errors linguist-generated=true
+/vim/test/fixtures/*.errors linguist-generated=true
