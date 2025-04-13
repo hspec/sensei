@@ -3,7 +3,7 @@ foo [✘]
 
 Failures:
 
-  vim/test/assets/hspec.hs:6:11: 
+  vim/test/fixtures/hspec.hs:6:11: 
   1) foo
        expected: "bar"
         but got: "foo"

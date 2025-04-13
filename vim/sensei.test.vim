@@ -22,7 +22,7 @@ function PopulateQuickFixList(name)
 endfunction
 
 function GhcErrorsFor(name)
-  let errors = glob("vim/test/assets/" . a:name . ".*.errors", v:true, v:true)
+  let errors = glob("vim/test/fixtures/" . a:name . ".*.errors", v:true, v:true)
   call ShouldBe(len(errors), 5)
   return errors
 endfunction
@@ -151,11 +151,11 @@ for name in GhcErrorsFor("suggested-fix-multiline.hs")
   call ShouldBe(err.text, "\n    The type signature for ‘bar’ lacks an accompanying binding")
 endfor
 
-let errors = PopulateQuickFixList("vim/test/assets/hspec.hs.errors")
+let errors = PopulateQuickFixList("vim/test/fixtures/hspec.hs.errors")
 call ShouldBe(len(errors), 1)
 
 let err = errors[0]
-call ShouldBe(bufname(err.bufnr), "vim/test/assets/hspec.hs")
+call ShouldBe(bufname(err.bufnr), "vim/test/fixtures/hspec.hs")
 call ShouldBe(err.lnum, 6)
 call ShouldBe(err.col, 11)
 call ShouldBe(err.end_lnum, 0)
