@@ -1,4 +1,4 @@
 *.cabal linguist-generated=true
 /test/fixtures/**/*.json linguist-generated=true
 /test/fixtures/**/Foo.hs linguist-generated=true
-/vim/test/assets/*.errors linguist-generated=true
+/vim/test/fixtures/*.errors linguist-generated=true
