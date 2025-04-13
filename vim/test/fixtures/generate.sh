@@ -1,8 +1,8 @@
 #!/bin/bash
-cabal exec -- runhaskell vim/test/assets/hspec.hs --expert --seed 0 --no-color > vim/test/assets/hspec.hs.errors
-sed -i 's/Finished in 0.[0-9][0-9][0-9][0-9] seconds/Finished in 0.0005 seconds/' vim/test/assets/hspec.hs.errors
+cabal exec -- runhaskell vim/test/fixtures/hspec.hs --expert --seed 0 --no-color > vim/test/fixtures/hspec.hs.errors
+sed -i 's/Finished in 0.[0-9][0-9][0-9][0-9] seconds/Finished in 0.0005 seconds/' vim/test/fixtures/hspec.hs.errors
 
-cd vim/test/assets
+cd vim/test/fixtures
 
 for name in $(ls *.hs | grep -v hspec); do
   for ghc in ghc-9.6 ghc-9.8 ghc-9.10; do
