@@ -139,6 +139,7 @@ diagnostic severity = Diagnostic {
 , code = Nothing
 , message = []
 , hints = []
+, reason = Nothing
 }
 
 to_json :: ToJSON a => a -> ByteString
