@@ -1,8 +1,14 @@
 module Sensei.API (
-  config
+  get
+, post
+
+, modules
+, config
 , trigger
 , quickFix
 , deepFix
+
+, Modules(..)
 
 , Config(..)
 
@@ -22,6 +28,14 @@ import Data.Aeson qualified as Aeson
 
 import GHC.Diagnostic.Type (Span(..), Location(..))
 import HTTP.Util (makeRequest)
+
+modules :: FilePath -> IO (Either LazyByteString Modules)
+modules = get "/modules"
+
+data Modules = Modules {
+  modules :: [String]
+} deriving (Eq, Show, Generic)
+  deriving (ToJSON, FromJSON) via (KebabOptions Modules)
 
 config :: FilePath -> IO (Either LazyByteString Config)
 config = get "/config"

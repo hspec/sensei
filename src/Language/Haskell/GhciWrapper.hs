@@ -56,6 +56,7 @@ numericVersion ghc = strip <$> readProcess ghc ["--numeric-version"] ""
 
 data Config = Config {
   configIgnoreDotGhci :: Bool
+, configIgnore_GHC_ENVIRONMENT :: Bool
 , configWorkingDirectory :: Maybe FilePath
 , configHieDirectory :: Maybe FilePath
 , configEcho :: ByteString -> IO ()
@@ -92,16 +93,17 @@ withInterpreter config envDefaults args action = do
     hClose h
     bracket (new startupFile config envDefaults args) close action
 
-sanitizeEnv :: [(String, String)] -> [(String, String)]
-sanitizeEnv = filter p
+sanitizeEnv :: Config -> [(String, String)] -> [(String, String)]
+sanitizeEnv config = filter p
   where
     p ("HSPEC_FAILURES", _) = False
+    p ("GHC_ENVIRONMENT", _) = not config.configIgnore_GHC_ENVIRONMENT
     p _ = True
 
 new :: FilePath -> Config -> [(String, String)] -> [String] -> IO Interpreter
-new startupFile Config{..} envDefaults args_ = do
+new startupFile config@Config{..} envDefaults args_ = do
   checkDotGhci
-  env <- sanitizeEnv <$> getEnvironment
+  env <- sanitizeEnv config <$> getEnvironment
 
   let
     ghc :: String

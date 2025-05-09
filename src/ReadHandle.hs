@@ -18,7 +18,6 @@ module ReadHandle (
 import           Imports
 
 import qualified Data.ByteString.Char8 as ByteString
-import           Data.IORef
 import           System.IO hiding (stdin, stdout, stderr, isEOF)
 
 import           Data.ByteString (dropEnd)

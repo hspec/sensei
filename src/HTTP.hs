@@ -38,6 +38,7 @@ data AppConfig = AppConfig {
 , deepSeek :: Maybe Config.DeepSeek
 , trigger :: IO ()
 , getLastResult :: IO (Trigger.Result, String, [Diagnostic])
+, getModules :: IO [String]
 }
 
 socketAddr :: FilePath -> SockAddr
@@ -78,6 +79,9 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
 
   ["diagnostics"] -> requireMethod "GET" $ do
     getDiagnostics >>= respond . json
+
+  ["modules"] -> requireMethod "GET" $ do
+    config.getModules >>= respond . json . API.Modules
 
   ["config"] -> requireMethod "GET" do
     respond $ json API.Config { hieDir = config.hieDir }

@@ -14,7 +14,7 @@ import           Data.Aeson (encode)
 
 import           Config
 import           Config.DeepSeek
-import           Sensei.API hiding (config)
+import           Sensei.API hiding (get, post, config)
 import           HTTP (AppConfig(..))
 import qualified HTTP
 import qualified Trigger
