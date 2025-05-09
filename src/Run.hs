@@ -15,7 +15,6 @@ import qualified Prelude
 import           Imports
 
 import qualified Data.ByteString as ByteString
-import           Data.IORef
 import           System.IO hiding (putStrLn)
 import           System.IO.Temp (withSystemTempDirectory)
 import qualified System.FSNotify as FSNotify
@@ -77,6 +76,7 @@ run args = withSystemTempDirectory "sensei" \ hieDir -> do
     , deepSeek = config.deepSeek
     , trigger = emitTriggerAndWaitForDelivery queue
     , getLastResult = readMVar lastOutput
+    , getModules = readIORef runArgs.modules
     }
 
     watch :: IO () -> IO ()
@@ -117,15 +117,18 @@ defaultRunArgs :: Maybe FilePath -> IO RunArgs
 defaultRunArgs hieDir = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "", [])
+  modules <- newIORef []
   cleanupAction <- newCleanupAction
   return RunArgs {
     config = defaultConfig
   , dir = ""
   , args = []
   , lastOutput
+  , modules
   , queue = queue
   , sessionConfig = Session.Config {
       configIgnoreDotGhci = False
+    , configIgnore_GHC_ENVIRONMENT = False
     , configWorkingDirectory = Nothing
     , configHieDirectory = hieDir
     , configEcho = \ string -> ByteString.putStr string >> hFlush stdout
@@ -139,6 +142,7 @@ data RunArgs = RunArgs {
 , dir :: FilePath
 , args :: [String]
 , lastOutput :: MVar (Result, String, [Diagnostic])
+, modules :: IORef [String]
 , queue :: EventQueue
 , sessionConfig  :: Session.Config
 , withSession :: forall r. Session.Config -> [String] -> (Session.Session -> IO r) -> IO r
@@ -194,10 +198,10 @@ runWith RunArgs {..} = do
             sessionConfig.configEcho . encodeUtf8 . withColor Red $ arg <> "\n"
 
           triggerAction :: OnTestRunStarted -> IO ()
-          triggerAction = saveOutput (trigger session hooks <* printExtraArgs)
+          triggerAction = saveOutput (trigger modules session hooks <* printExtraArgs)
 
           triggerAllAction :: OnTestRunStarted -> IO ()
-          triggerAllAction = saveOutput (triggerAll session hooks <* printExtraArgs)
+          triggerAllAction = saveOutput (triggerAll modules session hooks <* printExtraArgs)
 
         triggerAction onTestRunStarted
         processQueue cleanupAction.run (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction

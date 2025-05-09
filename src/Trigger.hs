@@ -32,10 +32,10 @@ data Hooks = Hooks {
 data Result = HookFailed | Failure | Success
   deriving (Eq, Show)
 
-triggerAll :: Session -> Hooks -> IO (Result, String, [Diagnostic])
-triggerAll session hooks = do
+triggerAll :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Diagnostic])
+triggerAll modules session hooks = do
   resetSummary session
-  trigger session hooks
+  trigger modules session hooks
 
 removeProgress :: String -> String
 removeProgress xs = case break (== '\r') xs of
@@ -47,8 +47,8 @@ removeProgress xs = case break (== '\r') xs of
 
 type Trigger = ExceptT Result (WriterT (String, [Diagnostic]) IO)
 
-trigger :: Session -> Hooks -> IO (Result, String, [Diagnostic])
-trigger session hooks = runWriterT (runExceptT go) >>= \ case
+trigger :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Diagnostic])
+trigger modules session hooks = runWriterT (runExceptT go) >>= \ case
   (Left result, (output, diagnostics)) -> return (result, output, diagnostics)
   (Right (), (output, diagnostics)) -> return (Success, output, diagnostics)
   where
@@ -62,6 +62,7 @@ trigger session hooks = runWriterT (runExceptT go) >>= \ case
           echo $ withColor Red "RELOADING FAILED" <> "\n"
           abort
         Ok -> do
+          liftIO $ Session.modules session >>= atomicWriteIORef modules
           echo $ withColor Green "RELOADING SUCCEEDED" <> "\n"
 
       runHook hooks.afterReload

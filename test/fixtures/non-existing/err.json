@@ -1,1 +1,1 @@
-{"version":"1.0","ghcVersion":"ghc-9.10.1","span":null,"severity":"Error","code":49196,"message":["Can't find test/fixtures/non-existing/Foo.hs"],"hints":[]}
+{"version":"1.0","ghcVersion":"ghc-9.10.0","span":null,"severity":"Error","code":49196,"message":["Can't find test/fixtures/non-existing/Foo.hs"],"hints":[]}

@@ -70,6 +70,7 @@ silent _ = pass
 ghciConfig :: Config
 ghciConfig = Config {
   configIgnoreDotGhci = True
+, configIgnore_GHC_ENVIRONMENT = False
 , configWorkingDirectory = Nothing
 , configHieDirectory = Nothing
 , configEcho = silent
@@ -83,6 +84,7 @@ appConfig dir = HTTP.AppConfig {
 , deepSeek = Nothing
 , trigger = pass
 , getLastResult = return (Trigger.Success, "", [])
+, getModules = return []
 }
 
 withTempDirectory :: (FilePath -> IO a) -> IO a
@@ -133,7 +135,7 @@ failingSpec = unlines [
 diagnostic :: Severity -> Diagnostic
 diagnostic severity = Diagnostic {
   version = "1.0"
-, ghcVersion = "ghc-9.10.1"
+, ghcVersion = "ghc-" <> __GLASGOW_HASKELL_FULL_VERSION__
 , span = Nothing
 , severity
 , code = Nothing

@@ -7,6 +7,7 @@ import           Helper hiding (diagnostic)
 
 import           System.Process
 import           System.Environment
+import qualified Data.Text as Text
 
 import           Language.Haskell.GhciWrapper (lookupGhc)
 import           GHC.Diagnostic
@@ -16,13 +17,16 @@ data Requirement = NoRequirement | RequireGhc912
 test :: HasCallStack => FilePath -> [String] -> Maybe Action -> Spec
 test name args = testWith name NoRequirement args
 
+normalizeGhcVersion :: String -> String
+normalizeGhcVersion = Text.unpack . Text.replace __GLASGOW_HASKELL_FULL_VERSION__ "9.10.0" . Text.pack
+
 testWith :: HasCallStack => FilePath -> Requirement -> [String] -> Maybe Action -> Spec
 testWith name requirement extraArgs action = it name $ do
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
-  json <- encodeUtf8 <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
+  json <- ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
   ensureFile (dir </> "err.out") (encodeUtf8 err)
-  ensureFile (dir </> "err.json") json
-  Just diagnostic <- return $ parse json
+  ensureFile (dir </> "err.json") (encodeUtf8 $ normalizeGhcVersion json)
+  Just diagnostic <- return . parse $ encodeUtf8 json
   when shouldRun $ do
     format diagnostic `shouldBe` err
   normalizeFileName <$> analyze diagnostic `shouldBe` action

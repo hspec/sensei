@@ -46,12 +46,14 @@ trigger session = triggerWithHooks session defaultHooks
 
 triggerWithHooks :: Session -> Hooks -> IO (Result, [String])
 triggerWithHooks session hooks = do
-  (result, output, _) <- Trigger.trigger session hooks
+  modules <- newIORef []
+  (result, output, _) <- Trigger.trigger modules session hooks
   return (result, normalize output)
 
 triggerAll :: Session -> IO (Result, [String])
 triggerAll session = do
-  (result, output, _) <- Trigger.triggerAll session defaultHooks
+  modules <- newIORef []
+  (result, output, _) <- Trigger.triggerAll modules session defaultHooks
   return (result, normalize output)
 
 data HookExecuted = BeforeReloadSucceeded | AfterReloadSucceeded

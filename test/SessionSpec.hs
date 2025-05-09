@@ -36,16 +36,28 @@ spec = do
         withSession ["-XOverloadedStrings", "-Wall", "-Werror"] $ \ Session{..} -> do
           eval interpreter "23 :: Int" `shouldReturn` "23\n"
 
-  describe "hasSpec" $ around withSomeSpec $ do
-    context "when module contains spec" $ do
-      it "returns True" $ \ name -> do
-        withSession [name] $ \session -> do
+  describe "modules" do
+    it "lists available modules" do
+      let config = ghciConfig { configIgnore_GHC_ENVIRONMENT = True }
+      Session.withSession config ["-hide-all-packages", "-package", "haskeline"] \ session -> do
+        Session.modules session `shouldReturn` [
+            "System.Console.Haskeline"
+          , "System.Console.Haskeline.Completion"
+          , "System.Console.Haskeline.History"
+          , "System.Console.Haskeline.IO"
+          , "System.Console.Haskeline.Internal"
+          ]
+
+  describe "hasSpec" $ around withSomeSpec do
+    context "when module contains spec" do
+      it "returns True" \ name -> do
+        withSession [name] \ session -> do
           _ <- Session.reload session
           Session.hasSpec hspecCommand session `shouldReturn` True
 
     context "when module does not contain spec" $ do
-      it "returns False" $ \ name -> do
-        withSession [name] $ \session -> do
+      it "returns False" \ name -> do
+        withSession [name] \ session -> do
           writeFile name "module Main where"
           _ <- Session.reload session
           Session.hasSpec hspecCommand session `shouldReturn` False

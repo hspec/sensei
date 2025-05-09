@@ -8,6 +8,8 @@ module Session (
 , ReloadStatus(..)
 , reload
 
+, modules
+
 , Summary(..)
 , resetSummary
 , hspecPreviousSummary
@@ -28,7 +30,6 @@ module Session (
 
 import           Imports
 
-import           Data.IORef
 import qualified Data.ByteString as ByteString
 
 import           Language.Haskell.GhciWrapper hiding (reload)
@@ -66,6 +67,9 @@ withSession config args action = do
 
 reload :: MonadIO m => Session -> m (String, (ReloadStatus, [Diagnostic]))
 reload session = liftIO $ Interpreter.reload session.interpreter
+
+modules :: Session -> IO [String]
+modules session = map read . drop 1 . lines <$> eval session.interpreter ":complete repl \"import \""
 
 data Summary = Summary {
   summaryExamples :: Int

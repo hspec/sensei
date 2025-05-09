@@ -14,6 +14,7 @@ import           Control.Exception as Imports hiding (handle)
 import           Control.Monad as Imports
 import           Data.Function as Imports (fix)
 import           Control.Applicative as Imports
+import           Data.IORef as Imports
 import           Data.Functor as Imports ((<&>), ($>))
 import           Data.Foldable as Imports
 import           Data.Traversable as Imports
