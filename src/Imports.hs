@@ -50,6 +50,7 @@ import qualified Data.Text.Encoding as T
 import           Text.Casing
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
+import System.Clock
 
 newtype KebabOptions a = KebabOptions a
 
@@ -132,3 +133,11 @@ that = \ case
 
 atomicReadIORef :: IORef a -> IO a
 atomicReadIORef ref = atomicModifyIORef' ref (id &&& id)
+
+timeAction :: IO a -> IO (a, Double)
+timeAction action = do
+  start <- getTime Monotonic
+  result <- action
+  end <- getTime Monotonic
+  let diff = fromIntegral (toNanoSecs (diffTimeSpec end start)) / 1e9
+  return (result, diff)

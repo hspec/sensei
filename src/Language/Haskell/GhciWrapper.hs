@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Language.Haskell.GhciWrapper (
   Config(..)
-, Interpreter(echo)
+, Interpreter(echo, identifierMap)
 , withInterpreter
 , eval
 
@@ -22,10 +22,10 @@ module Language.Haskell.GhciWrapper (
 #endif
 ) where
 
+import Data.Text.Encoding qualified as T
 import           Imports
 
 import qualified Data.ByteString as ByteString
-import           Data.Text.Encoding qualified as T
 import           System.IO hiding (stdin, stdout, stderr)
 import           System.IO.Temp (withSystemTempFile)
 import           System.Environment (getEnvironment)
@@ -69,6 +69,7 @@ data Interpreter = Interpreter {
 , readHandle :: ReadHandle
 , process :: ProcessHandle
 , echo :: ByteString -> IO ()
+, identifierMap :: IORef Diagnostic.AvailableImports
 }
 
 die :: String -> IO a
@@ -144,6 +145,8 @@ new startupFile config@Config{..} envDefaults args_ = do
   setMode stdin_
   readHandle <- toReadHandle stdoutReadEnd 1024
 
+  identifierMap <- newIORef mempty
+
   let
     interpreter = Interpreter {
       hIn = stdin_
@@ -151,6 +154,7 @@ new startupFile config@Config{..} envDefaults args_ = do
     , hOut = stdoutReadEnd
     , process = processHandle
     , echo = configEcho
+    , identifierMap
     }
 
 
@@ -178,12 +182,15 @@ new startupFile config@Config{..} envDefaults args_ = do
       hSetEncoding h utf8
 
     printStartupMessages :: Interpreter -> IO (String, [Either ReloadStatus Annotated])
-    printStartupMessages ghci = evalVerbose (extractReloadDiagnostics mempty) ghci ""
+    printStartupMessages ghci = do
+      identifierMap <- readIORef ghci.identifierMap
+      evalVerbose (extractReloadDiagnostics identifierMap) ghci ""
 
 close :: Interpreter -> IO ()
 close ghci = do
   hClose ghci.hIn
-  ReadHandle.drain (extractReloadDiagnostics mempty) ghci.readHandle ghci.echo
+  identifierMap <- readIORef ghci.identifierMap
+  ReadHandle.drain (extractReloadDiagnostics identifierMap) ghci.readHandle ghci.echo
   hClose ghci.hOut
   e <- waitForProcess ghci.process
   when (e /= ExitSuccess) $ do
@@ -225,13 +232,16 @@ silent :: ByteString -> IO ()
 silent _ = pass
 
 eval :: Interpreter -> String -> IO String
-eval ghci = fmap fst . evalVerbose (extractDiagnostics mempty) ghci {echo = silent}
+eval ghci input = do
+  identifierMap <- readIORef ghci.identifierMap
+  fmap fst . evalVerbose (extractDiagnostics identifierMap) ghci {echo = silent} $ input
 
 evalVerbose :: Extract a -> Interpreter -> String -> IO (String, [a])
 evalVerbose extract ghci expr = putExpression ghci expr >> getResult extract ghci
 
 reload :: Interpreter -> IO (String, (ReloadStatus, [Annotated]))
 reload ghci = do
-  evalVerbose (extractReloadDiagnostics mempty) ghci ":reload" <&> second \ case
+  identifierMap <- readIORef ghci.identifierMap
+  evalVerbose (extractReloadDiagnostics identifierMap) ghci ":reload" <&> second \ case
     (partitionEithers -> ([Ok], diagnostics)) -> (Ok, diagnostics)
     (partitionEithers ->(_, diagnostics)) -> (Failed, diagnostics)
