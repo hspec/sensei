@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 module Run (
   run
 #ifdef TEST
@@ -141,7 +140,7 @@ data RunArgs = RunArgs {
   config :: Config
 , dir :: FilePath
 , args :: [String]
-, lastOutput :: MVar (Result, String, [Diagnostic])
+, lastOutput :: MVar (Result, String, [Annotated])
 , modules :: IORef [String]
 , queue :: EventQueue
 , sessionConfig  :: Session.Config
@@ -168,7 +167,7 @@ newCleanupAction = do
 runWith :: RunArgs -> IO ()
 runWith RunArgs {..} = do
   let
-    saveOutput :: IO (Trigger.Result, String, [Diagnostic]) -> OnTestRunStarted -> IO ()
+    saveOutput :: IO (Trigger.Result, String, [Annotated]) -> OnTestRunStarted -> IO ()
     saveOutput action onTestRunStarted = do
       cleanupAction.run
       result <- modifyMVar lastOutput $ \ _ -> do

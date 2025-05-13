@@ -6,10 +6,16 @@ import           Helper
 import           Test.QuickCheck
 import qualified Data.ByteString as ByteString
 
-import           Session (Summary(..), extractSummary)
-import           Language.Haskell.GhciWrapper (extractReloadDiagnostics, extractDiagnostics)
+import           Session (ReloadStatus, Summary(..), extractSummary)
+import qualified Language.Haskell.GhciWrapper as GhciWrapper
 
 import           ReadHandle
+
+extractReloadDiagnostics :: Extract (Either ReloadStatus Annotated)
+extractReloadDiagnostics = GhciWrapper.extractReloadDiagnostics mempty
+
+extractDiagnostics :: Extract Annotated
+extractDiagnostics = GhciWrapper.extractDiagnostics mempty
 
 chunkByteString :: (Int, Int) -> ByteString -> Gen [ByteString]
 chunkByteString size = go
@@ -113,7 +119,7 @@ spec = do
 
       context "with extractDiagnostics" $ do
         let
-          extract :: Extract Diagnostic
+          extract :: Extract Annotated
           extract = extractDiagnostics {
             parseMessage = fmap (second $ const "") . extractDiagnostics.parseMessage
           }
@@ -127,7 +133,7 @@ spec = do
             span = Just $ Span "Foo.hs" start start
 
             err1 :: Diagnostic
-            err1 = (diagnostic Error) { span }
+            err1 = diagnostic { span }
 
             err2 :: Diagnostic
             err2 = err1 { code = Just 23 }
@@ -143,7 +149,7 @@ spec = do
               ]
           withRandomChunkSizes chunks $ \ h -> do
             fmap mconcat . withSpy $ \ echo -> do
-              getResult extract h echo `shouldReturn` ("foo\nbar\nbaz\n", [err1, err2])
+              getResult extract h echo `shouldReturn` ("foo\nbar\nbaz\n", [Annotated err1 Nothing [], Annotated err2 Nothing []])
             `shouldReturn` "foo\nbar\nbaz\n"
 
         context "with a partial match" $ do

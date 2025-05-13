@@ -157,11 +157,11 @@ spec = do
           failingModule file
           snd <$> Interpreter.reload ghci `shouldReturn` (Failed, [
 #if __GLASGOW_HASKELL__ >= 910
-              (diagnostic Error) {
+              Annotated diagnostic {
                 span = Just $ Span file (Location 2 7) (Location 2 10)
               , code = Just 88464
               , message = ["Variable not in scope: bar"]
-              }
+              } (Just $ NotInScope "bar") []
 #endif
             ])
 

@@ -1,5 +1,7 @@
 module Main (main) where
 
+import           Prelude
+
 import           System.Exit
 import           System.Environment
 import           Control.Monad

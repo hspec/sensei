@@ -2,8 +2,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 module GHC.DiagnosticSpec (spec) where
 
-import           Prelude hiding (span)
-
 import           Helper hiding (diagnostic)
 import           Test.Hspec.Expectations.Contrib qualified as Hspec
 import           Text.RawString.QQ (r, rQ)
@@ -12,19 +10,22 @@ import           System.Process
 import           System.Environment
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import           Data.ByteString qualified as B
+import qualified Data.Map as Map
 
 import           Language.Haskell.GhciWrapper (lookupGhc)
 import           GHC.Diagnostic
+import           GHC.Diagnostic.Annotated
 
 data Requirement = NoRequirement | RequireGhc912
 
-test, ftest, xtest :: HasCallStack => FilePath -> [String] -> String -> Maybe Action -> Spec
+test, ftest, xtest :: HasCallStack => FilePath -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
 
 test name = testWith name NoRequirement
 
-ftest name args code = focus . test name args code
+ftest name args code annotation = focus . test name args code annotation
 
-xtest name args code = before_ pending . test name args code
+xtest name args code annotation = before_ pending . test name args code annotation
 
 _ignore :: ()
 _ignore = let _ = (ftest, xtest) in ()
@@ -32,8 +33,8 @@ _ignore = let _ = (ftest, xtest) in ()
 normalizeGhcVersion :: String -> String
 normalizeGhcVersion = T.unpack . T.replace __GLASGOW_HASKELL_FULL_VERSION__ "9.10.0" . T.pack
 
-testWith :: HasCallStack => FilePath -> Requirement -> [String] -> String -> Maybe Action -> Spec
-testWith name requirement extraArgs (unindent -> code) action = it name $ do
+testWith :: HasCallStack => FilePath -> Requirement -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
+testWith name requirement extraArgs (unindent -> code) annotation solutions = it name do
   unless (T.null code) do
     ensureFile src $ T.encodeUtf8 code
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
@@ -41,10 +42,11 @@ testWith name requirement extraArgs (unindent -> code) action = it name $ do
   ensureFile (dir </> "err.out") (encodeUtf8 err)
   ensureFile (dir </> "err.json") (encodeUtf8 $ normalizeGhcVersion json)
   Hspec.annotate (separator <> err <> separator) do
-    Just diagnostic <- return . parse $ encodeUtf8 json
-    when shouldRun $ do
-      format diagnostic `shouldBe` err
-    normalizeFileName <$> analyze diagnostic `shouldBe` action
+    Just annotated <- return . parseAnnotated availableImports $ encodeUtf8 json
+    when shouldRun do
+      format annotated.diagnostic `shouldBe` err
+    annotated.annotation `shouldBe` annotation
+    annotated.solutions `shouldBe` solutions
   where
     separator :: String
     separator = replicate 30 '*' <> "\n"
@@ -81,11 +83,11 @@ testWith name requirement extraArgs (unindent -> code) action = it name $ do
         True
 #endif
 
-normalizeFileName :: Action -> Action
-normalizeFileName = \ case
-  Choices choices -> Choices $ map normalizeFileName choices
-  AddExtension _ name -> AddExtension "Foo.hs" name
-  Replace span substitute -> Replace span {file = "Foo.hs"} substitute
+availableImports :: AvailableImports
+availableImports = Map.fromList [
+    ("c2w", ["Data.ByteString.Internal"])
+  , ("fromList", ["Data.Map"])
+  ]
 
 unindent :: String -> Text
 unindent (T.pack >>> T.dropWhileEnd isSpace >>> T.lines -> input) = go input
@@ -99,46 +101,38 @@ unindent (T.pack >>> T.dropWhileEnd isSpace >>> T.lines -> input) = go input
     dropEmptyLines :: [Text] -> [Text]
     dropEmptyLines = filter (not . T.all isSpace)
 
-replace :: Location -> Location -> Text -> Action
-replace start end = Replace (Span "Foo.hs" start end)
+redundantImport :: Maybe Annotation
+redundantImport = Just RedundantImport
 
-replace_ :: Location -> Location -> Text -> Maybe Action
-replace_ start end = Just . replace start end
+notInScope :: RequiredVariable -> Maybe Annotation
+notInScope = Just . NotInScope
 
-addExtension :: Text -> Maybe Action
-addExtension = Just . AddExtension "Foo.hs"
+importName :: Module -> Text -> Solution
+importName module_ = ImportName module_ Unqualified
 
 spec :: Spec
 spec = do
-  describe "format" $ do
+  describe "format" do
     test "not-in-scope" [] [r|
       module Foo where
       foo = c2w
-      |] Nothing
+      |] (notInScope "c2w") [importName "Data.ByteString.Internal" "c2w"]
 
     test "not-in-scope-perhaps-use" [] [r|
       module Foo where
       foo = filter_
-      |] $ replace_ (Location 2 7) (Location 2 14) "filter"
+      |] (notInScope "filter_") [UseName "filter"]
 
     test "not-in-scope-perhaps-use-one-of-these" [] [r|
       module Foo where
       foo = fold
-      |] $ Just . Choices $ map
-      (replace (Location 2 7) (Location 2 11)) [
-        "foldl"
-      , "foldr"
-      ]
+      |] (notInScope "fold") [UseName "foldl", UseName "foldr"]
 
     test "not-in-scope-perhaps-use-multiline" [] [r|
       module Foo where
       import Data.List
       foo = fold
-      |] $ Just . Choices $ map
-      (replace (Location 3 7) (Location 3 11)) [
-        "foldl"
-      , "foldr"
-      ]
+      |] (notInScope "fold") [UseName "foldl", UseName "foldr"]
 
     test "use-BlockArguments" [] [r|
       {-# LANGUAGE NoBlockArguments #-}
@@ -146,45 +140,62 @@ spec = do
 
       foo :: IO ()
       foo = id do return ()
-      |] $ addExtension "BlockArguments"
+      |] Nothing [EnableExtension "BlockArguments"]
 
     test "use-TemplateHaskellQuotes" [] [rQ|
       module Foo where
       foo = [|23|~]
-      |] $ addExtension "TemplateHaskellQuotes"
+      |] Nothing [EnableExtension "TemplateHaskellQuotes", EnableExtension "TemplateHaskell"]
 
     testWith "redundant-import" RequireGhc912 ["-Wall", "-Werror"] [r|
       module Foo where
       import Data.Maybe
-      |] $ replace_ (Location 2 1) (Location 3 1) ""
+      |] redundantImport [RemoveImport]
 
     test "non-existing" [] [r|
-      |] Nothing
+      |] Nothing []
 
     test "parse-error" [] [r|
       module Foo where
 
       data foo
-      |] Nothing
+      |] Nothing []
 
     test "lex-error" [] [r|
       module Foo where
 
       foo = "bar
-      |] Nothing
+      |] Nothing []
 
     test "multiple-error-messages" [] [r|
       module Foo where
 
       foo = "foo" + 23
-      |] Nothing
+      |] Nothing []
 
-  describe "extractIdentifiers" $ do
-    it "extracts identifiers" $ do
-      extractIdentifiers ".. `foldl' ..., `foldr' .." `shouldBe` ["foldl", "foldr"]
+  describe "extractIdentifiers" do
+    it "extracts identifiers" do
+      extractIdentifiers ".. `foldl' ..., `foldr' .." `shouldBe` [UseName "foldl", UseName "foldr"]
 
-  describe "applyReplace" $ do
-    it "replaces a given source span with a substitute" $ do
+  describe "qualifiedName" do
+    it "parses an unqualified name" do
+      qualifiedName "foo" `shouldBe` RequiredVariable Unqualified "foo" Nothing
+
+    it "parses a qualified name" do
+      qualifiedName "Foo.Bar.baz" `shouldBe` RequiredVariable "Foo.Bar" "baz" Nothing
+
+  describe "formatAnnotated" do
+    it "formats an annotated diagnostic message" do
+      Just annotated <- B.readFile "test/fixtures/not-in-scope/err.json" <&> parseAnnotated availableImports
+      formatAnnotated annotated `shouldBe` T.unlines [
+          "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
+        , "    Variable not in scope: c2w"
+        , ""
+        , T.pack (withColor Cyan "    [1] ") <> "import Data.ByteString.Internal (c2w)"
+        ]
+
+  describe "applyReplace" do
+    it "replaces a given source span with a substitute" do
       applyReplace (Location 2 7) (Location 2 14) "filter" [
           "module Foo where"
         , "foo = filter_ p xs"
@@ -193,7 +204,7 @@ spec = do
         , "foo = filter p xs"
         ]
 
-    it "correctly handles source spans that span over multiple lines" $ do
+    it "correctly handles source spans that span over multiple lines" do
       applyReplace (Location 2 8) (Location 3 7) "Ya" [
           "module Foo where"
         , "import Data.Maybe"
@@ -204,20 +215,3 @@ spec = do
         , "import Yabar"
         , "one = two"
         ]
-
-  describe "joinMessageLines" do
-    context "when a line starts with whitespace" do
-      it "joins that line with the previous line" do
-        joinMessageLines (T.unlines [
-            "foo"
-          , "  bar"
-          , "    baz"
-          , "foo"
-          , "bar"
-          , "baz"
-          ]) `shouldBe` T.unlines [
-            "foo bar baz"
-          , "foo"
-          , "bar"
-          , "baz"
-          ]

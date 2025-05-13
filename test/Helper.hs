@@ -19,7 +19,9 @@ module Helper (
 
 , timeout
 
+, Annotated(..)
 , Diagnostic(..)
+, Annotation(..)
 , Span(..)
 , Location(..)
 , Severity(..)
@@ -56,6 +58,7 @@ import           Language.Haskell.GhciWrapper
 import qualified Trigger
 
 import           GHC.Diagnostic
+import           GHC.Diagnostic.Annotated
 
 timeout :: HasCallStack => IO a -> IO a
 timeout action = do
@@ -132,12 +135,12 @@ failingSpec = unlines [
   , "  it \"bar\" False"
   ]
 
-diagnostic :: Severity -> Diagnostic
-diagnostic severity = Diagnostic {
+diagnostic :: Diagnostic
+diagnostic = Diagnostic {
   version = "1.0"
 , ghcVersion = "ghc-" <> __GLASGOW_HASKELL_FULL_VERSION__
 , span = Nothing
-, severity
+, severity = Error
 , code = Nothing
 , message = []
 , hints = []

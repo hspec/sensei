@@ -16,7 +16,7 @@ spec = do
   describe "createPrompt" $ do
     let
       diagnostic :: Diagnostic
-      diagnostic = (Helper.diagnostic Error) { span = Just span, message = ["some error"] }
+      diagnostic = Helper.diagnostic { span = Just span, message = ["some error"] }
 
       instructions :: Instructions
       instructions = Instructions span "some instructions"

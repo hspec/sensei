@@ -32,7 +32,7 @@ data Hooks = Hooks {
 data Result = HookFailed | Failure | Success
   deriving (Eq, Show)
 
-triggerAll :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Diagnostic])
+triggerAll :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Annotated])
 triggerAll modules session hooks = do
   resetSummary session
   trigger modules session hooks
@@ -45,9 +45,9 @@ removeProgress xs = case break (== '\r') xs of
     dropLastLine :: String -> String
     dropLastLine = reverse . dropWhile (/= '\n') . reverse
 
-type Trigger = ExceptT Result (WriterT (String, [Diagnostic]) IO)
+type Trigger = ExceptT Result (WriterT (String, [Annotated]) IO)
 
-trigger :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Diagnostic])
+trigger :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Annotated])
 trigger modules session hooks = runWriterT (runExceptT go) >>= \ case
   (Left result, (output, diagnostics)) -> return (result, output, diagnostics)
   (Right (), (output, diagnostics)) -> return (Success, output, diagnostics)
