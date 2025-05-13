@@ -2,10 +2,14 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module GHC.Diagnostic (
   module Diagnostic
+, annotate
 , Action(..)
 , analyze
 , apply
 #ifdef TEST
+, variableNotInScope
+, missingExtension
+, redundantImport
 , extractIdentifiers
 , applyReplace
 #endif
@@ -20,21 +24,82 @@ import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Builder (hPutBuilder)
 
 import           GHC.Diagnostic.Type as Diagnostic
+import           GHC.Diagnostic.Annotated
 
 data Action = Choices [Action] | AddExtension FilePath Text | Replace Span Text
   deriving (Eq, Show)
 
-analyze :: Diagnostic -> Maybe Action
-analyze diagnostic = analyzeCode <|> analyzeHints
+annotate :: Diagnostic -> Annotated
+annotate diagnostic = Annotated diagnostic annotation
   where
-    analyzeCode :: Maybe Action
-    analyzeCode = redundantImport
-      where
-        redundantImport :: Maybe Action
-        redundantImport = matchCode 66111 >> removeLines
+    annotation :: Maybe Annotation
+    annotation = analyzeCode <|> analyzeHints
+
+    analyzeCode :: Maybe Annotation
+    analyzeCode = matchCode 66111 >> redundantImport
 
     matchCode :: Int -> Maybe ()
     matchCode expected = guard $ diagnostic.code == Just expected
+
+    analyzeHints :: Maybe Annotation
+    analyzeHints = head $ mapMaybe analyzeHint diagnostic.hints
+
+    analyzeHint :: String -> Maybe Annotation
+    analyzeHint (T.pack -> hint) =
+          perhapsYouIntendedToUse
+      <|> enableAnyOfTheFollowingExtensions
+      <|> perhapsUse
+      <|> perhapsUseOneOfThese
+      where
+        perhapsYouIntendedToUse :: Maybe Annotation
+        perhapsYouIntendedToUse = T.stripPrefix "Perhaps you intended to use " hint >>= missingExtension . return . T.unpack
+
+        enableAnyOfTheFollowingExtensions :: Maybe Annotation
+        enableAnyOfTheFollowingExtensions = do
+          T.stripPrefix "Enable any of the following extensions: " hint
+            >>= missingExtension . map T.unpack . T.splitOn ", "
+
+        perhapsUse :: Maybe Annotation
+        perhapsUse = T.stripPrefix "Perhaps use `" hint
+          >>= variableNotInScope . return . T.unpack . takeIdentifier 
+          where
+            takeIdentifier :: Text -> Text
+            takeIdentifier = T.takeWhile (/= '\'')
+
+        perhapsUseOneOfThese :: Maybe Annotation
+        perhapsUseOneOfThese = do
+          T.stripPrefix "Perhaps use one of these:" hint
+          >>= variableNotInScope . map T.unpack . extractIdentifiers
+
+variableNotInScope :: [FilePath] -> Maybe Annotation
+variableNotInScope = Just . VariableNotInScopeAnnotation . VariableNotInScope
+
+missingExtension :: [FilePath] -> Maybe Annotation
+missingExtension = Just . MissingExtensionAnnotation . MissingExtension
+
+redundantImport :: Maybe Annotation
+redundantImport = Just $ RedundantImportAnnotation RedundantImport
+
+_analyze :: Annotated -> Maybe Action
+_analyze (Annotated diagnostic annotation) = foo
+  where
+    foo :: Maybe Action
+    foo = case annotation of
+      Just (RedundantImportAnnotation RedundantImport) -> removeLines
+      Just (MissingExtensionAnnotation (MissingExtension extensions)) -> do
+        file <- (.file) <$> diagnostic.span
+        choices $ map (AddExtension file) (map T.pack extensions)
+
+      Just (VariableNotInScopeAnnotation bar) -> do
+          replaces <- Replace <$> diagnostic.span
+          choices $ map (replaces . T.pack) bar.suggestions
+      Nothing -> Nothing
+
+    choices :: [Action] -> Maybe Action
+    choices = \ case
+      [] -> Nothing
+      [action] -> Just action
+      actions -> Just $ Choices actions
 
     removeLines :: Maybe Action
     removeLines = Replace <$> diagnosticLines <*> pure ""
@@ -47,36 +112,8 @@ analyze diagnostic = analyzeCode <|> analyzeHints
       , end = Location (span.end.line + 1) 1
       }
 
-    analyzeHints :: Maybe Action
-    analyzeHints = head $ mapMaybe analyzeHint diagnostic.hints
-
-    analyzeHint :: String -> Maybe Action
-    analyzeHint (T.pack -> hint) =
-          perhapsYouIntendedToUse
-      <|> enableAnyOfTheFollowingExtensions
-      <|> perhapsUse
-      <|> perhapsUseOneOfThese
-      where
-        perhapsYouIntendedToUse :: Maybe Action
-        perhapsYouIntendedToUse = do
-          AddExtension . (.file) <$> diagnostic.span <*> T.stripPrefix "Perhaps you intended to use " hint
-
-        enableAnyOfTheFollowingExtensions :: Maybe Action
-        enableAnyOfTheFollowingExtensions = do
-          file <- (.file) <$> diagnostic.span
-          T.stripPrefix "Enable any of the following extensions: " hint
-            >>= head . reverse . map (AddExtension file) . T.splitOn ", "
-
-        perhapsUse :: Maybe Action
-        perhapsUse = Replace <$> diagnostic.span <*> (takeIdentifier <$> T.stripPrefix "Perhaps use `" hint)
-          where
-            takeIdentifier :: Text -> Text
-            takeIdentifier = T.takeWhile (/= '\'')
-
-        perhapsUseOneOfThese :: Maybe Action
-        perhapsUseOneOfThese = do
-          replaces <- Replace <$> diagnostic.span
-          Choices . map replaces . extractIdentifiers <$> T.stripPrefix "Perhaps use one of these:" hint
+analyze :: Diagnostic -> Maybe Action
+analyze diagnostic = _analyze $ annotate diagnostic
 
 extractIdentifiers :: Text -> [Text]
 extractIdentifiers input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ input of

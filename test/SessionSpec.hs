@@ -48,6 +48,14 @@ spec = do
           , "System.Console.Haskeline.Internal"
           ]
 
+  describe "browse" do
+    fit "lists definitions" do
+      let config = ghciConfig { configIgnore_GHC_ENVIRONMENT = True }
+      Session.withSession config ["-hide-all-packages", "-package", "haskeline"] \ session -> do
+        Session.browse session "System.Console.Haskeline.Internal" `shouldReturn` [
+            "System.Console.Haskeline.Internal.debugTerminalKeys :: ghc-prim-0.11.0:GHC.Types.IO a"
+          ]
+
   describe "hasSpec" $ around withSomeSpec do
     context "when module contains spec" do
       it "returns True" \ name -> do

@@ -9,6 +9,7 @@ module Session (
 , reload
 
 , modules
+, browse
 
 , Summary(..)
 , resetSummary
@@ -70,6 +71,18 @@ reload session = liftIO $ Interpreter.reload session.interpreter
 
 modules :: Session -> IO [String]
 modules session = map read . drop 1 . lines <$> eval session.interpreter ":complete repl \"import \""
+
+browse :: Session -> String -> IO [String]
+browse session name = joinLines . lines <$> eval session.interpreter (":browse " <> name)
+  where
+    joinLines :: [String] -> [String]
+    joinLines = go
+      where
+        go :: [String] -> [String]
+        go = \ case
+          [] -> []
+          x : (span isSpace -> (_ : _, y)) : ys -> go $ (x <> " " <> y) : ys
+          x : xs -> x : go xs
 
 data Summary = Summary {
   summaryExamples :: Int

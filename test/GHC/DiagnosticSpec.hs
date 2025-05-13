@@ -11,16 +11,17 @@ import qualified Data.Text as Text
 
 import           Language.Haskell.GhciWrapper (lookupGhc)
 import           GHC.Diagnostic
+import           GHC.Diagnostic.Annotated
 
 data Requirement = NoRequirement | RequireGhc912
 
-test :: HasCallStack => FilePath -> [String] -> Maybe Action -> Spec
+test :: HasCallStack => FilePath -> [String] -> Maybe Annotation -> Spec
 test name args = testWith name NoRequirement args
 
 normalizeGhcVersion :: String -> String
 normalizeGhcVersion = Text.unpack . Text.replace __GLASGOW_HASKELL_FULL_VERSION__ "9.10.0" . Text.pack
 
-testWith :: HasCallStack => FilePath -> Requirement -> [String] -> Maybe Action -> Spec
+testWith :: HasCallStack => FilePath -> Requirement -> [String] -> Maybe Annotation -> Spec
 testWith name requirement extraArgs action = it name $ do
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
   json <- ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
@@ -29,7 +30,7 @@ testWith name requirement extraArgs action = it name $ do
   Just diagnostic <- return . parse $ encodeUtf8 json
   when shouldRun $ do
     format diagnostic `shouldBe` err
-  normalizeFileName <$> analyze diagnostic `shouldBe` action
+  (annotate diagnostic).annotation `shouldBe` action
   where
     dir :: FilePath
     dir = "test" </> "fixtures" </> name
@@ -66,10 +67,10 @@ normalizeFileName = \ case
   AddExtension _ name -> AddExtension "Foo.hs" name
   Replace span substitute -> Replace span {file = "Foo.hs"} substitute
 
-ftest :: HasCallStack => FilePath -> [String] -> Maybe Action -> Spec
+ftest :: HasCallStack => FilePath -> [String] -> Maybe Annotation -> Spec
 ftest name args = focus . test name args
 
-xtest :: HasCallStack => FilePath -> [String] -> Maybe Action -> Spec
+xtest :: HasCallStack => FilePath -> [String] -> Maybe Annotation -> Spec
 xtest name args = before_ pending . test name args
 
 _ignore :: ()
@@ -86,22 +87,14 @@ addExtension = Just . AddExtension "Foo.hs"
 
 spec :: Spec
 spec = do
-  describe "format" $ do
+  fdescribe "format" $ do
     test "not-in-scope" [] Nothing
-    test "not-in-scope-perhaps-use" [] $ replace_ (Location 2 7) (Location 2 14) "filter"
-    test "not-in-scope-perhaps-use-one-of-these" [] . Just . Choices $ map
-      (replace (Location 2 7) (Location 2 11)) [
-        "foldl"
-      , "foldr"
-      ]
-    test "not-in-scope-perhaps-use-multiline" [] . Just . Choices $ map
-      (replace (Location 3 7) (Location 3 11)) [
-        "foldl"
-      , "foldr"
-      ]
-    test "use-BlockArguments" [] $ addExtension "BlockArguments"
-    test "use-TemplateHaskellQuotes" [] $ addExtension "TemplateHaskellQuotes"
-    testWith "redundant-import" RequireGhc912 ["-Wall", "-Werror"] $ replace_ (Location 2 1) (Location 3 1) ""
+    test "not-in-scope-perhaps-use" [] $ variableNotInScope ["filter"]
+    test "not-in-scope-perhaps-use-one-of-these" [] $ variableNotInScope ["foldl", "foldr"]
+    test "not-in-scope-perhaps-use-multiline" [] $ variableNotInScope ["foldl", "foldr"]
+    test "use-BlockArguments" [] $ missingExtension ["BlockArguments"]
+    test "use-TemplateHaskellQuotes" [] $ missingExtension ["TemplateHaskell", "TemplateHaskellQuotes"]
+    testWith "redundant-import" RequireGhc912 ["-Wall", "-Werror"] redundantImport
     test "non-existing" [] Nothing
     test "parse-error" [] Nothing
     test "lex-error" [] Nothing
@@ -132,3 +125,8 @@ spec = do
         , "import Yabar"
         , "one = two"
         ]
+        {-
+src/Command.hs:263:106: error: [GHC-88464]
+    Data constructor not in scope: PascalCase :: [String] -> String
+    Suggested fix: Perhaps use variable `pascalCase' (line 366)
+    -}

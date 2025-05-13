@@ -76,7 +76,7 @@ run args = withSystemTempDirectory "sensei" \ hieDir -> do
     , deepSeek = config.deepSeek
     , trigger = emitTriggerAndWaitForDelivery queue
     , getLastResult = readMVar lastOutput
-    , getModules = readIORef runArgs.modules
+    , getModules = atomicReadIORef runArgs.modules
     }
 
     watch :: IO () -> IO ()

@@ -128,3 +128,6 @@ that = \ case
   This _ -> Nothing
   That b -> Just b
   These _ b -> Just b
+
+atomicReadIORef :: IORef a -> IO a
+atomicReadIORef ref = atomicModifyIORef' ref (id &&& id)
