@@ -68,8 +68,10 @@ library
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
@@ -140,8 +142,10 @@ executable seito
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
@@ -212,8 +216,10 @@ executable sensei
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
@@ -308,8 +314,10 @@ test-suite spec
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , hspec >=2.9.0

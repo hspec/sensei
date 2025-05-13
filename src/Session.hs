@@ -9,6 +9,7 @@ module Session (
 , reload
 
 , modules
+, browse
 
 , Summary(..)
 , resetSummary
@@ -18,6 +19,8 @@ module Session (
 , getRunSpec
 
 #ifdef TEST
+, parseFunction
+
 , runSpec
 , hasSpec
 , hasHspecCommandSignature
@@ -30,6 +33,7 @@ module Session (
 
 import           Imports
 
+import qualified Data.List as List
 import qualified Data.ByteString as ByteString
 
 import           Language.Haskell.GhciWrapper hiding (reload)
@@ -38,6 +42,9 @@ import qualified Language.Haskell.GhciWrapper as Interpreter
 import           Util
 import           Options
 import           GHC.Diagnostic
+
+import qualified Data.Text as T
+import qualified Data.Set as Set
 
 data Session = Session {
   interpreter :: Interpreter
@@ -68,8 +75,31 @@ withSession config args action = do
 reload :: MonadIO m => Session -> m (String, (ReloadStatus, [Annotated]))
 reload session = liftIO $ Interpreter.reload session.interpreter
 
-modules :: Session -> IO [String]
-modules session = map read . drop 1 . lines <$> eval session.interpreter ":complete repl \"import \""
+modules :: Session -> IO (Set String)
+modules session = Set.fromList . map read . drop 1 . lines <$> eval session.interpreter ":complete repl \"import \""
+
+browse :: Session -> String -> IO [Text]
+browse session name = do
+  -- FIXME: make class methods work, e.g. lift
+  xs <- joinLines . lines <$> eval session.interpreter (":browse " <> name)
+  let
+    foo :: [Text]
+    foo = mapMaybe parseFunction xs
+  return foo
+  where
+    joinLines :: [String] -> [String]
+    joinLines = go
+      where
+        go :: [String] -> [String]
+        go = \ case
+          [] -> []
+          x : (List.span isSpace -> (_ : _, y)) : ys -> go $ (x <> " " <> y) : ys
+          x : xs -> x : go xs
+
+parseFunction :: String -> Maybe Text
+parseFunction (T.pack -> input) = case T.breakOn " :: " input of
+  (_, "") -> Nothing
+  (xs, _) -> Just $ T.takeWhileEnd (/= '.') xs
 
 data Summary = Summary {
   summaryExamples :: Int
