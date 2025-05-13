@@ -32,7 +32,9 @@ library
       DeepSeek.Types
       EventQueue
       GHC.Diagnostic
+      GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
+      GHC.Diagnostic.Util
       HTTP
       HTTP.Util
       Imports
@@ -48,6 +50,7 @@ library
   hs-source-dirs:
       src
   default-extensions:
+      NoImplicitPrelude
       DuplicateRecordFields
       LambdaCase
       NoFieldSelectors
@@ -99,7 +102,9 @@ executable seito
       DeepSeek.Types
       EventQueue
       GHC.Diagnostic
+      GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
+      GHC.Diagnostic.Util
       HTTP
       HTTP.Util
       Imports
@@ -117,6 +122,7 @@ executable seito
       src
       driver
   default-extensions:
+      NoImplicitPrelude
       DuplicateRecordFields
       LambdaCase
       NoFieldSelectors
@@ -168,7 +174,9 @@ executable sensei
       DeepSeek.Types
       EventQueue
       GHC.Diagnostic
+      GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
+      GHC.Diagnostic.Util
       HTTP
       HTTP.Util
       Imports
@@ -186,6 +194,7 @@ executable sensei
       src
       driver
   default-extensions:
+      NoImplicitPrelude
       DuplicateRecordFields
       LambdaCase
       NoFieldSelectors
@@ -238,7 +247,9 @@ test-suite spec
       DeepSeek.Types
       EventQueue
       GHC.Diagnostic
+      GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
+      GHC.Diagnostic.Util
       HTTP
       HTTP.Util
       Imports
@@ -252,10 +263,12 @@ test-suite spec
       Session
       Trigger
       Util
+      BuilderSpec
       ClientSpec
       ConfigSpec
       DeepSeekSpec
       EventQueueSpec
+      GHC.Diagnostic.UtilSpec
       GHC.DiagnosticSpec
       Helper
       HTTPSpec
@@ -272,6 +285,7 @@ test-suite spec
       src
       test
   default-extensions:
+      NoImplicitPrelude
       DuplicateRecordFields
       LambdaCase
       NoFieldSelectors
