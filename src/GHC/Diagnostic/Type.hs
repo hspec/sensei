@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 module GHC.Diagnostic.Type (
   Diagnostic(..)
 , Span(..)

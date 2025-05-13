@@ -65,7 +65,7 @@ withSession config args action = do
   where
     (ghciArgs, hspecArgs) = splitArgs args
 
-reload :: MonadIO m => Session -> m (String, (ReloadStatus, [Diagnostic]))
+reload :: MonadIO m => Session -> m (String, (ReloadStatus, [Annotated]))
 reload session = liftIO $ Interpreter.reload session.interpreter
 
 modules :: Session -> IO [String]

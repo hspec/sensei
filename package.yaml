@@ -10,6 +10,7 @@ category: Development
 
 language: GHC2021
 default-extensions:
+  - NoImplicitPrelude
   - DuplicateRecordFields
   - LambdaCase
   - NoFieldSelectors
