@@ -1,13 +1,17 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingStrategies #-}
-module Builder where
+module Builder (
+  module Builder
+, Color(..)
+) where
 
-import Imports
+import Imports hiding (join, unlines)
 
 import Data.List qualified as List
 import Data.ByteString qualified as ByteString
 import Data.Text.Encoding qualified as Text
 import Data.Text.Internal.StrictBuilder qualified as StrictBuilder
+import System.Console.ANSI
 
 #if MIN_VERSION_text(2,1,2)
 newtype Builder = Builder StrictBuilder.StrictTextBuilder
@@ -17,7 +21,10 @@ newtype Builder = Builder StrictBuilder.StrictBuilder
   deriving newtype (Semigroup, Monoid)
 
 instance IsString Builder where
-  fromString = fromText . fromString
+  fromString = Builder.fromString
+
+fromString :: String -> Builder
+fromString = fromText . Imports.fromString
 
 fromText :: Text -> Builder
 fromText = Builder . StrictBuilder.fromText
@@ -33,7 +40,24 @@ readFile name = do
     False -> either throwIO (return . fromText) $ Text.decodeUtf8' c
 
 show :: Show a => a -> Builder
-show = fromString . Imports.show
+show = Builder.fromString . Imports.show
 
 join :: Builder -> [Builder] -> Builder
 join sep = mconcat . List.intersperse sep
+
+unlines :: [Builder] -> Builder
+unlines = \ case
+  [] -> mempty
+  l : ls -> l <> "\n" <> unlines ls
+
+withColor :: Color -> Builder -> Builder
+withColor color string =  set <> string <> reset
+  where
+    set :: Builder
+    set = Builder.fromString $ setSGRCode [SetColor Foreground Dull color]
+
+    reset :: Builder
+    reset = Builder.fromString $ setSGRCode []
+
+toByteString :: Builder -> ByteString
+toByteString = Text.encodeUtf8 . Builder.toText
