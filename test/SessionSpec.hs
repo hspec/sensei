@@ -7,6 +7,7 @@ import           System.Environment.Blank (setEnv)
 import           Language.Haskell.GhciWrapper (eval)
 import qualified Session
 import           Session hiding (withSession, runSpec)
+import qualified Data.Set as Set
 
 withSession :: [String] -> (Session -> IO a) -> IO a
 withSession = Session.withSession ghciConfig
@@ -40,13 +41,26 @@ spec = do
     it "lists available modules" do
       let config = ghciConfig { configIgnore_GHC_ENVIRONMENT = True }
       Session.withSession config ["-hide-all-packages", "-package", "haskeline"] \ session -> do
-        Session.modules session `shouldReturn` [
+        Session.modules session `shouldReturn` Set.fromList [
             "System.Console.Haskeline"
           , "System.Console.Haskeline.Completion"
           , "System.Console.Haskeline.History"
           , "System.Console.Haskeline.IO"
           , "System.Console.Haskeline.Internal"
           ]
+
+  describe "browse" do
+    it "lists definitions" do
+      let config = ghciConfig { configIgnore_GHC_ENVIRONMENT = True }
+      Session.withSession config ["-hide-all-packages", "-package", "haskeline"] \ session -> do
+        Session.browse session "System.Console.Haskeline.Internal" `shouldReturn` [
+            "debugTerminalKeys"
+          ]
+
+  describe "parseFunction" do
+    it "" do
+      parseFunction "GHC.Internal.List.zip :: [a] -> [b] -> [(a, b)]" `shouldBe` Just "zip"
+      parseFunction "GHC.Internal.List.zip" `shouldBe` Nothing
 
   describe "hasSpec" $ around withSomeSpec do
     context "when module contains spec" do

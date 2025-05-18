@@ -19,6 +19,7 @@ module Helper (
 
 , timeout
 
+, Annotated(..)
 , Diagnostic(..)
 , Span(..)
 , Location(..)
@@ -132,12 +133,12 @@ failingSpec = unlines [
   , "  it \"bar\" False"
   ]
 
-diagnostic :: Severity -> Diagnostic
-diagnostic severity = Diagnostic {
+diagnostic :: Diagnostic
+diagnostic = Diagnostic {
   version = "1.0"
 , ghcVersion = "ghc-" <> __GLASGOW_HASKELL_FULL_VERSION__
 , span = Nothing
-, severity
+, severity = Error
 , code = Nothing
 , message = []
 , hints = []
@@ -154,6 +155,7 @@ requireGhc (makeVersion -> required) = do
 
 ensureFile :: FilePath -> ByteString -> IO ()
 ensureFile name new = do
+  createDirectoryIfMissing True $ takeDirectory name
   old <- tryReadFile name
   unless (old == Just new) $ do
     ByteString.writeFile name new

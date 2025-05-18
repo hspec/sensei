@@ -6,12 +6,15 @@ module Trigger (
 , Result(..)
 , trigger
 , triggerAll
+
+, Modules
 #ifdef TEST
 , removeProgress
 #endif
 ) where
 
-import           Imports
+import           Prelude ()
+import           Imports hiding (mod)
 
 import           Control.Monad.Trans.Writer.CPS (runWriterT)
 import           Control.Monad.Writer.CPS hiding (pass)
@@ -24,6 +27,13 @@ import           Session (Session, ReloadStatus(..), isFailure, isSuccess, hspec
 import qualified Session
 import           GHC.Diagnostic
 
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import qualified Data.Text as T
+import qualified Language.Haskell.GhciWrapper
+
+type Modules = Set String
+
 data Hooks = Hooks {
   beforeReload :: Hook
 , afterReload :: Hook
@@ -32,10 +42,10 @@ data Hooks = Hooks {
 data Result = HookFailed | Failure | Success
   deriving (Eq, Show)
 
-triggerAll :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Diagnostic])
-triggerAll modules session hooks = do
+triggerAll :: Modules -> IORef Modules -> IORef IdentifierMap -> Session -> Hooks -> IO (Result, String, [Annotated])
+triggerAll globalModules modules globalIdentifierMap session hooks = do
   resetSummary session
-  trigger modules session hooks
+  trigger globalModules modules globalIdentifierMap session hooks
 
 removeProgress :: String -> String
 removeProgress xs = case break (== '\r') xs of
@@ -45,10 +55,10 @@ removeProgress xs = case break (== '\r') xs of
     dropLastLine :: String -> String
     dropLastLine = reverse . dropWhile (/= '\n') . reverse
 
-type Trigger = ExceptT Result (WriterT (String, [Diagnostic]) IO)
+type Trigger = ExceptT Result (WriterT (String, [Annotated]) IO)
 
-trigger :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Diagnostic])
-trigger modules session hooks = runWriterT (runExceptT go) >>= \ case
+trigger :: Modules -> IORef Modules -> IORef IdentifierMap -> Session -> Hooks -> IO (Result, String, [Annotated])
+trigger globalModules modules globalIdentifierMap session hooks = runWriterT (runExceptT go) >>= \ case
   (Left result, (output, diagnostics)) -> return (result, output, diagnostics)
   (Right (), (output, diagnostics)) -> return (Success, output, diagnostics)
   where
@@ -62,7 +72,23 @@ trigger modules session hooks = runWriterT (runExceptT go) >>= \ case
           echo $ withColor Red "RELOADING FAILED" <> "\n"
           abort
         Ok -> do
-          liftIO $ Session.modules session >>= atomicWriteIORef modules
+          echo $ withColor Green "constructing identifier map..." <> "\n"
+          liftIO do
+            atomicReadIORef globalIdentifierMap >>= writeIORef session.interpreter.identifierMap
+            xs <- (Set.\\ globalModules) <$> Session.modules session
+            atomicWriteIORef modules xs
+            for_ xs \ mod -> do
+              y <- Session.browse session mod
+
+              let
+                insert :: Text -> IdentifierMap -> IdentifierMap
+                insert name = Map.insertWith (++) name [Identifier (Module $ T.pack mod) $ T.unpack name]
+
+                insertAll :: IdentifierMap -> IdentifierMap
+                insertAll m = foldr insert m y
+
+              modifyIORef session.interpreter.identifierMap insertAll
+
           echo $ withColor Green "RELOADING SUCCEEDED" <> "\n"
 
       runHook hooks.afterReload

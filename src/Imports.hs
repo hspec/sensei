@@ -21,12 +21,13 @@ import           Data.Traversable as Imports
 import           Data.Bifunctor as Imports
 import           Data.Char as Imports
 import           Data.Either as Imports
-import           Data.List as Imports hiding (span, head)
+import           Data.List as Imports hiding (insert, span, head)
 import           Data.Maybe as Imports
 import           Data.String as Imports
 import           Data.ByteString.Char8 as Imports (ByteString, pack, unpack)
 import           Data.ByteString.Lazy as Imports (LazyByteString)
 import           Data.Tuple as Imports
+import           Data.Set as Imports (Set)
 import           System.FilePath as Imports hiding (addExtension, combine)
 import           System.IO.Error as Imports (isDoesNotExistError)
 import           Text.Read as Imports (readMaybe)
@@ -128,3 +129,6 @@ that = \ case
   This _ -> Nothing
   That b -> Just b
   These _ b -> Just b
+
+atomicReadIORef :: IORef a -> IO a
+atomicReadIORef ref = atomicModifyIORef' ref (id &&& id)

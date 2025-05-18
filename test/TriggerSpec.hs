@@ -46,14 +46,16 @@ trigger session = triggerWithHooks session defaultHooks
 
 triggerWithHooks :: Session -> Hooks -> IO (Result, [String])
 triggerWithHooks session hooks = do
-  modules <- newIORef []
-  (result, output, _) <- Trigger.trigger modules session hooks
+  modules <- newIORef mempty
+  globalIdentifierMap <- newIORef mempty
+  (result, output, _) <- Trigger.trigger mempty modules globalIdentifierMap session hooks
   return (result, normalize output)
 
 triggerAll :: Session -> IO (Result, [String])
 triggerAll session = do
-  modules <- newIORef []
-  (result, output, _) <- Trigger.triggerAll modules session defaultHooks
+  modules <- newIORef mempty
+  globalIdentifierMap <- newIORef mempty
+  (result, output, _) <- Trigger.triggerAll mempty modules globalIdentifierMap session defaultHooks
   return (result, normalize output)
 
 data HookExecuted = BeforeReloadSucceeded | AfterReloadSucceeded
