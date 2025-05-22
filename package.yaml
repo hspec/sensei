@@ -74,11 +74,13 @@ tests:
     dependencies:
       - hspec >= 2.9.0
       - hspec-contrib >= 0.5.2
+      - hspec-expectations >= 0.5.2
       - HUnit
       - QuickCheck
       - hspec-wai
       - wai-extra
       - mockery
       - vcr
+      - raw-strings-qq
     cpp-options: -DTEST
     build-tools: hspec-discover
