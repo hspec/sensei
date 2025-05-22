@@ -132,3 +132,20 @@ spec = do
         , "import Yabar"
         , "one = two"
         ]
+
+  describe "joinMessageLines" do
+    context "when a line starts with whitespace" do
+      it "joins that line with the previous line" do
+        joinMessageLines (Text.unlines [
+            "foo"
+          , "  bar"
+          , "    baz"
+          , "foo"
+          , "bar"
+          , "baz"
+          ]) `shouldBe` Text.unlines [
+            "foo bar baz"
+          , "foo"
+          , "bar"
+          , "baz"
+          ]

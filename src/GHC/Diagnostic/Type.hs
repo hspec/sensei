@@ -11,6 +11,7 @@ module GHC.Diagnostic.Type (
 
 import           Imports hiding ((<>), unlines, empty, unlines)
 
+import           Data.Text qualified as T
 import           Data.Aeson (decode)
 import           Data.ByteString.Lazy (fromStrict)
 import           Text.PrettyPrint
@@ -21,8 +22,8 @@ data Diagnostic = Diagnostic {
 , span :: Maybe Span
 , severity :: Severity
 , code :: Maybe Int
-, message :: [String]
-, hints :: [String]
+, message :: [Text]
+, hints :: [Text]
 } deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data Span = Span {
@@ -85,8 +86,8 @@ format diagnostic = render $ unlines [
       [doc] -> doc
       docs -> vcat $ map (char '•' <+>) docs
 
-    verbatim :: String -> Doc
-    verbatim = unlines . map text . lines
+    verbatim :: Text -> Doc
+    verbatim = unlines . map (text . T.unpack) . T.lines
 
     unlines :: [Doc] -> Doc
     unlines = foldr ($+$) empty
@@ -94,11 +95,11 @@ format diagnostic = render $ unlines [
 removeGhciSpecificHints :: Diagnostic -> Diagnostic
 removeGhciSpecificHints diagnostic = diagnostic { hints = map processHint diagnostic.hints }
   where
-    isSetLanguageExtension :: String -> Bool
-    isSetLanguageExtension = isPrefixOf "  :set -X"
+    isSetLanguageExtension :: Text -> Bool
+    isSetLanguageExtension = T.isPrefixOf "  :set -X"
 
-    processHint :: String -> String
-    processHint input = case lines input of
+    processHint :: Text -> Text
+    processHint input = case T.lines input of
       [hint, "You may enable this language extension in GHCi with:", ghciHint]
         | isSetLanguageExtension ghciHint -> hint
       hint : "You may enable these language extensions in GHCi with:" : ghciHints

@@ -8,6 +8,7 @@ module GHC.Diagnostic (
 #ifdef TEST
 , extractIdentifiers
 , applyReplace
+, joinMessageLines
 #endif
 ) where
 
@@ -27,6 +28,9 @@ data Action = Choices [Action] | AddExtension FilePath Text | Replace Span Text
 analyze :: Diagnostic -> Maybe Action
 analyze diagnostic = analyzeCode <|> analyzeHints
   where
+    _message :: [Text]
+    _message = map joinMessageLines diagnostic.message
+
     analyzeCode :: Maybe Action
     analyzeCode = redundantImport
       where
@@ -50,8 +54,8 @@ analyze diagnostic = analyzeCode <|> analyzeHints
     analyzeHints :: Maybe Action
     analyzeHints = head $ mapMaybe analyzeHint diagnostic.hints
 
-    analyzeHint :: String -> Maybe Action
-    analyzeHint (T.pack -> hint) =
+    analyzeHint :: Text -> Maybe Action
+    analyzeHint hint =
           perhapsYouIntendedToUse
       <|> enableAnyOfTheFollowingExtensions
       <|> perhapsUse
@@ -124,3 +128,12 @@ applyReplace start end substitute input =
   of
     Nothing -> input
     Just substituted -> before ++ T.encodeUtf8 substituted : after
+
+joinMessageLines :: Text -> Text
+joinMessageLines = T.intercalate "\n" . loop . T.splitOn "\n"
+  where
+    loop :: [Text] -> [Text]
+    loop = \ case
+      [] -> []
+      x : (T.span isSpace -> (T.null -> False, y)) : ys -> loop $ (x <> " " <> y) : ys
+      x : xs -> x : loop xs
