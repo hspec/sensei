@@ -154,6 +154,7 @@ requireGhc (makeVersion -> required) = do
 
 ensureFile :: FilePath -> ByteString -> IO ()
 ensureFile name new = do
+  createDirectoryIfMissing True $ takeDirectory name
   old <- tryReadFile name
   unless (old == Just new) $ do
     ByteString.writeFile name new
