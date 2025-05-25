@@ -28,9 +28,9 @@ withInfoColor :: String -> String
 withInfoColor = withColor Magenta
 
 withColor :: Color -> String -> String
-withColor c string =  set <> string <> reset
+withColor color string =  set <> string <> reset
   where
-    set = setSGRCode [SetColor Foreground Dull c]
+    set = setSGRCode [SetColor Foreground Dull color]
     reset = setSGRCode []
 
 -- |

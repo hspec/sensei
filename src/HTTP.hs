@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 module HTTP (
   AppConfig(..)
 , withApp
@@ -25,7 +24,8 @@ import           Util
 import qualified Trigger
 import qualified Config.DeepSeek as Config
 import qualified DeepSeek
-import           GHC.Diagnostic
+import           GHC.Diagnostic hiding (edits)
+import qualified GHC.Diagnostic as Diagnostic
 
 import           HTTP.Util
 import           Sensei.API (QuickFixRequest(..), DeepFixRequest(..))
@@ -37,7 +37,7 @@ data AppConfig = AppConfig {
 , putStrLn :: String -> IO ()
 , deepSeek :: Maybe Config.DeepSeek
 , trigger :: IO ()
-, getLastResult :: IO (Trigger.Result, String, [Diagnostic])
+, getLastResult :: IO (Trigger.Result, String, [Annotated])
 , getModules :: IO [String]
 }
 
@@ -78,7 +78,7 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
     getLastResult >>= textPlain
 
   ["diagnostics"] -> requireMethod "GET" $ do
-    getDiagnostics >>= respond . json
+    getDiagnostics >>= respond . json . map (.diagnostic)
 
   ["modules"] -> requireMethod "GET" $ do
     config.getModules >>= respond . json . API.Modules
@@ -92,16 +92,13 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
 
   ["quick-fix"] -> requireMethod "POST" $ do
     withJsonBody @QuickFixRequest \ quickFixRequest -> do
-      getDiagnostics <&> (head >=> analyze) >>= \ case
-        Just action -> do
-          apply dir quickFixRequest.choice action
-          noContent
-        Nothing -> do
-          noContent
+      edits <- maybe [] Diagnostic.edits . head <$> getDiagnostics
+      apply dir quickFixRequest.choice edits
+      noContent
 
   ["deep-fix"] -> requireMethod "POST" $ do
     withJsonBody @DeepFixRequest \ deepFixRequest -> do
-      diagnostics <- getDiagnostics
+      diagnostics <- map (.diagnostic) <$> getDiagnostics
       case theseFromMaybes (head diagnostics) deepFixRequest.instructions of
         Just instructions -> withDeepSeekConfig \ conf -> do
           DeepSeek.apply putStrLn conf dir instructions
@@ -118,7 +115,7 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
       Right quickFixRequest -> action quickFixRequest
       Left err -> badRequest err
 
-    getDiagnostics :: IO [Diagnostic]
+    getDiagnostics :: IO [Annotated]
     getDiagnostics = do
       (_, _, diagnostics) <- getLastResult
       return diagnostics
@@ -144,7 +141,7 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
       Just "true" -> Right True
       Just value -> Left $ "invalid value for color: " <> urlEncodeBuilder True value
 
-    textPlain :: (Trigger.Result, FilePath, [Diagnostic]) -> IO ResponseReceived
+    textPlain :: (Trigger.Result, FilePath, [Annotated]) -> IO ResponseReceived
     textPlain (result, xs, _diagnostics) = case color of
       Left err -> respond $ textResponse Status.badRequest400 err
       Right c -> respond . textResponse status . stringUtf8 $ strip xs

@@ -32,7 +32,9 @@ library
       DeepSeek.Types
       EventQueue
       GHC.Diagnostic
+      GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
+      GHC.Diagnostic.Util
       HTTP
       HTTP.Util
       Imports
@@ -48,6 +50,7 @@ library
   hs-source-dirs:
       src
   default-extensions:
+      NoImplicitPrelude
       DuplicateRecordFields
       LambdaCase
       NoFieldSelectors
@@ -65,8 +68,10 @@ library
     , base >=4.11 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
@@ -99,7 +104,9 @@ executable seito
       DeepSeek.Types
       EventQueue
       GHC.Diagnostic
+      GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
+      GHC.Diagnostic.Util
       HTTP
       HTTP.Util
       Imports
@@ -117,6 +124,7 @@ executable seito
       src
       driver
   default-extensions:
+      NoImplicitPrelude
       DuplicateRecordFields
       LambdaCase
       NoFieldSelectors
@@ -134,8 +142,10 @@ executable seito
     , base >=4.11 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
@@ -168,7 +178,9 @@ executable sensei
       DeepSeek.Types
       EventQueue
       GHC.Diagnostic
+      GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
+      GHC.Diagnostic.Util
       HTTP
       HTTP.Util
       Imports
@@ -186,6 +198,7 @@ executable sensei
       src
       driver
   default-extensions:
+      NoImplicitPrelude
       DuplicateRecordFields
       LambdaCase
       NoFieldSelectors
@@ -203,8 +216,10 @@ executable sensei
     , base >=4.11 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
@@ -238,7 +253,9 @@ test-suite spec
       DeepSeek.Types
       EventQueue
       GHC.Diagnostic
+      GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
+      GHC.Diagnostic.Util
       HTTP
       HTTP.Util
       Imports
@@ -252,10 +269,12 @@ test-suite spec
       Session
       Trigger
       Util
+      BuilderSpec
       ClientSpec
       ConfigSpec
       DeepSeekSpec
       EventQueueSpec
+      GHC.Diagnostic.UtilSpec
       GHC.DiagnosticSpec
       Helper
       HTTPSpec
@@ -272,6 +291,7 @@ test-suite spec
       src
       test
   default-extensions:
+      NoImplicitPrelude
       DuplicateRecordFields
       LambdaCase
       NoFieldSelectors
@@ -294,8 +314,10 @@ test-suite spec
     , base >=4.11 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , hspec >=2.9.0
