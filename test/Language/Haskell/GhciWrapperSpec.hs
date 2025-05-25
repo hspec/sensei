@@ -7,7 +7,6 @@ import qualified Data.ByteString.Char8 as ByteString
 
 import           Language.Haskell.GhciWrapper (Config(..), Interpreter(..), ReloadStatus(..), Extract(..))
 import qualified Language.Haskell.GhciWrapper as Interpreter
-import           GHC.Diagnostic.Annotated
 
 main :: IO ()
 main = hspec spec

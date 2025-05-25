@@ -19,7 +19,7 @@ module GHC.Diagnostic (
 
 import           Imports hiding (stripPrefix)
 import           Builder (Builder, Color(..))
-import qualified Builder as Builder
+import qualified Builder
 
 import           System.IO
 import           Data.Text (stripPrefix, stripSuffix)
@@ -39,10 +39,10 @@ formatAnnotated annotated = Builder.toText $
   fromString (format annotated.diagnostic) <> formatSolutions annotated.solutions
 
 formatSolutions :: [Solution] -> Builder
-formatSolutions = Builder.unlines . map formatNumbered . zip [1..]
+formatSolutions = Builder.unlines . zipWith formatNumbered [1..]
   where
-    formatNumbered :: (Int, Solution) -> Builder
-    formatNumbered (n, solution) = formatNumber n <> formatSolution solution
+    formatNumbered :: Int -> Solution -> Builder
+    formatNumbered n solution = formatNumber n <> formatSolution solution
 
     formatNumber :: Int -> Builder
     formatNumber n = Builder.withColor Cyan $ "    " <> "[" <> Builder.show n <> "] "

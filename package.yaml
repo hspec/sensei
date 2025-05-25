@@ -22,7 +22,7 @@ default-extensions:
   - DerivingVia
 
 dependencies:
-  - base >= 4.11 && < 5
+  - base >= 4.18 && < 5
   - pretty
   - process
   - fsnotify == 0.4.*
