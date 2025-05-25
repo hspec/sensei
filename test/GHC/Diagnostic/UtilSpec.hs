@@ -8,7 +8,7 @@ import GHC.Diagnostic.Annotated
 import GHC.Diagnostic.Util
 
 spec :: Spec
-spec = focus do
+spec = do
   describe "joinMessageLines" do
     context "when a line starts with whitespace" do
       it "joins that line with the previous line" do

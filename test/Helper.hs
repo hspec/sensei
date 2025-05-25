@@ -21,6 +21,7 @@ module Helper (
 
 , Annotated(..)
 , Diagnostic(..)
+, Annotation(..)
 , Span(..)
 , Location(..)
 , Severity(..)
@@ -57,6 +58,7 @@ import           Language.Haskell.GhciWrapper
 import qualified Trigger
 
 import           GHC.Diagnostic
+import           GHC.Diagnostic.Annotated
 
 timeout :: HasCallStack => IO a -> IO a
 timeout action = do
