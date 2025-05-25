@@ -19,6 +19,7 @@ module Helper (
 
 , timeout
 
+, Annotated(..)
 , Diagnostic(..)
 , Span(..)
 , Location(..)
@@ -132,12 +133,12 @@ failingSpec = unlines [
   , "  it \"bar\" False"
   ]
 
-diagnostic :: Severity -> Diagnostic
-diagnostic severity = Diagnostic {
+diagnostic :: Diagnostic
+diagnostic = Diagnostic {
   version = "1.0"
 , ghcVersion = "ghc-" <> __GLASGOW_HASKELL_FULL_VERSION__
 , span = Nothing
-, severity
+, severity = Error
 , code = Nothing
 , message = []
 , hints = []

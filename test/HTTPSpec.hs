@@ -18,7 +18,7 @@ import           Sensei.API hiding (get, post, config)
 import           HTTP (AppConfig(..))
 import qualified HTTP
 import qualified Trigger
-import qualified GHC.Diagnostic.Type as Diagnostic
+import qualified GHC.Diagnostic as Diagnostic
 
 verbose :: Bool
 verbose = False
@@ -38,7 +38,7 @@ spec = do
       file :: FilePath
       file = "Foo.hs"
 
-      withApp :: (Trigger.Result, String, [Diagnostic]) -> SpecWith (FilePath, Application) -> Spec
+      withApp :: (Trigger.Result, String, [Annotated]) -> SpecWith (FilePath, Application) -> Spec
       withApp lastResult = around \ item -> withTempDirectory \ dir -> do
         item (dir, HTTP.app (appConfig dir) { getLastResult = return lastResult })
 
@@ -51,8 +51,8 @@ spec = do
           copySource :: IO ()
           copySource = readFile (testCaseDir </> file) >>= writeFile (dir </> file)
 
-          readErrFile :: IO (Maybe Diagnostic)
-          readErrFile = fmap normalizeFileName . Diagnostic.parse <$> B.readFile (testCaseDir </> "err.json")
+          readErrFile :: IO (Maybe Annotated)
+          readErrFile = fmap normalizeFileName . Diagnostic.parseAnnotated mempty <$> B.readFile (testCaseDir </> "err.json")
 
         copySource
         Just err <- readErrFile
@@ -67,8 +67,11 @@ spec = do
 
         item (dir, app)
         where
-          normalizeFileName :: Diagnostic -> Diagnostic
-          normalizeFileName err = err { span = normalizeSpan <$> err.span }
+          normalizeFileName :: Annotated -> Annotated
+          normalizeFileName annotated = annotated { diagnostic = normalizeDiagnostic annotated.diagnostic }
+
+          normalizeDiagnostic :: Diagnostic -> Diagnostic
+          normalizeDiagnostic err = err { span = normalizeSpan <$> err.span }
 
           normalizeSpan :: Span -> Span
           normalizeSpan span = span { file }
@@ -109,12 +112,12 @@ spec = do
         span = Just $ Span "Foo.hs" start start
 
         err :: Diagnostic
-        err = (diagnostic Error) { span, message = ["failure"] }
+        err = diagnostic { span, message = ["failure"] }
 
         expected :: ResponseMatcher
         expected = fromString . decodeUtf8 $ to_json [err]
 
-      withApp (Trigger.Failure, "", [err]) $ do
+      withApp (Trigger.Failure, "", [Annotated err Nothing []]) $ do
         it "returns GHC diagnostics" $ do
           get "/diagnostics" `shouldRespondWith` expected
 
