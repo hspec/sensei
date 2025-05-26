@@ -148,10 +148,10 @@ parseAnnotation diagnostic = asum [
 
     analyzeMessageLine :: Text -> Maybe Annotation
     analyzeMessageLine input = asum [
-        NotInScope <$> variableNotInScope
-      , NotInScope <$> qualifiedNameNotInScope
-      , NotInScope <$> dataConstructorNotInScope
-      , NotInScope <$> dataConstructorNotInScopeInPattern
+        VariableNotInScope <$> variableNotInScope
+      , VariableNotInScope <$> qualifiedNameNotInScope
+      , VariableNotInScope <$> dataConstructorNotInScope
+      , VariableNotInScope <$> dataConstructorNotInScopeInPattern
       , typeConstructorNotInScope
       , foundHole
       ]
@@ -225,9 +225,14 @@ qualifiedName :: Text -> RequiredVariable
 qualifiedName = breakOnTypeSignature $ qualified RequiredVariable
 
 qualified :: (Qualification -> Text -> t) -> Text -> t
-qualified c input = case breakOnEnd "." input of
-  ("", name) -> c Unqualified name
-  (qualification, name) -> c (Qualified qualification) name
+qualified c input = case stripParensAroundOperators input of
+  Just operator -> c Unqualified operator
+  Nothing -> case breakOnEnd "." input of
+    ("", name) -> c Unqualified name
+    (qualification, name) -> c (Qualified qualification) name
+
+stripParensAroundOperators :: Text -> Maybe Text
+stripParensAroundOperators = T.stripPrefix "(" >=> T.stripSuffix ")"
 
 breakOn :: Text -> Text -> (Text, Text)
 breakOn sep = second (T.drop $ T.length sep) . T.breakOn sep
@@ -238,7 +243,7 @@ breakOnEnd sep = first (T.dropEnd $ T.length sep) . T.breakOnEnd sep
 analyzeAnnotation :: AvailableImports -> Annotation -> [Solution]
 analyzeAnnotation availableImports = \ case
   RedundantImport -> [RemoveImport]
-  NotInScope variable -> importName variable.qualification (Name VariableName variable.name)
+  VariableNotInScope variable -> importName variable.qualification (Name VariableName variable.name)
   TypeNotInScope qualification name -> importName qualification (Name TypeName name)
   FoundHole _ fits -> map (UseName . (.name)) fits
   where
@@ -323,8 +328,13 @@ addImport statement input = case break (B.isPrefixOf "import ") input of
 
 importStatement :: Module -> Qualification -> [Text] -> Builder
 importStatement (Module (Builder.fromText -> module_)) qualification names = case qualification of
-  Unqualified -> "import " <> module_ <> " (" <> Builder.join ", " (map Builder.fromText names) <> ")"
+  Unqualified -> "import " <> module_ <> " (" <> Builder.join ", " (map formatImportItem names) <> ")"
   Qualified name -> "import " <> module_ <> " qualified as " <> Builder.fromText name
+  where
+    formatImportItem :: Text -> Builder
+    formatImportItem name = case T.uncons name of
+      Just (c, _) | isLetter c || c == '_' -> Builder.fromText name
+      _ -> "(" <> Builder.fromText name <> ")"
 
 applyReplace :: Location -> Location -> Text -> [ByteString] -> [ByteString]
 applyReplace start end substitute input =

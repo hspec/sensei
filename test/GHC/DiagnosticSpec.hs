@@ -6,13 +6,13 @@ import Helper hiding (diagnostic)
 import Test.Hspec.Expectations.Contrib qualified as Hspec
 import Text.RawString.QQ (r, rQ)
 
+import System.IO.Unsafe (unsafePerformIO)
 import System.Process
 import System.Console.ANSI.Codes
 import Control.Concurrent.Async qualified as Async
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.ByteString qualified as B
-import Data.Map qualified as Map
 
 import HIE qualified as HIE
 
@@ -82,11 +82,18 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
       c -> c
 
 getAvailableImports :: IO AvailableImports
-getAvailableImports = return $ Map.fromList [
-    (Name VariableName "c2w", ["Data.ByteString.Internal"])
-  , (Name VariableName "fromList", ["Data.Map"])
-  , (Name VariableName "NoArg", [ProvidedBy "System.Console.GetOpt" (Just "ArgDescr")])
-  ]
+getAvailableImports = do
+  require GHC_908
+  getAvailableImports_
+
+{-# NOINLINE getAvailableImports_ #-}
+getAvailableImports_ :: IO AvailableImports
+getAvailableImports_ = unsafePerformIO do
+  info <- ghcInfo
+  imports <- HIE.with (\ _ -> pass) info \ _ getImports async -> do
+    Async.wait async
+    getImports
+  return $ return imports
 
 unindent :: String -> Text
 unindent (T.pack >>> T.dropWhileEnd isSpace >>> T.lines -> input) = go input
@@ -104,7 +111,7 @@ redundantImport :: Maybe Annotation
 redundantImport = Just RedundantImport
 
 notInScope :: RequiredVariable -> Maybe Annotation
-notInScope = Just . NotInScope
+notInScope = Just . VariableNotInScope
 
 foundHole :: Type -> [HoleFit] -> Maybe Annotation
 foundHole type_ = Just . FoundHole type_
@@ -117,13 +124,15 @@ spec = do
   describe "format" do
     test "not-in-scope" [] [r|
       module Foo where
-      foo = c2w
-      |] (notInScope "c2w") [importName "Data.ByteString.Internal" "c2w"]
+      foo = catMaybes
+      |] (notInScope "catMaybes") [importName "Data.Maybe" "catMaybes"]
 
     test "not-in-scope-qualified" [] [r|
       module Foo where
-      foo = B.c2w
-      |] (notInScope (RequiredVariable "B" "c2w" NoTypeSignature)) [ImportName "Data.ByteString.Internal" "B" "c2w"]
+      foo = M.catMaybes
+      |] (notInScope (RequiredVariable "M" "catMaybes" NoTypeSignature)) [
+        ImportName "Data.Maybe" "M" "catMaybes"
+      ]
 
     test "not-in-scope-with-type" [] [r|
       module Foo where
@@ -139,13 +148,40 @@ spec = do
     test "not-in-scope-perhaps-use-one-of-these" [] [r|
       module Foo where
       foo = fold
-      |] (notInScope "fold") [UseName "foldl", UseName "foldr"]
+      |] (notInScope "fold") [
+        UseName "foldl"
+      , UseName "foldr"
+      , importName "Data.Foldable" "Foldable(..)"
+      ]
 
     test "not-in-scope-perhaps-use-multiline" [] [r|
       module Foo where
       import Data.List
       foo = fold
-      |] (notInScope "fold") [UseName "foldl", UseName "foldr"]
+      |] (notInScope "fold") [
+        UseName "foldl"
+      , UseName "foldr"
+      , importName "Data.Foldable" "Foldable(..)"
+      ]
+
+    test "not-in-scope-operator" [] [r|
+      module Foo where
+      foo = (<&>)
+      |] (notInScope (RequiredVariable Unqualified "<&>" NoTypeSignature)) [
+        UseName "<>"
+      , UseName "<$>"
+      , UseName "<*>"
+      , importName "Data.Functor" "<&>"
+      ]
+
+    test "not-in-scope-operator-infix" [] [r|
+      module Foo where
+      foo :: [a] -> (Int, [a])
+      foo = length &&& id
+      |] (notInScope (RequiredVariable Unqualified "&&&" "(t0 a0 -> Int) -> (a1 -> a1) -> [a] -> (Int, [a])")) [
+        UseName "&&"
+      , importName "Control.Arrow" "Arrow(..)"
+      ]
 
     test "not-in-scope-type" [] [r|
       module Foo where
@@ -162,20 +198,26 @@ spec = do
     test "not-in-scope-data" [] [r|
       module Foo where
       foo = NoArg
-      |] (notInScope "NoArg") [importName "System.Console.GetOpt" "ArgDescr(..)"]
+      |] (notInScope "NoArg") [
+        importName "System.Console.GetOpt" "ArgDescr(..)"
+      ]
 
     test "not-in-scope-data-with-type" [] [r|
       module Foo where
 
       foo :: Maybe Int
       foo = Foo (23 :: Int)
-      |] (notInScope (RequiredVariable Unqualified "Foo" "Int -> Maybe Int")) [UseName "foo"]
+      |] (notInScope (RequiredVariable Unqualified "Foo" "Int -> Maybe Int")) [
+        UseName "foo"
+      ]
 
     test "not-in-scope-pattern" [] [r|
       module Foo where
       foo = case undefined of
         NoArg -> undefined
-      |] (notInScope "NoArg") [importName "System.Console.GetOpt" "ArgDescr(..)"]
+      |] (notInScope "NoArg") [
+        importName "System.Console.GetOpt" "ArgDescr(..)"
+      ]
 
     test "found-hole" [] [r|
       module Foo where
@@ -351,36 +393,51 @@ spec = do
       qualifiedName "Foo.Bar.baz :: Int -> Int" `shouldBe` RequiredVariable "Foo.Bar" "baz" "Int -> Int"
 
   describe "formatAnnotated" do
+    let
+      set :: Text
+      set = T.pack $ setSGRCode [SetColor Foreground Vivid Magenta, SetConsoleIntensity BoldIntensity]
+
+      reset :: Text
+      reset = T.pack $ setSGRCode [Reset]
+
+      solution :: Int -> Text -> Text
+      solution n m = mconcat [set, "    [", fromString (show n), "] ", reset, m]
+
     it "formats an annotated diagnostic message" do
-      let
-        set = T.pack $ setSGRCode [SetColor Foreground Vivid Magenta, SetConsoleIntensity BoldIntensity]
-        reset = T.pack $ setSGRCode [Reset]
 
       Just annotated <- B.readFile "test/fixtures/not-in-scope/err.json" >>= parseAnnotated getAvailableImports
       formatAnnotated 1 annotated `shouldBe` (2, T.unlines [
           "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
-        , "    Variable not in scope: c2w"
+        , "    Variable not in scope: catMaybes"
         , ""
-        , set <> "    [1] " <> reset <> "import Data.ByteString.Internal (c2w)"
+        , solution 1 "import Data.Maybe (catMaybes)"
+        , ""
+        ])
+
+    it "formats an annotated diagnostic message" do
+      Just annotated <- B.readFile "test/fixtures/not-in-scope-operator/err.json" >>= parseAnnotated getAvailableImports
+      formatAnnotated 1 annotated `shouldBe` (5, T.unlines [
+          "test/fixtures/not-in-scope-operator/Foo.hs:2:7: error: [GHC-88464]"
+        , "    Variable not in scope: <&>"
+        , "    Suggested fix:"
+        , "      Perhaps use one of these:"
+        , "        `<>' (imported from Prelude), `<$>' (imported from Prelude),"
+        , "        `<*>' (imported from Prelude)"
+        , ""
+        , solution 1 "Use <>"
+        , solution 2 "Use <$>"
+        , solution 3 "Use <*>"
+        , solution 4 "import Data.Functor ((<&>))"
         , ""
         ])
 
   describe "analyzeAnnotation" do
-    let
-      withAvailableImports :: (AvailableImports -> IO a) -> IO a
-      withAvailableImports item = do
-        require GHC_908
-        info <- ghcInfo
-        HIE.with (\ _ -> pass) info \ _ getAvailable async -> do
-          Async.wait async
-          getAvailable >>= item
-
-    aroundAll withAvailableImports do
+    beforeAll getAvailableImports do
       context "with NotInScope" do
         it "suggests functions" \ availableImports -> do
           let
             annotation :: Annotation
-            annotation = NotInScope (RequiredVariable Unqualified "unlit" NoTypeSignature)
+            annotation = VariableNotInScope (RequiredVariable Unqualified "unlit" NoTypeSignature)
           analyzeAnnotation availableImports annotation `shouldBe` [
               ImportName "Text.Markdown.Unlit" Unqualified "unlit"
             ]
@@ -388,7 +445,7 @@ spec = do
         it "suggests constructors" \ availableImports -> do
           let
             annotation :: Annotation
-            annotation = NotInScope (RequiredVariable Unqualified "Option" NoTypeSignature)
+            annotation = VariableNotInScope (RequiredVariable Unqualified "Option" NoTypeSignature)
           analyzeAnnotation availableImports annotation `shouldBe` [
               ImportName "System.Console.GetOpt" Unqualified "OptDescr(..)"
             ]
@@ -396,7 +453,7 @@ spec = do
         it "does not suggest types" \ availableImports -> do
           let
             annotation :: Annotation
-            annotation = NotInScope (RequiredVariable Unqualified "OptDescr" NoTypeSignature)
+            annotation = VariableNotInScope (RequiredVariable Unqualified "OptDescr" NoTypeSignature)
           analyzeAnnotation availableImports annotation `shouldBe` [
             ]
 
