@@ -1,2 +1,2 @@
 module Foo where
-foo = catMaybes
+foo = (<&>)

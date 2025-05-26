@@ -1,1 +1,1 @@
-{"version":"1.0","ghcVersion":"ghc-9.10.0","span":{"file":"test/fixtures/not-in-scope-qualified/Foo.hs","start":{"line":2,"column":7},"end":{"line":2,"column":12}},"severity":"Error","code":76037,"message":["Not in scope: `B.c2w'\nNB: no module named `B' is imported."],"hints":[]}
+{"version":"1.0","ghcVersion":"ghc-9.10.0","span":{"file":"test/fixtures/not-in-scope-qualified/Foo.hs","start":{"line":2,"column":7},"end":{"line":2,"column":18}},"severity":"Error","code":76037,"message":["Not in scope: `M.catMaybes'\nNB: no module named `M' is imported."],"hints":[]}

@@ -175,7 +175,7 @@ spec = do
                     span = Just $ Span file (Location 2 7) (Location 2 10)
                   , code = Just 88464
                   , message = ["Variable not in scope: bar"]
-                  } (Just $ NotInScope "bar") []
+                  } (Just $ VariableNotInScope "bar") []
                 ]
             False -> do
               return []
