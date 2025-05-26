@@ -134,6 +134,50 @@ spec = do
       foo = fold
       |] (notInScope "fold") [UseName "foldl", UseName "foldr"]
 
+    test "not-in-scope-type-signature" [] [r|
+      module Foo where
+      foo :: String -> String -> String -> String -> String -> String -> String
+      foo = c2w
+      |] (notInScope $ RequiredVariable Unqualified "c2w" $ Just "String -> String -> String -> String -> String -> String -> String") [importName "Data.ByteString.Internal" "c2w"]
+
+    test "not-in-scope-qualified" [] [r|
+      module Foo where
+      foo = B.c2w
+      |] (notInScope $ RequiredVariable "B" "c2w" Nothing) [ImportName "Data.ByteString.Internal" (Qualified "B") "c2w"]
+
+    test "not-in-scope-qualified-2" [] [r|
+      module Foo where
+      import Data.List.NonEmpty qualified as Ma
+      foo = Map.fromList
+      |] (notInScope $ RequiredVariable "Map" "fromList" Nothing) [
+          UseName "Ma.fromList"
+        , ImportName "Data.Map" (Qualified "Map") "fromList"
+        ]
+
+    xtest "not-in-scope-data" [] [r|
+      module Foo where
+      foo = SomeData
+      |] (notInScope "SomeData") []
+
+    xtest "not-in-scope-data-type-signature" [] [r|
+      module Foo where
+      foo :: Int -> Int
+      foo = SomeData
+      |] (notInScope "SomeData") []
+
+    xtest "not-in-scope-data-type-signature-xxx-use" [] [r|
+      module Foo where
+      someData = undefined
+      foo :: Int -> Int
+      foo = SomeData
+      |] (notInScope "SomeData") []
+
+    xtest "not-in-scope-data-xxx-use" [] [r|
+      module Foo where
+      someData = undefined
+      foo = SomeData
+      |] (notInScope "SomeData") []
+
     test "use-BlockArguments" [] [r|
       {-# LANGUAGE NoBlockArguments #-}
       module Foo where
