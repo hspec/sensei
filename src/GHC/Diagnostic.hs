@@ -23,6 +23,7 @@ import           Builder (Builder, Color(..))
 import qualified Builder
 
 import           System.IO
+import qualified Data.List as List
 import           Data.Text (stripPrefix, stripSuffix)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -127,12 +128,43 @@ parseAnnotation diagnostic = asum [
     analyzeMessage :: Maybe Annotation
     analyzeMessage = asum . map analyzeMessageLine $ concatMap T.lines message
 
+    analyzeHole :: Maybe [HoleFit]
+    analyzeHole = asum $ map xx diagnostic.message
+
+    xx :: Text -> Maybe [HoleFit]
+    xx input = (return <$> (asum . map balletHoleFitsIncludeOneLine . T.lines) input) <|> validHoleFitsInclude input
+
+    balletHoleFitsIncludeOneLine :: Text -> Maybe HoleFit
+    balletHoleFitsIncludeOneLine input = do
+      rest <- T.stripPrefix "Valid hole fits include " input
+      return $ holeFit rest
+
+    holeFit :: Text -> HoleFit
+    holeFit = breakOnTypeSignature HoleFit . T.strip . fst . breakOn " (bound at "
+
+    validHoleFitsInclude :: Text -> Maybe [HoleFit]
+    validHoleFitsInclude (T.lines -> input) = case List.break (== "Valid hole fits include") input of
+      (_, "Valid hole fits include" : matches) -> Just $ (map holeFit) $ hello matches
+      _ -> Nothing
+      where
+        hello = filter p . joinLines 3 . mapMaybe (T.stripPrefix "  ")
+
+        p t = case T.uncons t of
+          Nothing -> False
+          Just (c, _) -> c /= '(' && c /= ' '
+
     analyzeMessageLine :: Text -> Maybe Annotation
-    analyzeMessageLine input = NotInScope <$> asum [
-        variableNotInScope
-      , qualifiedNameNotInScope
+    analyzeMessageLine input = asum [
+        NotInScope <$> variableNotInScope
+      , NotInScope <$> qualifiedNameNotInScope
+      , foundHole
       ]
       where
+        foundHole :: Maybe Annotation
+        foundHole = FoundHole <$> (prefix "Found hole: _" >>= takeTypeSignature) <*> analyzeHole
+
+
+
         prefix :: Text -> Maybe Text
         prefix p = stripPrefix p input
 
@@ -143,14 +175,22 @@ parseAnnotation diagnostic = asum [
         qualifiedNameNotInScope = prefix "Not in scope: `" >>= stripSuffix "'" <&> qualifiedName
 
         variable :: Text -> RequiredVariable
-        variable = breakOn " :: " >>> \ case
-          (name, "") -> RequiredVariable Unqualified name Nothing
-          (name, type_) -> RequiredVariable Unqualified name (Just type_)
+        variable = breakOnTypeSignature $ RequiredVariable Unqualified
+
+    breakOnTypeSignature :: (Text -> TypeSignature -> a) -> Text -> a
+    breakOnTypeSignature c t = case breakOn " :: " t of
+      (name, "") -> c name NoTypeSignature
+      (name, type_) -> c name (TypeSignature $ Type type_)
+
+    takeTypeSignature :: Text -> Maybe Type
+    takeTypeSignature t = case breakOn " :: " t of
+      (_, "") -> Nothing
+      (_, type_) -> Just (Type type_)
 
 qualifiedName :: Text -> RequiredVariable
 qualifiedName = breakOnEnd "." >>> \ case
-  ("", name) -> RequiredVariable Unqualified name Nothing
-  (qualification, name) -> RequiredVariable (Qualified qualification) name Nothing
+  ("", name) -> RequiredVariable Unqualified name NoTypeSignature
+  (qualification, name) -> RequiredVariable (Qualified qualification) name NoTypeSignature
 
 breakOn :: Text -> Text -> (Text, Text)
 breakOn sep = second (T.drop $ T.length sep) . T.breakOn sep
@@ -162,6 +202,7 @@ analyzeAnnotation :: AvailableImports -> Annotation -> [Solution]
 analyzeAnnotation availableImports = \ case
   RedundantImport -> [RemoveImport]
   NotInScope name -> importRequired name
+  FoundHole _ xs -> map (UseName . (.name)) xs
   where
     importRequired :: RequiredVariable -> [Solution]
     importRequired required = map importName $ sortImports required modules
