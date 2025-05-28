@@ -144,13 +144,13 @@ parseAnnotation diagnostic = asum [
 
         variable :: Text -> RequiredVariable
         variable = breakOn " :: " >>> \ case
-          (name, "") -> RequiredVariable Unqualified name Nothing
-          (name, type_) -> RequiredVariable Unqualified name (Just type_)
+          (name, "") -> RequiredVariable Unqualified name NoTypeSignature
+          (name, type_) -> RequiredVariable Unqualified name (TypeSignature $ Type type_)
 
 qualifiedName :: Text -> RequiredVariable
 qualifiedName = breakOnEnd "." >>> \ case
-  ("", name) -> RequiredVariable Unqualified name Nothing
-  (qualification, name) -> RequiredVariable (Qualified qualification) name Nothing
+  ("", name) -> RequiredVariable Unqualified name NoTypeSignature
+  (qualification, name) -> RequiredVariable (Qualified qualification) name NoTypeSignature
 
 breakOn :: Text -> Text -> (Text, Text)
 breakOn sep = second (T.drop $ T.length sep) . T.breakOn sep

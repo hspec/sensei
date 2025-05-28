@@ -54,7 +54,7 @@ spec = do
       it "sorts imports" do
         let
           name :: RequiredVariable
-          name = RequiredVariable (Qualified "Map") "fromList" Nothing
+          name = RequiredVariable (Qualified "Map") "fromList" NoTypeSignature
         sortImports name [
             "Data.List.NonEmpty"
           , "Data.Map"

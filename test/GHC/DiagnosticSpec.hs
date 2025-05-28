@@ -17,6 +17,12 @@ import           Language.Haskell.GhciWrapper (lookupGhc)
 import           GHC.Diagnostic
 import           GHC.Diagnostic.Annotated
 
+shouldAnnotate :: Bool
+shouldAnnotate = True
+
+addAnnotation :: String -> IO a -> IO a
+addAnnotation m = if shouldAnnotate then Hspec.annotate m else id
+
 test, ftest, xtest :: HasCallStack => FilePath -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
 
 test name = testWith name minBound
@@ -42,7 +48,7 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
   case parseAnnotated availableImports $ encodeUtf8 json of
     Nothing -> do
       expectationFailure $ "Parsing JSON failed:\n\n" <> json
-    Just annotated -> Hspec.annotate (separator <> err <> separator) do
+    Just annotated -> addAnnotation (separator <> err <> separator) do
       whenGhc requiredVersion do
         format annotated.diagnostic `shouldBe` err
       annotated.annotation `shouldBe` annotation
@@ -86,7 +92,7 @@ unindent (T.pack >>> T.dropWhileEnd isSpace >>> T.lines -> input) = go input
     go = map (T.drop $ indentation input) >>> T.unlines >>> T.dropWhile isSpace
 
     indentation :: [Text] -> Int
-    indentation = dropEmptyLines >>> map (T.length . T.takeWhile isSpace) >>> maximum
+    indentation = dropEmptyLines >>> map (T.length . T.takeWhile isSpace) >>> minimum
 
     dropEmptyLines :: [Text] -> [Text]
     dropEmptyLines = filter (not . T.all isSpace)
@@ -208,10 +214,10 @@ spec = do
 
   describe "qualifiedName" do
     it "parses an unqualified name" do
-      qualifiedName "foo" `shouldBe` RequiredVariable Unqualified "foo" Nothing
+      qualifiedName "foo" `shouldBe` RequiredVariable Unqualified "foo" NoTypeSignature
 
     it "parses a qualified name" do
-      qualifiedName "Foo.Bar.baz" `shouldBe` RequiredVariable "Foo.Bar" "baz" Nothing
+      qualifiedName "Foo.Bar.baz" `shouldBe` RequiredVariable "Foo.Bar" "baz" NoTypeSignature
 
   describe "formatAnnotated" do
     it "formats an annotated diagnostic message" do
