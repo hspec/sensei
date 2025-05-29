@@ -20,7 +20,6 @@ data Solution =
 data Annotation =
     RedundantImport
   | NotInScope RequiredVariable
-  | FoundHole Type [HoleFit]
   deriving (Eq, Show)
 
 data RequiredVariable = RequiredVariable {
@@ -37,11 +36,6 @@ data Qualification = Unqualified | Qualified Text
 
 instance IsString Qualification where
   fromString = Qualified . fromString
-
-data HoleFit = HoleFit {
-  name :: Text
-, type_ :: TypeSignature
-} deriving (Eq, Show)
 
 data TypeSignature = NoTypeSignature | TypeSignature Type
   deriving (Eq, Ord, Show)

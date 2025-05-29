@@ -20,6 +20,9 @@ import           GHC.Diagnostic.Annotated
 shouldAnnotate :: Bool
 shouldAnnotate = True
 
+addAnnotation :: String -> IO a -> IO a
+addAnnotation m = if shouldAnnotate then Hspec.annotate m else id
+
 test, ftest, xtest :: HasCallStack => FilePath -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
 
 test name = testWith name minBound
@@ -39,13 +42,13 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
   unless (T.null code) do
     ensureFile src $ T.encodeUtf8 code
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
-  json <- ghc ["-fdiagnostics-as-json"]
+  json <- ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
   ensureFile (dir </> "err.out") (encodeUtf8 err)
   ensureFile (dir </> "err.json") (encodeUtf8 $ normalizeGhcVersion json)
   case parseAnnotated availableImports $ encodeUtf8 json of
     Nothing -> do
       expectationFailure $ "Parsing JSON failed:\n\n" <> json
-    Just annotated -> (if shouldAnnotate then Hspec.annotate (separator <> err <> separator) else id) do
+    Just annotated -> addAnnotation (separator <> err <> separator) do
       whenGhc requiredVersion do
         format annotated.diagnostic `shouldBe` err
       annotated.annotation `shouldBe` annotation
@@ -66,8 +69,7 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
       bin <- lookupGhc <$> getEnvironment
       let
         process :: CreateProcess
-        -- process = proc bin (["-fno-max-valid-hole-fits", "-XNoStarIsType", "-fno-code"] ++ args ++ extraArgs ++ [src])
-        process = proc bin (["-XNoStarIsType", "-fno-code"] ++ args ++ extraArgs ++ [src])
+        process = proc bin ("-fno-code" : args ++ extraArgs ++ [src])
       (_, _, err) <- readCreateProcessWithExitCode process ""
       return err
 
@@ -101,14 +103,11 @@ redundantImport = Just RedundantImport
 notInScope :: RequiredVariable -> Maybe Annotation
 notInScope = Just . NotInScope
 
-foundHole :: Type -> [HoleFit] -> Maybe Annotation
-foundHole type_ = Just . FoundHole type_
-
 importName :: Module -> Text -> Solution
 importName module_ = ImportName module_ Unqualified
 
 spec :: Spec
-spec = focus do
+spec = do
   describe "format" do
     test "not-in-scope" [] [r|
       module Foo where
@@ -130,89 +129,6 @@ spec = focus do
       import Data.List
       foo = fold
       |] (notInScope "fold") [UseName "foldl", UseName "foldr"]
-
-    test "found-hole" [] [r|
-      {-# LINE 1 "A" #-}
-      data A
-      a :: A
-      a = _
-      |] (foundHole "A" [
-        HoleFit "a" "A"
-      ]
-      ) [
-        UseName "a"
-      ]
-
-    test "found-hole-foo" [] [r|
-      {-# LINE 1 "A" #-}
-      a :: String -> String -> String -> String -> String -> String -> String -> String
-      a = _
-      |] (foundHole "String -> String -> String -> String -> String -> String -> String -> String" [
-        HoleFit "a" "String -> String -> String -> String -> String -> String -> String -> String"
-      , HoleFit "mempty" "forall a. Monoid a => a"
-      ]
-      ) [
-        UseName "a"
-      , UseName "mempty"
-      ]
-
-    test "found-hole-named" [] [r|
-      {-# LINE 1 "A" #-}
-      data A
-      a :: A
-      a = _foo
-      |] (foundHole "A" [
-        HoleFit "a" "A"
-      ]
-      ) [
-        UseName "a"
-      ]
-
-    test "found-hole-multiline" [] [r|
-      module Foo where
-      foo :: FilePath -> IO String
-      foo name = do
-        r <- _ name
-        return r
-      |] (foundHole "FilePath -> IO String" [
-        HoleFit "foo" "FilePath -> IO String"
-      , HoleFit "readFile" "FilePath -> IO String"
-      , HoleFit "readIO" "forall a. Read a => String -> IO a"
-      , HoleFit "return" "forall (m :: Type -> Type) a. Monad m => a -> m a"
-      , HoleFit "fail" "forall (m :: Type -> Type) a. MonadFail m => String -> m a"
-      , HoleFit "pure" "forall (f :: Type -> Type) a. Applicative f => a -> f a"
-      ]
-      ) [
-        UseName "foo"
-      , UseName "readFile"
-      , UseName "readIO"
-      , UseName "return"
-      , UseName "fail"
-      , UseName "pure"
-      ]
-
-    test "found-hole-no-type" ["-fno-show-type-of-hole-fits"] [r|
-      module Foo where
-      foo :: FilePath -> IO String
-      foo name = do
-        r <- _ name
-        return r
-      |] (foundHole "FilePath -> IO String" [
-        HoleFit "foo" NoTypeSignature
-      , HoleFit "readFile" NoTypeSignature
-      , HoleFit "readIO" NoTypeSignature
-      , HoleFit "return" NoTypeSignature
-      , HoleFit "fail" NoTypeSignature
-      , HoleFit "pure" NoTypeSignature
-      ]
-      ) [
-        UseName "foo"
-      , UseName "readFile"
-      , UseName "readIO"
-      , UseName "return"
-      , UseName "fail"
-      , UseName "pure"
-      ]
 
     test "use-BlockArguments" [] [r|
       {-# LANGUAGE NoBlockArguments #-}

@@ -1,6 +1,5 @@
 module GHC.Diagnostic.Util (
   joinMessageLines
-, joinLines
 , sortImports
 ) where
 
@@ -10,17 +9,12 @@ import Data.Text qualified as T
 import GHC.Diagnostic.Annotated
 
 joinMessageLines :: Text -> Text
-joinMessageLines = T.intercalate "\n" . joinLines 1 . T.splitOn "\n"
-
-joinLines :: Int -> [Text] -> [Text]
-joinLines required = loop
+joinMessageLines = T.intercalate "\n" . loop . T.splitOn "\n"
   where
-    hasRequiredLeadingSpaces = T.length >>> (>= required)
-
     loop :: [Text] -> [Text]
     loop = \ case
       [] -> []
-      x : (T.span isSpace -> (hasRequiredLeadingSpaces -> True, y)) : ys -> loop $ mconcat [x, " ", y] : ys
+      x : (T.span isSpace -> (T.null -> False, y)) : ys -> loop $ mconcat [x, " ", y] : ys
       x : xs -> x : loop xs
 
 sortImports :: RequiredVariable -> [Module] -> [Module]
