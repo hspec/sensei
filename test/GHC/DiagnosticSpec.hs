@@ -69,7 +69,7 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
       bin <- lookupGhc <$> getEnvironment
       let
         process :: CreateProcess
-        process = proc bin ("-fno-code" : args ++ extraArgs ++ [src])
+        process = proc bin (["-XNoStarIsType", "-fno-code"] ++ args ++ extraArgs ++ [src])
       (_, _, err) <- readCreateProcessWithExitCode process ""
       return err
 
@@ -103,11 +103,14 @@ redundantImport = Just RedundantImport
 notInScope :: RequiredVariable -> Maybe Annotation
 notInScope = Just . NotInScope
 
+foundHole :: Type -> [HoleFit] -> Maybe Annotation
+foundHole type_ = Just . FoundHole type_
+
 importName :: Module -> Text -> Solution
 importName module_ = ImportName module_ Unqualified
 
 spec :: Spec
-spec = do
+spec = focus do
   describe "format" do
     test "not-in-scope" [] [r|
       module Foo where
@@ -129,6 +132,87 @@ spec = do
       import Data.List
       foo = fold
       |] (notInScope "fold") [UseName "foldl", UseName "foldr"]
+
+    test "found-hole" [] [r|
+      module Foo where
+      foo :: FilePath -> IO String
+      foo name = do
+        r <- _ name
+        return r
+      |] (foundHole "FilePath -> IO String" [
+        HoleFit "foo" "FilePath -> IO String"
+      , HoleFit "readFile" "FilePath -> IO String"
+      , HoleFit "readIO" "forall a. Read a => String -> IO a"
+      , HoleFit "return" "forall (m :: Type -> Type) a. Monad m => a -> m a"
+      , HoleFit "fail" "forall (m :: Type -> Type) a. MonadFail m => String -> m a"
+      , HoleFit "pure" "forall (f :: Type -> Type) a. Applicative f => a -> f a"
+      ]
+      ) [
+        UseName "foo"
+      , UseName "readFile"
+      , UseName "readIO"
+      , UseName "return"
+      , UseName "fail"
+      , UseName "pure"
+      ]
+
+    test "found-hole-no-type" ["-fno-show-type-of-hole-fits"] [r|
+      module Foo where
+      foo :: FilePath -> IO String
+      foo name = do
+        r <- _ name
+        return r
+      |] (foundHole "FilePath -> IO String" [
+        HoleFit "foo" NoTypeSignature
+      , HoleFit "readFile" NoTypeSignature
+      , HoleFit "readIO" NoTypeSignature
+      , HoleFit "return" NoTypeSignature
+      , HoleFit "fail" NoTypeSignature
+      , HoleFit "pure" NoTypeSignature
+      ]
+      ) [
+        UseName "foo"
+      , UseName "readFile"
+      , UseName "readIO"
+      , UseName "return"
+      , UseName "fail"
+      , UseName "pure"
+      ]
+
+    test "found-hole-single-line" [] [r|
+      {-# LINE 1 "A" #-}
+      data A
+      a :: A
+      a = _
+      |] (foundHole "A" [
+        HoleFit "a" "A"
+      ]
+      ) [
+        UseName "a"
+      ]
+
+    test "found-hole-named" [] [r|
+      data A
+      a :: A
+      a = _foo
+      |] (foundHole "A" [
+        HoleFit "a" "A"
+      ]
+      ) [
+        UseName "a"
+      ]
+
+    test "found-hole-multiline-signature" [] [r|
+      a :: String -> String -> String -> String -> String -> String -> String -> String
+      a = _
+      |] (foundHole "String -> String -> String -> String -> String -> String -> String -> String" [
+        HoleFit "a" "String -> String -> String -> String -> String -> String -> String -> String"
+      , HoleFit "mempty" "forall a. Monoid a => a"
+      ]
+      ) [
+        UseName "a"
+      , UseName "mempty"
+      ]
 
     test "use-BlockArguments" [] [r|
       {-# LANGUAGE NoBlockArguments #-}

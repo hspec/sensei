@@ -92,7 +92,7 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
 
   ["quick-fix"] -> requireMethod "POST" $ do
     withJsonBody @QuickFixRequest \ quickFixRequest -> do
-      edits <- maybe [] Diagnostic.edits . head <$> getDiagnostics
+      edits <- concatMap Diagnostic.edits <$> getDiagnostics
       apply dir quickFixRequest.choice edits
       noContent
 
