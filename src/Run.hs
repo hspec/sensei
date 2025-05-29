@@ -28,6 +28,10 @@ import           Pager (pager)
 import           Util
 import           Config
 import           GHC.Diagnostic
+import           GHC.Diagnostic.Annotated
+import qualified Data.Map as Map
+import qualified Data.Text as T
+import qualified Data.Set as Set
 
 watchFiles :: FilePath -> EventQueue -> IO () -> IO ()
 watchFiles dir queue action = do
@@ -58,8 +62,38 @@ data Mode = Lenient | Strict
 
 run :: [String] -> IO ()
 run args = withSystemTempDirectory "sensei" \ hieDir -> do
+
   config <- loadConfig
-  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction} <- defaultRunArgs (Just hieDir)
+  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction, moduleIndex} <- defaultRunArgs (Just hieDir)
+
+  let
+    c = Session.Config {
+        configIgnoreDotGhci = True
+      , configIgnore_GHC_ENVIRONMENT = False
+      , configWorkingDirectory = Nothing
+      , configHieDirectory = Nothing
+      , configEcho = \ _ -> pass
+      }
+
+  globalModulesVar <- newEmptyMVar
+
+  _ <- forkIO do -- wait for thread, don't delegate control-c?
+    Session.withSession c [] \ session -> do
+      modules <- Session.modules session
+      putMVar globalModulesVar modules
+      ((), dt) <- timeAction $ for_ modules \ mod -> do
+        y <- Session.browse session mod
+
+        let
+          insert :: Text -> AvailableImports -> AvailableImports
+          insert name = Map.insertWith (++) name [(Module $ T.pack mod)]
+
+          insertAll :: AvailableImports -> AvailableImports
+          insertAll m = foldr insert m y
+        atomicModifyIORef' moduleIndex.globalIdentifierMap (insertAll &&& const ())
+      atomicWriteIORef moduleIndex.globalIdentifierMapConstructionTime dt
+
+  globalModules <- takeMVar globalModulesVar
 
   let
     putStrLn :: String -> IO ()
@@ -75,7 +109,7 @@ run args = withSystemTempDirectory "sensei" \ hieDir -> do
     , deepSeek = config.deepSeek
     , trigger = emitTriggerAndWaitForDelivery queue
     , getLastResult = readMVar lastOutput
-    , getModules = readIORef runArgs.modules
+    , getModules = Set.toList . mappend globalModules <$> atomicReadIORef moduleIndex.modules
     }
 
     watch :: IO () -> IO ()
@@ -83,11 +117,12 @@ run args = withSystemTempDirectory "sensei" \ hieDir -> do
       | config.watch = watchFiles dir queue
       | otherwise = id
 
+
   HTTP.withApp appConfig do
     watch do
       mode <- newIORef Lenient
       Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
-      runWith runArgs {config, args}
+      runWith runArgs { config, args, moduleIndex = moduleIndex { globalModules } }
   where
     dispatch :: IORef Mode -> EventQueue -> Char -> IO ()
     dispatch mode queue = \ case
@@ -116,14 +151,16 @@ defaultRunArgs :: Maybe FilePath -> IO RunArgs
 defaultRunArgs hieDir = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "", [])
-  modules <- newIORef []
+  modules <- newIORef Set.empty
+  globalIdentifierMap <- newIORef mempty
+  globalIdentifierMapConstructionTime <- newIORef 0
   cleanupAction <- newCleanupAction
   return RunArgs {
     config = defaultConfig
   , dir = ""
   , args = []
   , lastOutput
-  , modules
+  , moduleIndex = ModuleIndex mempty modules globalIdentifierMap globalIdentifierMapConstructionTime
   , queue = queue
   , sessionConfig = Session.Config {
       configIgnoreDotGhci = False
@@ -141,7 +178,7 @@ data RunArgs = RunArgs {
 , dir :: FilePath
 , args :: [String]
 , lastOutput :: MVar (Result, String, [Annotated])
-, modules :: IORef [String]
+, moduleIndex :: ModuleIndex
 , queue :: EventQueue
 , sessionConfig  :: Session.Config
 , withSession :: forall r. Session.Config -> [String] -> (Session.Session -> IO r) -> IO r
@@ -197,10 +234,10 @@ runWith RunArgs {..} = do
             sessionConfig.configEcho . encodeUtf8 . withColor Red $ arg <> "\n"
 
           triggerAction :: OnTestRunStarted -> IO ()
-          triggerAction = saveOutput (trigger modules session hooks <* printExtraArgs)
+          triggerAction = saveOutput (trigger moduleIndex session hooks <* printExtraArgs)
 
           triggerAllAction :: OnTestRunStarted -> IO ()
-          triggerAllAction = saveOutput (triggerAll modules session hooks <* printExtraArgs)
+          triggerAllAction = saveOutput (triggerAll moduleIndex session hooks <* printExtraArgs)
 
         triggerAction onTestRunStarted
         processQueue cleanupAction.run (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction

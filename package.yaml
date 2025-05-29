@@ -49,6 +49,8 @@ dependencies:
   - yaml
   - casing
   - temporary
+  - clock
+  - double-conversion
 
 ghc-options: -Wall -threaded
 
