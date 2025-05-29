@@ -23,6 +23,7 @@ import           Builder (Builder, Color(..))
 import qualified Builder
 
 import           System.IO
+import qualified Data.List as List
 import           Data.Text (stripPrefix, stripSuffix)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -128,11 +129,15 @@ parseAnnotation diagnostic = asum [
     analyzeMessage = asum . map analyzeMessageLine $ concatMap T.lines message
 
     analyzeMessageLine :: Text -> Maybe Annotation
-    analyzeMessageLine input = NotInScope <$> asum [
-        variableNotInScope
-      , qualifiedNameNotInScope
+    analyzeMessageLine input = asum [
+        NotInScope <$> variableNotInScope
+      , NotInScope <$> qualifiedNameNotInScope
+      , foundHole
       ]
       where
+        foundHole :: Maybe Annotation
+        foundHole = FoundHole <$> (prefix "Found hole: _" >>= takeTypeSignature) <*> analyzeHoleFits
+
         prefix :: Text -> Maybe Text
         prefix p = stripPrefix p input
 
@@ -143,9 +148,49 @@ parseAnnotation diagnostic = asum [
         qualifiedNameNotInScope = prefix "Not in scope: `" >>= stripSuffix "'" <&> qualifiedName
 
         variable :: Text -> RequiredVariable
-        variable = breakOn " :: " >>> \ case
-          (name, "") -> RequiredVariable Unqualified name NoTypeSignature
-          (name, type_) -> RequiredVariable Unqualified name (TypeSignature $ Type type_)
+        variable = breakOnTypeSignature $ RequiredVariable Unqualified
+
+    analyzeHoleFits :: Maybe [HoleFit]
+    analyzeHoleFits = asum $ map validHoleFitsInclude diagnostic.message
+
+    validHoleFitsInclude :: Text -> Maybe [HoleFit]
+    validHoleFitsInclude (T.lines -> input) = oneLine <|> multiline
+      where
+        prefix :: Text
+        prefix = "Valid hole fits include"
+
+        oneLine :: Maybe [HoleFit]
+        oneLine = return . holeFit <$> asum do
+          map (T.stripPrefix $ prefix <> " ") input
+
+        multiline :: Maybe [HoleFit]
+        multiline = case List.break (== prefix) input of
+          (_, m : matches) | m == prefix -> Just . map holeFit $ joinHoleFits matches
+          _ -> Nothing
+          where
+            joinHoleFits :: [Text] -> [Text]
+            joinHoleFits = discardBoring . joinLines 3 . mapMaybe (T.stripPrefix "  ")
+
+            discardBoring :: [Text] -> [Text]
+            discardBoring = filter isBoring
+
+            isBoring :: Text -> Bool
+            isBoring = T.uncons >>> \ case
+              Nothing -> False
+              Just (c, _) -> c /= '(' && c /= ' '
+
+        holeFit :: Text -> HoleFit
+        holeFit = breakOn " (bound at " >>> fst >>> T.strip >>> breakOnTypeSignature HoleFit
+
+    breakOnTypeSignature :: (Text -> TypeSignature -> a) -> Text -> a
+    breakOnTypeSignature c t = case breakOn " :: " t of
+      (name, "") -> c name NoTypeSignature
+      (name, type_) -> c name (TypeSignature $ Type type_)
+
+    takeTypeSignature :: Text -> Maybe Type
+    takeTypeSignature t = case breakOn " :: " t of
+      (_, "") -> Nothing
+      (_, type_) -> Just (Type type_)
 
 qualifiedName :: Text -> RequiredVariable
 qualifiedName = breakOnEnd "." >>> \ case
@@ -162,6 +207,7 @@ analyzeAnnotation :: AvailableImports -> Annotation -> [Solution]
 analyzeAnnotation availableImports = \ case
   RedundantImport -> [RemoveImport]
   NotInScope name -> importRequired name
+  FoundHole _ fits -> map (UseName . (.name)) fits
   where
     importRequired :: RequiredVariable -> [Solution]
     importRequired required = map importName $ sortImports required modules
