@@ -117,6 +117,14 @@ spec = focus do
       foo = c2w
       |] (notInScope "c2w") [importName "Data.ByteString.Internal" "c2w"]
 
+    test "not-in-scope-operator" [] [r|
+      foo :: [a] -> (Int, [a])
+      foo = length &&& id
+      |] (notInScope
+        $ RequiredVariable Unqualified "(&&&)"
+        $ Just "(t0 a0 -> Int) -> (a1 -> a1) -> [a] -> (Int, [a])"
+        ) [UseName "&&"] -- , importName "Data.ByteString.Internal" "c2w"]
+
     test "not-in-scope-perhaps-use" [] [r|
       module Foo where
       foo = filter_
