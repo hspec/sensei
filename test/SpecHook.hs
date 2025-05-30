@@ -7,7 +7,9 @@ import           GHC.Conc
 import qualified Language.Haskell.GhciWrapper as Interpreter
 
 installPackageEnvironment :: FilePath -> FilePath -> IO ()
-installPackageEnvironment ghc file = callProcess "cabal" ["install", "-v0", "-w", ghc, "-z", "--lib", "hspec", "hspec-meta", "--package-env", file]
+installPackageEnvironment ghc file = do
+  unsetEnv "GHC_ENVIRONMENT"
+  callProcess "cabal" ["install", "-v0", "-w", ghc, "-z", "--lib", "hspec", "hspec-meta", "--package-env", file]
 
 ensurePackageEnvironment :: FilePath -> FilePath -> IO ()
 ensurePackageEnvironment ghc file = doesFileExist file >>= \ case
