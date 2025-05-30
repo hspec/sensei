@@ -1,4 +1,4 @@
-cabal-version: 1.12
+cabal-version: 2.0
 
 -- This file has been generated from package.yaml by hpack version 0.38.1.
 --
@@ -15,6 +15,8 @@ maintainer:     Simon Hengel <sol@typeful.net>
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple
+data-files:
+    vim/sensei.vim
 
 source-repository head
   type: git
@@ -68,8 +70,10 @@ library
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
@@ -118,6 +122,9 @@ executable seito
       Session
       Trigger
       Util
+      Paths_sensei
+  autogen-modules:
+      Paths_sensei
   hs-source-dirs:
       src
       driver
@@ -140,8 +147,10 @@ executable seito
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
@@ -212,8 +221,10 @@ executable sensei
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , http-client >=0.5.0
@@ -308,8 +319,10 @@ test-suite spec
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
     , hspec >=2.9.0
