@@ -37,7 +37,7 @@ jobs:
       - uses: hspec/setup-haskell@v1
         with:
           ghc-version: ${{ matrix.ghc }}
-      - uses: sol/run-haskell-tests@2975edb9ad5b1405154d0d1e8584ea839f5e828b
+      - uses: sol/run-haskell-tests@c7fc6481a25c199564eaacdd57544da978c07780
         with:
           caching: true
           strict: true
