@@ -19,6 +19,7 @@ default-extensions:
   - RecordWildCards
   - ViewPatterns
   - BlockArguments
+  - PackageImports
   - DerivingVia
 
 dependencies:
@@ -49,6 +50,11 @@ dependencies:
   - yaml
   - casing
   - temporary
+  - clock
+  - double-conversion
+  - ghc
+  - ghc-hie >= 0.0.2
+  - Cabal-syntax
 
 ghc-options: -Wall -threaded
 

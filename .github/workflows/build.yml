@@ -25,7 +25,6 @@ jobs:
         os:
           - ubuntu-latest
         ghc:
-          - '9.6'
           - '9.8'
           - '9.10'
           - 'latest'
@@ -43,7 +42,7 @@ jobs:
 
       - shell: bash
         run: |
-          for GHC in 9.4
+          for GHC in 9.4 9.6
           do
             ghcup install ghc $GHC --no-set
             SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)

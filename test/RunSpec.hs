@@ -6,13 +6,13 @@ import           Control.Concurrent.Async
 
 import           EventQueue
 
-import           Language.Haskell.GhciWrapper (Config(..))
+import           Session (Config(..))
 import           Run hiding (defaultRunArgs)
 import qualified Run
 
 defaultRunArgs :: IO RunArgs
 defaultRunArgs = do
-  args <- Run.defaultRunArgs Nothing
+  args <- Run.defaultRunArgs Nothing mempty
   return args { sessionConfig = args.sessionConfig { configEcho = silent } }
 
 unwrapExceptionInLinkedThread :: IO a -> IO a

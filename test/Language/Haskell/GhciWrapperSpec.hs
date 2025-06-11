@@ -157,7 +157,7 @@ spec = do
     it "indicates success" do
       withModule \ file -> do
         withInterpreter [file] \ ghci -> do
-          Interpreter.reload ghci `shouldReturn` ("", (Ok, []))
+          Interpreter.reload mempty ghci `shouldReturn` ("", (Ok, []))
 
     it "indicates failure" do
       withModule \ file -> do
@@ -175,7 +175,7 @@ spec = do
                 ]
             False -> do
               return []
-          snd <$> Interpreter.reload ghci `shouldReturn` (Failed, diagnostics)
+          snd <$> Interpreter.reload mempty ghci `shouldReturn` (Failed, diagnostics)
 
     context "with -fno-diagnostics-as-json" $ do
       it "does not extract diagnostics" do
@@ -183,4 +183,4 @@ spec = do
         withModule \ file -> do
           withInterpreter ["-fno-diagnostics-as-json", file] \ ghci -> do
             failingModule file
-            snd <$> Interpreter.reload ghci `shouldReturn` (Failed, [])
+            snd <$> Interpreter.reload mempty ghci `shouldReturn` (Failed, [])

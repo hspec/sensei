@@ -15,9 +15,9 @@ import           Imports
 
 import qualified Data.ByteString as ByteString
 import           System.IO hiding (putStrLn)
-import           System.IO.Temp (withSystemTempDirectory)
 import qualified System.FSNotify as FSNotify
 
+import qualified HIE
 import qualified HTTP
 import qualified Session
 
@@ -57,9 +57,9 @@ watchFiles dir queue action = do
 data Mode = Lenient | Strict
 
 run :: [String] -> IO ()
-run args = withSystemTempDirectory "sensei" \ hieDir -> do
+run args = HIE.with \ hieDir getAvailableImports -> do
   config <- loadConfig
-  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction} <- defaultRunArgs (Just hieDir)
+  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction} <- defaultRunArgs (Just hieDir) getAvailableImports
 
   let
     putStrLn :: String -> IO ()
@@ -75,7 +75,7 @@ run args = withSystemTempDirectory "sensei" \ hieDir -> do
     , deepSeek = config.deepSeek
     , trigger = emitTriggerAndWaitForDelivery queue
     , getLastResult = readMVar lastOutput
-    , getModules = readIORef runArgs.modules
+    , getModules = atomicReadIORef runArgs.modules
     }
 
     watch :: IO () -> IO ()
@@ -87,7 +87,7 @@ run args = withSystemTempDirectory "sensei" \ hieDir -> do
     watch do
       mode <- newIORef Lenient
       Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
-      runWith runArgs {config, args}
+      runWith runArgs { config, args }
   where
     dispatch :: IORef Mode -> EventQueue -> Char -> IO ()
     dispatch mode queue = \ case
@@ -112,11 +112,11 @@ emitTriggerAndWaitForDelivery queue = do
     putMVar barrier ()
   takeMVar barrier
 
-defaultRunArgs :: Maybe FilePath -> IO RunArgs
-defaultRunArgs hieDir = do
+defaultRunArgs :: Maybe FilePath -> IO AvailableImports -> IO RunArgs
+defaultRunArgs hieDir getAvailableImports = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "", [])
-  modules <- newIORef []
+  modules <- newIORef mempty
   cleanupAction <- newCleanupAction
   return RunArgs {
     config = defaultConfig
@@ -132,7 +132,7 @@ defaultRunArgs hieDir = do
     , hieDirectory = hieDir
     , configEcho = \ string -> ByteString.putStr string >> hFlush stdout
     }
-  , withSession = Session.withSession
+  , withSession = Session.withSession getAvailableImports
   , cleanupAction
   }
 
