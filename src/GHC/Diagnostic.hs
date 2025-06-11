@@ -58,19 +58,22 @@ formatSolutions = Builder.unlines . zipWith formatNumbered [1..]
 
 type AvailableImports = Map Text [Module]
 
-parseAnnotated :: AvailableImports -> ByteString -> Maybe Annotated
-parseAnnotated availableImports = parse >>> (<&> annotate availableImports)
+parseAnnotated :: IO AvailableImports -> ByteString -> IO (Maybe Annotated)
+parseAnnotated getAvailableImports input = case parse input of
+  Nothing -> return Nothing
+  Just diagnostic -> Just <$> annotate getAvailableImports diagnostic
 
-annotate :: AvailableImports -> Diagnostic -> Annotated
-annotate availableImports diagnostic = Annotated { diagnostic, annotation, solutions }
-  where
-    annotation :: Maybe Annotation
-    annotation = parseAnnotation diagnostic
+annotate :: IO AvailableImports -> Diagnostic -> IO Annotated
+annotate getAvailableImports diagnostic = getAvailableImports >>= \ case
+  availableImports -> return $ Annotated { diagnostic, annotation, solutions }
+    where
+      annotation :: Maybe Annotation
+      annotation = parseAnnotation diagnostic
 
-    solutions :: [Solution]
-    solutions =
-         analyzeHints diagnostic.hints
-      ++ maybe [] (analyzeAnnotation availableImports) annotation
+      solutions :: [Solution]
+      solutions =
+          analyzeHints diagnostic.hints
+        ++ maybe [] (analyzeAnnotation availableImports) annotation
 
 analyzeHints :: [Text] -> [Solution]
 analyzeHints = concat . mapMaybe analyzeHint

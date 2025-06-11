@@ -10,6 +10,10 @@ module Run (
 #endif
 ) where
 
+import System.Process
+import Data.Text qualified as T
+import Data.Double.Conversion.Text qualified as Double
+import qualified HIE
 import qualified Prelude
 import           Imports
 
@@ -59,35 +63,71 @@ data Mode = Lenient | Strict
 run :: [String] -> IO ()
 run args = withSystemTempDirectory "sensei" \ hieDir -> do
   config <- loadConfig
-  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction} <- defaultRunArgs (Just hieDir)
+
+  globalIdentifierMap <- newIORef mempty
+  globalIdentifierMapConstructionTime <- newIORef 0
+
+
 
   let
-    putStrLn :: String -> IO ()
-    putStrLn message = do
-      cleanupAction.add $ Prelude.putStrLn message
-      cleanupAction.run
+    -- getAvailableImports :: Maybe String -> IORef AvailableImports -> IORef Double -> IO AvailableImports
+    getAvailableImports = do
+      do
+        dt <- liftIO $ atomicReadIORef globalIdentifierMapConstructionTime
+        if dt == 0 then do
+          putStr $ withColor Yellow "constructing global identifier map..." <> "\n"
+        else do
+          let
+            t = Double.toFixed 2 dt
+          putStr $ "constructing global identifier map done in " <> T.unpack t <> "s"
+          putStr $ withColor Green " ✔\n"
 
-    appConfig :: HTTP.AppConfig
-    appConfig = HTTP.AppConfig {
-      dir
-    , hieDir
-    , putStrLn
-    , deepSeek = config.deepSeek
-    , trigger = emitTriggerAndWaitForDelivery queue
-    , getLastResult = readMVar lastOutput
-    , getModules = readIORef runArgs.modules
-    }
+      putStr $ "constructing local identifier map... "
+      (r, dt) <- timeAction do
+        c <- atomicReadIORef globalIdentifierMap
+        ref <- newIORef c
+        files <- findHieFiles hieDir
+        HIE.loadAllPackages files ref
+        readIORef ref
+      let
+        t = Double.toFixed 2 dt
+      putStr $ "" <> T.unpack t <> "s" -- fixme, is putStr ok here?
+      putStr $ withColor Green " ✔\n"
+      return r
 
-    watch :: IO () -> IO ()
-    watch
-      | config.watch = watchFiles dir queue
-      | otherwise = id
+  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction, modules} <- defaultRunArgs (Just hieDir) getAvailableImports
 
-  HTTP.withApp appConfig do
-    watch do
-      mode <- newIORef Lenient
-      Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
-      runWith runArgs {config, args}
+
+
+  HIE.asyncLoadAllPackages globalIdentifierMap globalIdentifierMapConstructionTime do
+    let
+      putStrLn :: String -> IO ()
+      putStrLn message = do
+        cleanupAction.add $ Prelude.putStrLn message
+        cleanupAction.run
+
+      appConfig :: HTTP.AppConfig
+      appConfig = HTTP.AppConfig {
+        dir
+      , hieDir
+      , putStrLn
+      , deepSeek = config.deepSeek
+      , trigger = emitTriggerAndWaitForDelivery queue
+      , getLastResult = readMVar lastOutput
+      , getModules = atomicReadIORef modules
+      }
+
+      watch :: IO () -> IO ()
+      watch
+        | config.watch = watchFiles dir queue
+        | otherwise = id
+
+
+    HTTP.withApp appConfig do
+      watch do
+        mode <- newIORef Lenient
+        Input.watch stdin (dispatch mode queue) (emitEvent queue Done)
+        runWith runArgs { config, args }
   where
     dispatch :: IORef Mode -> EventQueue -> Char -> IO ()
     dispatch mode queue = \ case
@@ -112,11 +152,11 @@ emitTriggerAndWaitForDelivery queue = do
     putMVar barrier ()
   takeMVar barrier
 
-defaultRunArgs :: Maybe FilePath -> IO RunArgs
-defaultRunArgs hieDir = do
+defaultRunArgs :: Maybe FilePath -> IO AvailableImports -> IO RunArgs
+defaultRunArgs hieDir getAvailableImports = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "", [])
-  modules <- newIORef []
+  modules <- newIORef mempty
   cleanupAction <- newCleanupAction
   return RunArgs {
     config = defaultConfig
@@ -132,7 +172,7 @@ defaultRunArgs hieDir = do
     , configHieDirectory = hieDir
     , configEcho = \ string -> ByteString.putStr string >> hFlush stdout
     }
-  , withSession = Session.withSession
+  , withSession = Session.withSession getAvailableImports
   , cleanupAction
   }
 
@@ -211,3 +251,6 @@ runWith RunArgs {..} = do
         (notify, Restart mExtraArgs) -> go notify (fromMaybe extraArgs mExtraArgs)
         (OnTestRunStarted notify, Terminate) -> notify
   go mempty []
+
+findHieFiles :: FilePath -> IO [FilePath]
+findHieFiles dir = lines <$> readCreateProcess (shell $ "find " <> dir <> " -name '*.hie'") ""

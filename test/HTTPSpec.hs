@@ -52,7 +52,7 @@ spec = do
           copySource = readFile (testCaseDir </> file) >>= writeFile (dir </> file)
 
           readErrFile :: IO (Maybe Annotated)
-          readErrFile = fmap normalizeFileName . Diagnostic.parseAnnotated mempty <$> B.readFile (testCaseDir </> "err.json")
+          readErrFile = fmap normalizeFileName <$> (B.readFile (testCaseDir </> "err.json") >>= Diagnostic.parseAnnotated mempty)
 
         copySource
         Just err <- readErrFile

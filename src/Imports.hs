@@ -50,6 +50,7 @@ import qualified Data.Text.Encoding as T
 import           Text.Casing
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
+import System.Clock
 
 newtype KebabOptions a = KebabOptions a
 
@@ -145,3 +146,11 @@ data GHC =
 requiredFor :: GHC -> a -> a
 requiredFor _ = id
 {-# INLINE requiredFor #-}
+
+timeAction :: MonadIO m => m a -> m (a, Double)
+timeAction action = do
+  start <- liftIO $ getTime Monotonic
+  result <- action
+  end <- liftIO $ getTime Monotonic
+  let diff = fromIntegral (toNanoSecs (diffTimeSpec end start)) / 1e9
+  return (result, diff)
