@@ -2,6 +2,9 @@
 module Helper (
   module Imports
 , silent
+
+, Info(..)
+, ghcInfo
 , ghciConfig
 
 , AppConfig(..)
@@ -34,6 +37,9 @@ module Helper (
 , whenGhc
 
 , ensureFile
+
+, shouldBe
+, shouldReturn
 ) where
 
 import           Imports
@@ -41,7 +47,8 @@ import           Imports
 import           System.Directory as Imports
 import           System.IO.Temp (withSystemTempDirectory)
 import           System.Process as Imports (readProcess, callProcess, callCommand)
-import           Test.Hspec as Imports
+import           Test.Hspec as Imports hiding (shouldBe, shouldReturn)
+import qualified Test.Hspec as Hspec
 import           Test.Hspec.Contrib.Mocks.V1 as Imports
 import           Test.Mockery.Directory as Imports (touch)
 import           Test.HUnit
@@ -63,6 +70,9 @@ import qualified Trigger
 import           GHC.Diagnostic
 import           GHC.Diagnostic.Annotated
 
+import           GHC.Info (Info(..))
+import           SpecHook (ghcInfo)
+
 timeout :: HasCallStack => IO a -> IO a
 timeout action = do
   lookupEnv "CI" >>= \ case
@@ -73,14 +83,18 @@ timeout action = do
 silent :: a -> IO ()
 silent _ = pass
 
-ghciConfig :: Config
-ghciConfig = Config {
-  ignoreDotGhci = True
-, ignore_GHC_ENVIRONMENT = False
-, workingDirectory = Nothing
-, hieDirectory = Nothing
-, configEcho = silent
-}
+ghciConfig :: IO Config
+ghciConfig = do
+  info <- ghcInfo
+  return Config {
+    ghc = info.ghc
+  , ignoreDotGhci = True
+  , ignore_GHC_ENVIRONMENT = False
+  , workingDirectory = Nothing
+  , diagnosticsAsJson = info.supportsDiagnosticsAsJson
+  , hieDirectory = Nothing
+  , configEcho = silent
+  }
 
 appConfig :: FilePath -> HTTP.AppConfig
 appConfig dir = HTTP.AppConfig {
@@ -152,15 +166,15 @@ diagnostic = Diagnostic {
 
 diagnosticForGhc :: IO Diagnostic
 diagnosticForGhc = do
-  ghc <- getGhcVersion
+  info <- ghcInfo
   let
     version :: String
     version
-      | ghc <= makeVersion [9,12] = "1.0"
+      | info.ghcVersion <= makeVersion [9,12] = "1.0"
       | otherwise = "1.1"
   return diagnostic {
     version
-  , ghcVersion = "ghc-" <> showVersion ghc
+  , ghcVersion = "ghc-" <> info.ghcVersionString
   }
 
 to_json :: ToJSON a => a -> ByteString
@@ -174,14 +188,8 @@ whenGhc required action = ifGhc required >>= (`when` action)
 
 ifGhc :: GHC -> IO Bool
 ifGhc (toVersion -> required) = do
-  ghcVersion <- getGhcVersion
-  return (ghcVersion >= required)
-
-getGhcVersion :: IO Version
-getGhcVersion = do
-  env <- getEnvironment
-  let Just ghcVersion = lookupGhcVersion env >>= parseVersion
-  return ghcVersion
+  info <- ghcInfo
+  return (info.ghcVersion >= required)
 
 toVersion :: GHC -> Version
 toVersion = makeVersion . \ case
@@ -198,3 +206,11 @@ ensureFile name new = do
   old <- tryReadFile name
   unless (old == Just new) $ do
     ByteString.writeFile name new
+
+infixr 0 `shouldBe`, `shouldReturn`
+
+shouldBe :: HasCallStack => (Eq a, Show a) => a -> a -> IO ()
+shouldBe = Hspec.shouldBe
+
+shouldReturn :: HasCallStack => (Eq a, Show a) => IO a -> a -> IO ()
+shouldReturn = Hspec.shouldReturn

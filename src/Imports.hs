@@ -7,14 +7,14 @@ module Imports (
 , FromJSON(..)
 ) where
 
-import           Prelude as Imports hiding (putStrLn, span, mod, head)
+import           Prelude as Imports hiding (putStr, putStrLn, span, mod, head)
 import           Control.Arrow as Imports ((>>>), (&&&))
 import           Control.Concurrent as Imports
 import           Control.Exception as Imports hiding (handle)
 import           Control.Monad as Imports
 import           Data.Function as Imports (fix)
 import           Control.Applicative as Imports
-import           Data.IORef as Imports
+import           Data.IORef as Imports hiding (modifyIORef, atomicModifyIORef)
 import           Data.Functor as Imports ((<&>), ($>))
 import           Data.Foldable as Imports
 import           Data.Traversable as Imports
@@ -36,8 +36,11 @@ import           Control.Monad.IO.Class as Imports
 import           Data.Version as Imports (Version(..), showVersion, makeVersion)
 import           Data.Text as Imports (Text)
 
+import           Data.Text.IO.Utf8 (hPutStrLn)
+import           System.Exit (exitFailure)
+import           System.Environment (getProgName)
 import           System.Process as Process
-import           System.IO (Handle)
+import           System.IO (Handle, stderr)
 import           GHC.IO.Handle.Internals (wantReadableHandle_)
 import           GHC.Generics
 
@@ -50,6 +53,7 @@ import qualified Data.Text.Encoding as T
 import           Text.Casing
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
+import           System.Clock
 
 newtype KebabOptions a = KebabOptions a
 
@@ -145,3 +149,34 @@ data GHC =
 requiredFor :: GHC -> a -> a
 requiredFor _ = id
 {-# INLINE requiredFor #-}
+
+timeAction :: MonadIO m => m a -> m (Double, a)
+timeAction action = do
+  start <- liftIO $ getTime Monotonic
+  result <- action
+  end <- liftIO $ getTime Monotonic
+  let dt = fromIntegral (toNanoSecs (diffTimeSpec end start)) / 1e9
+  return (dt, result)
+
+data TerminateProcess = TerminateProcess String
+  deriving (Eq, Show)
+
+instance Exception TerminateProcess
+
+handleTerminateProcess :: IO a -> IO a
+handleTerminateProcess action = try action >>= either terminate return
+  where
+    terminate :: TerminateProcess -> IO a
+    terminate (TerminateProcess err) = do
+      name <- getProgName
+      hPutStrLn stderr . T.pack $ name <> ": " <> err
+      exitFailure
+
+die :: String -> IO a
+die err = throwIO $ TerminateProcess err
+
+newtype Path tag = Path FilePath
+  deriving newtype (Eq, Show, Ord, IsString)
+
+unPath :: Path tag -> FilePath
+unPath (Path p) = p
