@@ -105,8 +105,8 @@ spec = do
       input = fromString $ show summary
 
     it "extracts summary" $ do
-      extractSummary.parseMessage input `shouldBe` Just (summary, "")
+      extractSummary.parseMessage input `shouldReturn` Just (summary, "")
 
     context "when the input starts with the ANSI \"show cursor\"-sequence" $ do
       it "extracts summary" $ do
-        extractSummary.parseMessage (ansiShowCursor <> input) `shouldBe` Just (summary, ansiShowCursor)
+        extractSummary.parseMessage (ansiShowCursor <> input) `shouldReturn` Just (summary, ansiShowCursor)
