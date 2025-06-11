@@ -184,8 +184,11 @@ runWith RunArgs {..} = do
 
     hooks :: Hooks
     hooks = Hooks {
-      beforeReload = config.senseiHooksBeforeReload
-    , afterReload = config.senseiHooksAfterReload
+      beforeReload = \ _ -> do
+        config.senseiHooksBeforeReload
+    , afterReload = \ ghci -> do
+        Session.modules ghci >>= atomicWriteIORef modules
+        config.senseiHooksAfterReload
     }
 
     go :: OnTestRunStarted -> [String] -> IO ()
@@ -197,10 +200,10 @@ runWith RunArgs {..} = do
             sessionConfig.configEcho . encodeUtf8 . withColor Red $ arg <> "\n"
 
           triggerAction :: OnTestRunStarted -> IO ()
-          triggerAction = saveOutput (trigger modules session hooks <* printExtraArgs)
+          triggerAction = saveOutput (trigger session hooks <* printExtraArgs)
 
           triggerAllAction :: OnTestRunStarted -> IO ()
-          triggerAllAction = saveOutput (triggerAll modules session hooks <* printExtraArgs)
+          triggerAllAction = saveOutput (triggerAll session hooks <* printExtraArgs)
 
         triggerAction onTestRunStarted
         processQueue cleanupAction.run (sessionConfig.configEcho . encodeUtf8) dir queue triggerAllAction triggerAction

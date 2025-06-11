@@ -44,8 +44,8 @@ withSession specPath args = do
 
 defaultHooks :: Hooks
 defaultHooks = Hooks {
-  beforeReload = return HookSuccess
-, afterReload = return HookSuccess
+  beforeReload = \ _ -> return HookSuccess
+, afterReload = \ _ -> return HookSuccess
 }
 
 trigger :: Session -> IO (Result, [String])
@@ -53,14 +53,12 @@ trigger session = triggerWithHooks session defaultHooks
 
 triggerWithHooks :: Session -> Hooks -> IO (Result, [String])
 triggerWithHooks session hooks = do
-  modules <- newIORef []
-  (result, output, _) <- Trigger.trigger modules session hooks
+  (result, output, _) <- Trigger.trigger session hooks
   return (result, normalize output)
 
 triggerAll :: Session -> IO (Result, [String])
 triggerAll session = do
-  modules <- newIORef []
-  (result, output, _) <- Trigger.triggerAll modules session defaultHooks
+  (result, output, _) <- Trigger.triggerAll session defaultHooks
   return (result, normalize output)
 
 data HookExecuted = BeforeReloadSucceeded | AfterReloadSucceeded
@@ -68,12 +66,12 @@ data HookExecuted = BeforeReloadSucceeded | AfterReloadSucceeded
 
 withHooks :: (Hooks -> IO ()) -> IO [HookExecuted]
 withHooks action = withSpy $ \ spy -> action defaultHooks {
-  beforeReload = spy BeforeReloadSucceeded >> return HookSuccess
-, afterReload = spy AfterReloadSucceeded >> return HookSuccess
+  beforeReload = \ _ -> spy BeforeReloadSucceeded >> return HookSuccess
+, afterReload = \ _ -> spy AfterReloadSucceeded >> return HookSuccess
 }
 
-failingHook :: Hook
-failingHook = return $ HookFailure "hook failed"
+failingHook :: Session -> Hook
+failingHook _ = return $ HookFailure "hook failed"
 
 spec :: Spec
 spec = do

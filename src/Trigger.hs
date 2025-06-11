@@ -25,17 +25,17 @@ import qualified Session
 import           GHC.Diagnostic
 
 data Hooks = Hooks {
-  beforeReload :: Hook
-, afterReload :: Hook
+  beforeReload :: Session -> Hook
+, afterReload :: Session -> Hook
 }
 
 data Result = HookFailed | Failure | Success
   deriving (Eq, Show)
 
-triggerAll :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Annotated])
-triggerAll modules session hooks = do
+triggerAll :: Session -> Hooks -> IO (Result, String, [Annotated])
+triggerAll session hooks = do
   resetSummary session
-  trigger modules session hooks
+  trigger session hooks
 
 removeProgress :: String -> String
 removeProgress xs = case break (== '\r') xs of
@@ -47,8 +47,8 @@ removeProgress xs = case break (== '\r') xs of
 
 type Trigger = ExceptT Result (WriterT (String, [Annotated]) IO)
 
-trigger :: IORef [String] -> Session -> Hooks -> IO (Result, String, [Annotated])
-trigger modules session hooks = runWriterT (runExceptT go) >>= \ case
+trigger :: Session -> Hooks -> IO (Result, String, [Annotated])
+trigger session hooks = runWriterT (runExceptT go) >>= \ case
   (Left result, (output, diagnostics)) -> return (result, output, diagnostics)
   (Right (), (output, diagnostics)) -> return (Success, output, diagnostics)
   where
@@ -62,7 +62,6 @@ trigger modules session hooks = runWriterT (runExceptT go) >>= \ case
           echo $ withColor Red "RELOADING FAILED" <> "\n"
           abort
         Ok -> do
-          liftIO $ Session.modules session >>= atomicWriteIORef modules
           echo $ withColor Green "RELOADING SUCCEEDED" <> "\n"
 
       runHook hooks.afterReload
@@ -89,8 +88,8 @@ trigger modules session hooks = runWriterT (runExceptT go) >>= \ case
       result <- hspecPreviousSummary session
       unless (isSuccess result) abort
 
-    runHook :: Hook -> Trigger ()
-    runHook hook = liftIO hook >>= \ case
+    runHook :: (Session -> IO HookResult) -> Trigger ()
+    runHook hook = liftIO (hook session) >>= \ case
       HookSuccess -> pass
       HookFailure message -> echo message >> throwError HookFailed
 
