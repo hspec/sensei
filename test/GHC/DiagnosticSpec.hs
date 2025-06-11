@@ -110,7 +110,7 @@ importName :: Module -> Text -> Solution
 importName module_ = ImportName module_ Unqualified
 
 spec :: Spec
-spec = focus do
+spec = do
   describe "format" do
     test "not-in-scope" [] [r|
       module Foo where
