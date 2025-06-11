@@ -1,6 +1,7 @@
 module SessionSpec (spec) where
 
-import           Helper
+import           Helper hiding (ghciConfig)
+import qualified Helper
 
 import           System.Environment.Blank (setEnv)
 
@@ -9,10 +10,14 @@ import qualified Session
 import           Session hiding (withSession, runSpec)
 
 withSession :: [String] -> (Session -> IO a) -> IO a
-withSession = Session.withSession ghciConfig
+withSession args action = do
+  config <- Helper.ghciConfig
+  Session.withSession mempty config args action
 
 spec :: Spec
 spec = do
+  ghciConfig <- runIO Helper.ghciConfig
+
   describe "withSession" $ do
     it "unsets HSPEC_FAILURES" $ do
       setEnv "HSPEC_FAILURES" "foo" True
@@ -28,7 +33,7 @@ spec = do
             , workingDirectory = Just dir
             }
           writeFile (dir </> ".ghci") ":set +t +s"
-          Session.withSession config [] $ \ Session{..} -> do
+          Session.withSession mempty config [] $ \ Session{..} -> do
             eval interpreter "23" `shouldReturn` "23\n"
 
     context "with -XOverloadedStrings" $ do
@@ -39,7 +44,7 @@ spec = do
   describe "modules" do
     it "lists available modules" do
       let config = ghciConfig { ignore_GHC_ENVIRONMENT = True }
-      Session.withSession config ["-hide-all-packages", "-package", "haskeline"] \ session -> do
+      Session.withSession mempty config ["-hide-all-packages", "-package", "haskeline"] \ session -> do
         Session.modules session `shouldReturn` [
             "System.Console.Haskeline"
           , "System.Console.Haskeline.Completion"
@@ -105,8 +110,8 @@ spec = do
       input = fromString $ show summary
 
     it "extracts summary" $ do
-      extractSummary.parseMessage input `shouldBe` Just (summary, "")
+      extractSummary.parseMessage input `shouldReturn` Just (summary, "")
 
     context "when the input starts with the ANSI \"show cursor\"-sequence" $ do
       it "extracts summary" $ do
-        extractSummary.parseMessage (ansiShowCursor <> input) `shouldBe` Just (summary, ansiShowCursor)
+        extractSummary.parseMessage (ansiShowCursor <> input) `shouldReturn` Just (summary, ansiShowCursor)

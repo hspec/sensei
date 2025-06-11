@@ -31,16 +31,18 @@ normalize = normalizeTiming . lines . forGhc9dot4
       . Text.pack
 
 withSession :: FilePath -> [String] -> (Session -> IO a) -> IO a
-withSession specPath args = do
-  Session.withSession ghciConfig {workingDirectory = Just dir} $
-      "-fhide-source-paths"
-    : "-fno-diagnostics-show-caret"
-    : "-fdiagnostics-color=never"
-    : file
-    : args
-    ++ ["--no-color", "--seed=0"]
+withSession specPath args action = do
+  config <- ghciConfig
+  Session.withSession mempty config {workingDirectory = Just dir} fullArgs action
   where
     (dir, file) = splitFileName specPath
+    fullArgs =
+        "-fhide-source-paths"
+      : "-fno-diagnostics-show-caret"
+      : "-fdiagnostics-color=never"
+      : file
+      : args
+      ++ ["--no-color", "--seed=0"]
 
 defaultHooks :: Hooks
 defaultHooks = Hooks {
