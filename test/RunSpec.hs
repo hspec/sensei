@@ -42,6 +42,13 @@ spec = around_ unwrapExceptionInLinkedThread do
         wait user
 
   describe "runWith" $ do
+    it "populates modules" $ do
+      runArgs <- defaultRunArgs
+      emitEvent runArgs.queue Done
+      timeout $ runWith runArgs
+      modules <- readIORef runArgs.modules
+      "Prelude" `elem` modules `shouldBe` True
+
     context "on Done" $ do
       it "terminates" $ do
         runArgs <- defaultRunArgs
