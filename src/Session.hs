@@ -135,8 +135,8 @@ extractSummary = Extract {
     summaryPrefix :: ByteString
     summaryPrefix = "Summary {"
 
-    parseMessage :: ByteString -> Maybe (Summary, ByteString)
-    parseMessage input = case ByteString.stripPrefix ansiShowCursor input of
+    parseMessage :: ByteString -> IO (Maybe (Summary, ByteString))
+    parseMessage input = return $ case ByteString.stripPrefix ansiShowCursor input of
       Nothing -> flip (,) "" <$> parseSummary input
       Just i -> flip (,) ansiShowCursor <$> parseSummary i
 

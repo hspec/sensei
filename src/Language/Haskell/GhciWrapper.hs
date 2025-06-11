@@ -199,8 +199,8 @@ putExpression Interpreter{hIn = stdin} e = do
   ByteString.hPut stdin ReadHandle.marker
   hFlush stdin
 
-extractReloadDiagnostics :: Diagnostic.AvailableImports -> Extract (Either ReloadStatus Annotated)
-extractReloadDiagnostics availableImports = extractReloadStatus <+> extractDiagnostics availableImports
+extractReloadDiagnostics :: IO Diagnostic.AvailableImports -> Extract (Either ReloadStatus Annotated)
+extractReloadDiagnostics getAvailableImports = extractReloadStatus <+> extractDiagnostics getAvailableImports
 
 data ReloadStatus = Ok | Failed
   deriving (Eq, Show)
@@ -209,17 +209,17 @@ extractReloadStatus :: Extract ReloadStatus
 extractReloadStatus = Extract {
   isPartialMessage = partialMessageStartsWithOneOf [ok, failed]
 , parseMessage = \ case
-    line | ByteString.isPrefixOf ok line -> Just (Ok, "")
-    line | ByteString.isPrefixOf failed line -> Just (Failed, "")
-    _ -> Nothing
+    line | ByteString.isPrefixOf ok line -> return $ Just (Ok, "")
+    line | ByteString.isPrefixOf failed line -> return $ Just (Failed, "")
+    _ -> return $ Nothing
 } where
     ok = "Ok, modules loaded: "
     failed = "Failed, modules loaded: "
 
-extractDiagnostics :: Diagnostic.AvailableImports -> ReadHandle.Extract Annotated
-extractDiagnostics availableImports = ReadHandle.Extract {
+extractDiagnostics :: IO Diagnostic.AvailableImports -> ReadHandle.Extract Annotated
+extractDiagnostics getAvailableImports = ReadHandle.Extract {
   isPartialMessage = ByteString.isPrefixOf "{"
-, parseMessage = fmap (id &&& T.encodeUtf8 . Diagnostic.formatAnnotated) . Diagnostic.parseAnnotated availableImports
+, parseMessage = \ input -> fmap (id &&& T.encodeUtf8 . Diagnostic.formatAnnotated) <$> Diagnostic.parseAnnotated getAvailableImports input
 }
 
 getResult :: Extract a -> Interpreter -> IO (String, [a])

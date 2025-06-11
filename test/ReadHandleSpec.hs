@@ -121,7 +121,7 @@ spec = do
         let
           extract :: Extract Annotated
           extract = extractDiagnostics {
-            parseMessage = fmap (second $ const "") . extractDiagnostics.parseMessage
+            parseMessage = \ xs -> fmap (second $ const "") <$> extractDiagnostics.parseMessage xs
           }
 
         it "extracts Diagnostic" $ do
