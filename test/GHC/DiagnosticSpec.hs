@@ -45,7 +45,7 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
   json <- ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
   ensureFile (dir </> "err.out") (encodeUtf8 err)
   ensureFile (dir </> "err.json") (encodeUtf8 $ normalizeGhcVersion json)
-  case parseAnnotated availableImports $ encodeUtf8 json of
+  parseAnnotated getAvailableImports (encodeUtf8 json) >>= \ case
     Nothing -> do
       expectationFailure $ "Parsing JSON failed:\n\n" <> json
     Just annotated -> addAnnotation (separator <> err <> separator) do
@@ -79,8 +79,8 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
       '’' -> '\''
       c -> c
 
-availableImports :: AvailableImports
-availableImports = Map.fromList [
+getAvailableImports :: IO AvailableImports
+getAvailableImports = return $ Map.fromList [
     ("c2w", ["Data.ByteString.Internal"])
   , ("fromList", ["Data.Map"])
   ]
@@ -305,7 +305,7 @@ spec = do
 
   describe "formatAnnotated" do
     it "formats an annotated diagnostic message" do
-      Just annotated <- B.readFile "test/fixtures/not-in-scope/err.json" <&> parseAnnotated availableImports
+      Just annotated <- B.readFile "test/fixtures/not-in-scope/err.json" >>= parseAnnotated getAvailableImports
       formatAnnotated annotated `shouldBe` T.unlines [
           "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: c2w"

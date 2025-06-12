@@ -35,6 +35,8 @@ library
       GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
+      GHC.Environment
+      HIE
       HTTP
       HTTP.Util
       Imports
@@ -42,6 +44,7 @@ library
       Language.Haskell.GhciWrapper
       Options
       Pager
+      ProgressBar
       ReadHandle
       Run
       Session
@@ -59,19 +62,25 @@ library
       RecordWildCards
       ViewPatterns
       BlockArguments
+      PackageImports
       DerivingVia
   ghc-options: -Wall -threaded
   build-depends:
-      aeson
+      Cabal-syntax
+    , aeson
     , ansi-terminal
     , async
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
+    , ghc
+    , ghc-hie >=0.0.2
     , http-client >=0.5.0
     , http-conduit
     , http-media
@@ -105,6 +114,8 @@ executable seito
       GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
+      GHC.Environment
+      HIE
       HTTP
       HTTP.Util
       Imports
@@ -112,6 +123,7 @@ executable seito
       Language.Haskell.GhciWrapper
       Options
       Pager
+      ProgressBar
       ReadHandle
       Run
       Sensei.API
@@ -131,19 +143,25 @@ executable seito
       RecordWildCards
       ViewPatterns
       BlockArguments
+      PackageImports
       DerivingVia
   ghc-options: -Wall -threaded
   build-depends:
-      aeson
+      Cabal-syntax
+    , aeson
     , ansi-terminal
     , async
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
+    , ghc
+    , ghc-hie >=0.0.2
     , http-client >=0.5.0
     , http-conduit
     , http-media
@@ -177,6 +195,8 @@ executable sensei
       GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
+      GHC.Environment
+      HIE
       HTTP
       HTTP.Util
       Imports
@@ -184,6 +204,7 @@ executable sensei
       Language.Haskell.GhciWrapper
       Options
       Pager
+      ProgressBar
       ReadHandle
       Run
       Sensei.API
@@ -203,19 +224,25 @@ executable sensei
       RecordWildCards
       ViewPatterns
       BlockArguments
+      PackageImports
       DerivingVia
   ghc-options: -Wall -threaded
   build-depends:
-      aeson
+      Cabal-syntax
+    , aeson
     , ansi-terminal
     , async
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
+    , ghc
+    , ghc-hie >=0.0.2
     , http-client >=0.5.0
     , http-conduit
     , http-media
@@ -250,6 +277,8 @@ test-suite spec
       GHC.Diagnostic.Annotated
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
+      GHC.Environment
+      HIE
       HTTP
       HTTP.Util
       Imports
@@ -257,6 +286,7 @@ test-suite spec
       Language.Haskell.GhciWrapper
       Options
       Pager
+      ProgressBar
       ReadHandle
       Run
       Sensei.API
@@ -270,11 +300,13 @@ test-suite spec
       EventQueueSpec
       GHC.Diagnostic.UtilSpec
       GHC.DiagnosticSpec
+      GHC.EnvironmentSpec
       Helper
       HTTPSpec
       Language.Haskell.GhciWrapperSpec
       OptionsSpec
       PagerSpec
+      ProgressBarSpec
       ReadHandleSpec
       RunSpec
       SessionSpec
@@ -294,13 +326,15 @@ test-suite spec
       RecordWildCards
       ViewPatterns
       BlockArguments
+      PackageImports
       DerivingVia
   ghc-options: -Wall -threaded
   cpp-options: -DTEST
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:
-      HUnit
+      Cabal-syntax
+    , HUnit
     , QuickCheck
     , aeson
     , ansi-terminal
@@ -308,10 +342,14 @@ test-suite spec
     , base >=4.18 && <5
     , bytestring >=0.11
     , casing
+    , clock
     , containers
     , directory
+    , double-conversion
     , filepath
     , fsnotify ==0.4.*
+    , ghc
+    , ghc-hie >=0.0.2
     , hspec >=2.9.0
     , hspec-contrib >=0.5.2
     , hspec-expectations >=0.5.2

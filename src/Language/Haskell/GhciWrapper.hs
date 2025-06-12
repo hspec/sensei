@@ -26,7 +26,7 @@ module Language.Haskell.GhciWrapper (
 import           Imports
 
 import qualified Data.ByteString as ByteString
-import           Data.Text.Encoding qualified as T
+import qualified Data.Text.Encoding as T
 import           System.IO hiding (stdin, stdout, stderr)
 import           System.IO.Temp (withSystemTempFile)
 import           System.Environment (getEnvironment)
@@ -199,8 +199,8 @@ putExpression Interpreter{hIn = stdin} e = do
   ByteString.hPut stdin ReadHandle.marker
   hFlush stdin
 
-extractReloadDiagnostics :: Diagnostic.AvailableImports -> Extract (Either ReloadStatus Annotated)
-extractReloadDiagnostics availableImports = extractReloadStatus <+> extractDiagnostics availableImports
+extractReloadDiagnostics :: IO Diagnostic.AvailableImports -> Extract (Either ReloadStatus Annotated)
+extractReloadDiagnostics getAvailableImports = extractReloadStatus <+> extractAnnotatedDiagnostics getAvailableImports
 
 data ReloadStatus = Ok | Failed
   deriving (Eq, Show)
@@ -209,17 +209,25 @@ extractReloadStatus :: Extract ReloadStatus
 extractReloadStatus = Extract {
   isPartialMessage = partialMessageStartsWithOneOf [ok, failed]
 , parseMessage = \ case
-    line | ByteString.isPrefixOf ok line -> Just (Ok, "")
-    line | ByteString.isPrefixOf failed line -> Just (Failed, "")
-    _ -> Nothing
+    line | ByteString.isPrefixOf ok line -> accept (Ok, "")
+    line | ByteString.isPrefixOf failed line -> accept (Failed, "")
+    _ -> reject
 } where
+    accept = return . Just
+    reject = return Nothing
     ok = "Ok, modules loaded: "
     failed = "Failed, modules loaded: "
 
-extractDiagnostics :: Diagnostic.AvailableImports -> ReadHandle.Extract Annotated
-extractDiagnostics availableImports = ReadHandle.Extract {
+extractAnnotatedDiagnostics :: IO Diagnostic.AvailableImports -> ReadHandle.Extract Annotated
+extractAnnotatedDiagnostics getAvailableImports = ReadHandle.Extract {
   isPartialMessage = ByteString.isPrefixOf "{"
-, parseMessage = fmap (id &&& T.encodeUtf8 . Diagnostic.formatAnnotated) . Diagnostic.parseAnnotated availableImports
+, parseMessage = \ input -> fmap (id &&& T.encodeUtf8 . Diagnostic.formatAnnotated) <$> Diagnostic.parseAnnotated getAvailableImports input
+}
+
+extractDiagnostics :: ReadHandle.Extract Diagnostic.Diagnostic
+extractDiagnostics = ReadHandle.Extract {
+  isPartialMessage = ByteString.isPrefixOf "{"
+, parseMessage = \ input -> return $ (id &&& encodeUtf8 . Diagnostic.format) <$> Diagnostic.parse input
 }
 
 getResult :: Extract a -> Interpreter -> IO (String, [a])
@@ -229,13 +237,13 @@ silent :: ByteString -> IO ()
 silent _ = pass
 
 eval :: Interpreter -> String -> IO String
-eval ghci = fmap fst . evalVerbose (extractDiagnostics mempty) ghci {echo = silent}
+eval ghci = fmap fst . evalVerbose extractDiagnostics ghci {echo = silent}
 
 evalVerbose :: Extract a -> Interpreter -> String -> IO (String, [a])
 evalVerbose extract ghci expr = putExpression ghci expr >> getResult extract ghci
 
-reload :: Interpreter -> IO (String, (ReloadStatus, [Annotated]))
-reload ghci = do
-  evalVerbose (extractReloadDiagnostics mempty) ghci ":reload" <&> second \ case
+reload :: IO Diagnostic.AvailableImports -> Interpreter -> IO (String, (ReloadStatus, [Annotated]))
+reload getAvailableImports ghci = do
+  evalVerbose (extractReloadDiagnostics getAvailableImports) ghci ":reload" <&> second \ case
     (partitionEithers -> ([Ok], diagnostics)) -> (Ok, diagnostics)
     (partitionEithers ->(_, diagnostics)) -> (Failed, diagnostics)
