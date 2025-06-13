@@ -1,21 +1,23 @@
-{-# LANGUAGE QuasiQuotes #-}
 module GHC.EnvironmentFileSpec (spec) where
 
+import Helper
 import System.Process
-import           Helper
+import Distribution.Types.InstalledPackageInfo (libraryDirs)
 
-import           GHC.EnvironmentFile
+import GHC.EnvironmentFile
 
 spec :: Spec
 spec = do
   describe "listHieFiles" do
     it "boot package" do
-      ghcVersion <- strip <$> readProcess "ghc" ["--numeric-version"] ""
-      Just packageConfigDatabase <- getGlobalPackageDb
-      packageConfigFile <- strip <$> readProcess "find" [packageConfigDatabase, "-name", "binary-*.conf"] ""
+      info <- ghcInfo
+      packageConfigFile <- strip <$> readProcess "find" [info.globalPackageDb, "-name", "binary-*.conf"] ""
       p <- readPackageConfig $ packageConfigFile
 
-      boot <- getXdgDirectory XdgState $ "ghc-hie-files" </> ("ghc-" <> ghcVersion)
+      for_ (libraryDirs p) \ dir -> doesDirectoryExist dir >>= flip unless do
+        expectationFailure $ unwords [show dir, "does not exist!"]
+
+      boot <- getXdgDirectory XdgState $ "ghc-hie-files" </> ("ghc-" <> info.ghcVersionString)
       Just dir <- determineHieDirectory boot p
       listHieFiles dir p `shouldReturn` [
           dir </> "Data/Binary.hie"
@@ -26,14 +28,17 @@ spec = do
         ]
 
     it "regular package" do
-      ghcVersion <- strip <$> readProcess "ghc" ["--numeric-version"] ""
+      info <- ghcInfo
+      let
+        command :: CreateProcess
+        command = shell $ "find ~/.local/state/cabal/store/ghc-" <> info.ghcVersionString <> "-* -name 'hspec-core-*.conf'"
 
-      xx : _ <- reverse . lines <$> readCreateProcess (shell $ "find ~/.local/state/cabal/store/ghc-" <> ghcVersion <> "-* -name 'hspec-core-*.conf'") ""
+      packageConfigFile : _ <- reverse . lines <$> readCreateProcess command ""
 
 
-      p <- readPackageConfig xx
+      p <- readPackageConfig packageConfigFile
 
-      boot <- getXdgDirectory XdgState $ "ghc-hie-files" </> ("ghc-" <> ghcVersion)
+      boot <- getXdgDirectory XdgState $ "ghc-hie-files" </> ("ghc-" <> info.ghcVersionString)
       Just dir <- determineHieDirectory boot p
       listHieFiles dir p `shouldReturn` [
           dir </> "Test/Hspec/Core/Extension.hie"
@@ -53,31 +58,39 @@ spec = do
         , dir </> "Test/Hspec/Core/Util.hie"
         ]
 
-  describe "parseEntry" do
+  describe "parseEntries" do
     it "accepts clear-package-db" do
-      parseEntry "/path/to/env/file" "clear-package-db"
-        `shouldBe` Just ClearPackageDb
+      parseEntries "/path/to/env/file" "clear-package-db"
+        `shouldBe` Right [ClearPackageDb]
 
     it "accepts global-package-db" do
-      parseEntry "/path/to/env/file" "global-package-db"
-        `shouldBe` Just GlobalPackageDb
+      parseEntries "/path/to/env/file" "global-package-db"
+        `shouldBe` Right [GlobalPackageDb]
 
     it "accepts user-package-db" do
-      parseEntry "/path/to/env/file" "user-package-db"
-        `shouldBe` Just UserPackageDb
+      parseEntries "/path/to/env/file" "user-package-db"
+        `shouldBe` Right [UserPackageDb]
 
     it "accepts absolute path to package-db" do
-      parseEntry "/path/to/env/file" "package-db /path/to/package/db"
-        `shouldBe` Just (PackageDb "/path/to/package/db")
+      parseEntries "/path/to/env/file" "package-db /path/to/package/db"
+        `shouldBe` Right [PackageDb "/path/to/package/db"]
 
     it "accepts relative path to package-db" do
-      parseEntry "/path/to/env/file" "package-db package/db"
-        `shouldBe` Just (PackageDb "/path/to/env/package/db")
+      parseEntries "/path/to/env/file" "package-db package/db"
+        `shouldBe` Right [PackageDb "/path/to/env/package/db"]
 
     it "accepts package-id" do
-      parseEntry "/path/to/env/file" "package-id base-4.20.0.0-18ae"
-        `shouldBe` Just (PackageId "base-4.20.0.0-18ae")
+      parseEntries "/path/to/env/file" "package-id base-4.20.0.0-18ae"
+        `shouldBe` Right [PackageId "base-4.20.0.0-18ae"]
 
     it "accepts raw package-id" do
-      parseEntry "/path/to/env/file" "base-4.20.0.0-18ae"
-        `shouldBe` Just (PackageId "base-4.20.0.0-18ae")
+      parseEntries "/path/to/env/file" "base-4.20.0.0-18ae"
+        `shouldBe` Right [PackageId "base-4.20.0.0-18ae"]
+
+    it "ignores comments" do
+      parseEntries "/path/to/env/file" "-- some comment\nbase-4.20.0.0-18ae"
+        `shouldBe` Right [PackageId "base-4.20.0.0-18ae"]
+
+    it "fails on invalid entry" do
+      parseEntries "/path/to/env/file" "foo bar"
+        `shouldBe` Left "Can't parse environment file entry: /path/to/env/file: foo bar"

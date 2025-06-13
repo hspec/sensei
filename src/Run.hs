@@ -17,6 +17,7 @@ import qualified Data.ByteString as ByteString
 import           System.IO hiding (putStrLn)
 import qualified System.FSNotify as FSNotify
 
+import qualified GHC.Info as GHC
 import qualified HIE
 import qualified HTTP
 import qualified Session
@@ -57,9 +58,9 @@ watchFiles dir queue action = do
 data Mode = Lenient | Strict
 
 run :: [String] -> IO ()
-run args = HIE.with \ hieDir getAvailableImports -> do
+run args = handleTerminateProcess $ GHC.info >>= \ info -> HIE.with info \ hieDir getAvailableImports -> do
   config <- loadConfig
-  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction} <- defaultRunArgs (Just hieDir) getAvailableImports
+  runArgs@RunArgs{dir, lastOutput, queue, cleanupAction} <- defaultRunArgs info (Just hieDir) getAvailableImports
 
   let
     putStrLn :: String -> IO ()
@@ -112,8 +113,8 @@ emitTriggerAndWaitForDelivery queue = do
     putMVar barrier ()
   takeMVar barrier
 
-defaultRunArgs :: Maybe FilePath -> IO AvailableImports -> IO RunArgs
-defaultRunArgs hieDir getAvailableImports = do
+defaultRunArgs :: GHC.Info -> Maybe FilePath -> IO AvailableImports -> IO RunArgs
+defaultRunArgs info hieDir getAvailableImports = do
   queue <- newQueue
   lastOutput <- newMVar (Trigger.Success, "", [])
   modules <- newIORef mempty
@@ -126,10 +127,12 @@ defaultRunArgs hieDir getAvailableImports = do
   , modules
   , queue = queue
   , sessionConfig = Session.Config {
-      ignoreDotGhci = False
+      ghc = info.ghc
+    , ignoreDotGhci = False
     , ignore_GHC_ENVIRONMENT = False
     , workingDirectory = Nothing
-    , hieDirectory = hieDir
+    , hieDirectory = if info.supportsIdeInfo then hieDir else Nothing
+    , diagnosticsAsJson = info.supportsDiagnosticsAsJson
     , configEcho = \ string -> ByteString.putStr string >> hFlush stdout
     }
   , withSession = Session.withSession getAvailableImports

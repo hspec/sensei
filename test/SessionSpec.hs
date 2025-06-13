@@ -1,6 +1,7 @@
 module SessionSpec (spec) where
 
-import           Helper
+import           Helper hiding (ghciConfig)
+import qualified Helper
 
 import           System.Environment.Blank (setEnv)
 
@@ -9,10 +10,14 @@ import qualified Session
 import           Session hiding (withSession, runSpec)
 
 withSession :: [String] -> (Session -> IO a) -> IO a
-withSession = Session.withSession mempty ghciConfig
+withSession args action = do
+  config <- Helper.ghciConfig
+  Session.withSession mempty config args action
 
 spec :: Spec
 spec = do
+  ghciConfig <- runIO Helper.ghciConfig
+
   describe "withSession" $ do
     it "unsets HSPEC_FAILURES" $ do
       setEnv "HSPEC_FAILURES" "foo" True

@@ -7,13 +7,11 @@ import           Test.Hspec.Expectations.Contrib qualified as Hspec
 import           Text.RawString.QQ (r, rQ)
 
 import           System.Process
-import           System.Environment
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.ByteString qualified as B
 import qualified Data.Map as Map
 
-import           Language.Haskell.GhciWrapper (lookupGhc)
 import           GHC.Diagnostic
 import           GHC.Diagnostic.Annotated
 
@@ -66,10 +64,10 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
     ghc :: [String] -> IO String
     ghc args = do
       require GHC_910
-      bin <- lookupGhc <$> getEnvironment
+      info <- ghcInfo
       let
         process :: CreateProcess
-        process = proc bin (["-XNoStarIsType", "-fno-code"] ++ args ++ extraArgs ++ [src])
+        process = proc info.ghc (["-XNoStarIsType", "-fno-code"] ++ args ++ extraArgs ++ [src])
       (_, _, err) <- readCreateProcessWithExitCode process ""
       return err
 

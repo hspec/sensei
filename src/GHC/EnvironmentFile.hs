@@ -6,9 +6,7 @@ module GHC.EnvironmentFile (
 , determineHieDirectory
 , listHieFiles
 , Entry(..)
-, parseEntry
-
-, getGlobalPackageDb
+, parseEntries
 #endif
 ) where
 
@@ -18,14 +16,15 @@ import Prelude (putStrLn)
 import Distribution.ModuleName (toFilePath)
 import Distribution.PackageDescription
 import Data.ByteString qualified as B
-import           Distribution.InstalledPackageInfo as C
-import System.Process (readProcess)
+import Distribution.InstalledPackageInfo
 import System.Directory
 import System.Environment.Blank (getEnv)
 import Data.Text.IO.Utf8 qualified as Text
 import Data.Text qualified as T
 import           Prelude ()
 import           Imports
+
+import qualified GHC.Info as GHC (Info(..))
 
 warning :: String -> IO ()
 warning = putStrLn . withColor Red
@@ -51,12 +50,11 @@ listHieFiles dir package = catMaybes <$> do
       warning $ "ignoring re-export " <> display xx <> " as " <> packageName <> ":" <> display name
       return Nothing
 
-listAllHieFiles :: IO [FilePath]
-listAllHieFiles = do
-  let version = "9.10.1"
-  boot <- getXdgDirectory XdgState $ "ghc-hie-files" </> ("ghc-" <> version)
+listAllHieFiles :: GHC.Info -> IO [FilePath]
+listAllHieFiles info = do
+  boot <- getXdgDirectory XdgState $ "ghc-hie-files" </> ("ghc-" <> info.ghcVersionString)
 
-  xs <- getPackages
+  xs <- getPackages info.globalPackageDb
   concat <$> for xs \ x -> do
     determineHieDirectory boot x >>= \ case
       Nothing -> return []
@@ -84,43 +82,33 @@ firstDir = \ case
       True -> return $ Just dir
       False -> firstDir dirs
 
-
-getPackages :: IO [InstalledPackageInfo]
-getPackages = listPackageConfigs >>= traverse readPackageConfig
+getPackages :: FilePath -> IO [InstalledPackageInfo]
+getPackages globalPackageDb = listPackageConfigs globalPackageDb >>= traverse readPackageConfig
 
 readPackageConfig :: FilePath -> IO InstalledPackageInfo
-readPackageConfig p = do
-  C.parseInstalledPackageInfo <$> B.readFile p >>= \ case
-    Left _err -> fail "XXX todo"
-    Right (_, r) -> return r
+readPackageConfig name = parseInstalledPackageInfo <$> B.readFile name >>= \ case
+  Left err -> die . unlines $ (unwords ["Reading", name, "failed!"]) : "" : toList err
+  Right (_, package) -> return package { libraryDirs = map expand package.libraryDirs }
+  where
+    expand :: FilePath -> FilePath
+    expand = T.unpack . T.replace "${pkgroot}" (T.pack . takeDirectory $ takeDirectory name) . T.pack
 
-getGlobalPackageDb :: IO (Maybe String)
-getGlobalPackageDb = do
-  info <- readProcess "ghc" ["--info"] ""
-
-  let
-    globalPackageDb :: Maybe FilePath
-    globalPackageDb = readMaybe info >>= lookup @String "Global Package DB"
-  return globalPackageDb
-
-listPackageConfigs :: IO [FilePath]
-listPackageConfigs = do
-  globalPackageDb <- getGlobalPackageDb
+listPackageConfigs :: FilePath -> IO [FilePath]
+listPackageConfigs globalPackageDb = do
   entries <- parseGhcEnvironment
   let
-    dbs = maybe id (:) globalPackageDb $ [db | PackageDb db <- entries]
-
+    dbs = globalPackageDb : [db | PackageDb db <- entries]
     packages = [db | PackageId db <- entries]
-
   catMaybes <$> for packages \ package -> findFile dbs (T.unpack package <> ".conf")
 
 parseGhcEnvironment :: IO [Entry]
-parseGhcEnvironment = do
-  getEnv "GHC_ENVIRONMENT" >>= \ case
-    Nothing -> return []
-    Just name -> Text.readFile name <&> (T.lines >>> mapMaybe (parseEntry name))
+parseGhcEnvironment = getEnv "GHC_ENVIRONMENT" >>= \ case
+  Nothing -> return []
+  Just name -> Text.readFile name <&> parseEntries name >>= \ case
+    Left err -> die err
+    Right entries -> return entries
 
-data Entry = 
+data Entry =
     ClearPackageDb
   | GlobalPackageDb
   | UserPackageDb
@@ -129,17 +117,22 @@ data Entry =
   | HidePackage Text
   deriving (Eq, Show)
 
-parseEntry :: FilePath -> Text -> Maybe Entry
+parseEntries :: FilePath -> Text -> Either String [Entry]
+parseEntries file = traverse (parseEntry file) . discardComments . T.lines
+
+discardComments :: [Text] -> [Text]
+discardComments = filter (not . T.isPrefixOf "--")
+
+parseEntry :: FilePath -> Text -> Either String Entry
 parseEntry envfile str = case T.words str of
-  ["clear-package-db"] -> Just ClearPackageDb
-  ["global-package-db"] -> Just GlobalPackageDb
-  ["user-package-db"] -> Just UserPackageDb
-  ("package-db": _) -> Just (PackageDb (envdir </> T.unpack db))
+  ["clear-package-db"] -> return ClearPackageDb
+  ["global-package-db"] -> return GlobalPackageDb
+  ["user-package-db"] -> return UserPackageDb
+  ("package-db": _) -> return (PackageDb (envdir </> T.unpack db))
     -- relative package dbs are interpreted relative to the env file
     where envdir = takeDirectory envfile
           db = T.drop 11 str
-  ["package-id", packageId] -> Just $ PackageId packageId
-  ["hide-package", package] -> Just $ HidePackage package
-  ((T.unpack -> ('-':'-':_)):_) -> Nothing
-  [packageId] -> Just $ PackageId packageId
-  _ -> Nothing
+  ["package-id", packageId] -> return $ PackageId packageId
+  ["hide-package", package] -> return $ HidePackage package
+  [packageId] -> return $ PackageId packageId
+  _ -> Left $ "Can't parse environment file entry: " ++ envfile ++ ": " ++ T.unpack str

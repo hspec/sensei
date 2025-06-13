@@ -12,7 +12,8 @@ import qualified Run
 
 defaultRunArgs :: IO RunArgs
 defaultRunArgs = do
-  args <- Run.defaultRunArgs Nothing mempty
+  info <- ghcInfo
+  args <- Run.defaultRunArgs info Nothing mempty
   return args { sessionConfig = args.sessionConfig { configEcho = silent } }
 
 unwrapExceptionInLinkedThread :: IO a -> IO a
