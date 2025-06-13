@@ -13,11 +13,6 @@ module Language.Haskell.GhciWrapper (
 , reload
 
 #ifdef TEST
-, sensei_ghc
-, sensei_ghc_version
-, lookupGhc
-, lookupGhcVersion
-, numericVersion
 , extractReloadDiagnostics
 , extractDiagnostics
 #endif
@@ -39,31 +34,13 @@ import qualified ReadHandle
 import           GHC.Diagnostic (Annotated)
 import qualified GHC.Diagnostic as Diagnostic
 
-sensei_ghc_version :: String
-sensei_ghc_version = "SENSEI_GHC_VERSION"
-
-sensei_ghc :: String
-sensei_ghc = "SENSEI_GHC"
-
-lookupGhc :: [(String, String)] -> FilePath
-lookupGhc = fromMaybe "ghc" . lookup sensei_ghc
-
-lookupGhcVersion :: [(String, String)] -> Maybe String
-lookupGhcVersion = lookup sensei_ghc_version
-
-getGhcVersion :: FilePath -> [(String, String)] -> IO String
-getGhcVersion ghc env = case lookupGhcVersion env of
-  Nothing -> numericVersion ghc
-  Just version -> return version
-
-numericVersion :: [Char] -> IO [Char]
-numericVersion ghc = strip <$> readProcess ghc ["--numeric-version"] ""
-
 data Config = Config {
-  ignoreDotGhci :: Bool
+  ghc :: FilePath
+, ignoreDotGhci :: Bool
 , ignore_GHC_ENVIRONMENT :: Bool
 , workingDirectory :: Maybe FilePath
 , hieDirectory :: Maybe FilePath
+, diagnosticsAsJson :: Bool
 , configEcho :: ByteString -> IO ()
 }
 
@@ -75,9 +52,6 @@ data Interpreter = Interpreter {
 , echo :: ByteString -> IO ()
 }
 
-die :: String -> IO a
-die = throwIO . ErrorCall
-
 withInterpreter :: Config -> [(String, String)] -> [String] -> (Interpreter -> IO r) -> IO r
 withInterpreter config envDefaults args action = do
   withSystemTempFile "sensei" $ \ startupFile h -> do
@@ -88,7 +62,7 @@ withInterpreter config envDefaults args action = do
       , ":seti -XNoOverloadedStrings"
 
       -- GHCi uses NoBuffering for stdout and stderr by default:
-      -- https://downloads.haskell.org/ghc/9.4.4/docs/users_guide/ghci.html
+      -- https://downloads.haskell.org/ghc/9.12.2/docs/users_guide/ghci.html#faq-and-things-to-watch-out-for
       , "GHC.IO.Handle.hSetBuffering System.IO.stdout GHC.IO.Handle.LineBuffering"
       , "GHC.IO.Handle.hSetBuffering System.IO.stderr GHC.IO.Handle.LineBuffering"
 
@@ -109,29 +83,22 @@ new :: FilePath -> Config -> [(String, String)] -> [String] -> IO Interpreter
 new startupFile config@Config{..} envDefaults args_ = do
   checkDotGhci
   env <- sanitizeEnv config <$> getEnvironment
-
   let
-    ghc :: String
-    ghc = lookupGhc env
-
-  ghcVersion <- parseVersion <$> getGhcVersion ghc env
-
-  let
-    diagnosticsAsJson :: [String] -> [String]
-    diagnosticsAsJson
-      | ghcVersion < Just (makeVersion [9,10]) = id
-      | otherwise = ("-fdiagnostics-as-json" :)
+    setDiagnosticsAsJson :: [String] -> [String]
+    setDiagnosticsAsJson
+      | diagnosticsAsJson = ("-fdiagnostics-as-json" :)
+      | otherwise = id
 
     writeIdeInfo :: [String]
     writeIdeInfo = case hieDirectory of
-      Just dir | ghcVersion >= Just (makeVersion [8,8]) -> ["-fwrite-ide-info", "-hiedir", dir]
+      Just dir -> ["-fwrite-ide-info", "-hiedir", dir]
       _ -> []
 
     mandatoryArgs :: [String]
     mandatoryArgs = ["-fshow-loaded-modules", "--interactive"]
 
     args :: [String]
-    args = "-ghci-script" : startupFile : diagnosticsAsJson args_ ++ catMaybes [
+    args = "-ghci-script" : startupFile : setDiagnosticsAsJson args_ ++ catMaybes [
         if ignoreDotGhci then Just "-ignore-dot-ghci" else Nothing
       ] ++ writeIdeInfo ++ mandatoryArgs
 

@@ -1,7 +1,8 @@
 {-# LANGUAGE CPP #-}
 module Language.Haskell.GhciWrapperSpec (main, spec) where
 
-import           Helper hiding (diagnostic)
+import           Helper hiding (diagnostic, ghciConfig)
+import qualified Helper
 import           Util
 import qualified Data.ByteString.Char8 as ByteString
 
@@ -12,7 +13,9 @@ main :: IO ()
 main = hspec spec
 
 withInterpreter :: [String] -> (Interpreter -> IO a) -> IO a
-withInterpreter = Interpreter.withInterpreter ghciConfig []
+withInterpreter args action = do
+  c <- Helper.ghciConfig
+  Interpreter.withInterpreter c [] args action
 
 withGhci :: ((String -> IO String) -> IO a) -> IO a
 withGhci action = withInterpreter [] $ action . Interpreter.eval
@@ -25,6 +28,7 @@ extractNothing = Extract {
 
 spec :: Spec
 spec = do
+  ghciConfig <- runIO Helper.ghciConfig
   describe "withInterpreter" $ do
     context "on shutdown" $ do
       it "drains `stdout` of the `ghci` process" $ do
@@ -46,7 +50,7 @@ spec = do
         it "terminates with an error message" $ do
           withTempDirectory $ \ dir -> do
             let dotGhci = dir </> ".ghci"
-            with dir ghciConfig { ignoreDotGhci = False } `shouldThrow` (== (ErrorCall . unlines) [
+            with dir ghciConfig { ignoreDotGhci = False } `shouldThrow` (== (TerminateProcess . unlines) [
                 dotGhci <> " is writable by others, you can fix this with:"
               , ""
               , "    chmod go-w " <> dotGhci <> " ."

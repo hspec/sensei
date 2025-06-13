@@ -1,126 +1,119 @@
 {-# LANGUAGE CPP #-}
 module GHC.EnvironmentFile (
-  listAllHieFiles
+  Warning(..)
+, listAllHieFiles
 #ifdef TEST
 , readPackageConfig
-, determineHieDirectory
-, listHieFiles
 , Entry(..)
-, parseEntry
-
-, getGlobalPackageDb
+, parseEntries
 #endif
 ) where
 
-import Util
+import Imports
+
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.ByteString qualified as B
+import System.Environment.Blank (getEnv)
+import Data.Text qualified as T
+import Data.Text.IO.Utf8 qualified as T (readFile)
+import System.Directory
+import Control.Monad.Trans.Writer.CPS
+
 import Distribution.Text (display)
-import Prelude (putStrLn)
 import Distribution.ModuleName (toFilePath)
 import Distribution.PackageDescription
-import Data.ByteString qualified as B
-import           Distribution.InstalledPackageInfo as C
-import System.Process (readProcess)
-import System.Directory
-import System.Environment.Blank (getEnv)
-import Data.Text.IO.Utf8 qualified as Text
-import Data.Text qualified as T
-import           Prelude ()
-import           Imports
+import Distribution.InstalledPackageInfo
 
-warning :: String -> IO ()
-warning = putStrLn . withColor Red
+import GHC.Info qualified as GHC (Info(..))
 
-listHieFiles :: FilePath -> InstalledPackageInfo -> IO [FilePath]
-listHieFiles dir package = catMaybes <$> do
-  for package.exposedModules \ case
-    ExposedModule name Nothing -> do
-      let p = dir </> toFilePath name <.> "hie"
-      doesFileExist p >>= \ case
-        False -> do
-          warning $ "non-existing " <> p
-          return Nothing
-        True -> do
-          return $ Just p
-    ExposedModule name (Just xx) -> do
-      let
-        packageName :: String
-        packageName = unPackageName . pkgName $ sourcePackageId package
-      -- e.g.
-      --
-      -- GHC.Num.BigNat from ghc-bignum-1.3-32a7:GHC.Num.BigNat
-      warning $ "ignoring re-export " <> display xx <> " as " <> packageName <> ":" <> display name
-      return Nothing
+type WarningM = WriterT [Warning] IO
 
-listAllHieFiles :: IO [FilePath]
-listAllHieFiles = do
-  let version = "9.10.1"
-  boot <- getXdgDirectory XdgState $ "ghc-hie-files" </> ("ghc-" <> version)
+newtype Warning = Warning String
 
-  xs <- getPackages
-  concat <$> for xs \ x -> do
-    determineHieDirectory boot x >>= \ case
-      Nothing -> return []
-      Just dir -> listHieFiles dir x
+listAllHieFiles :: GHC.Info -> IO ([Warning], [FilePath])
+listAllHieFiles info = do
+  fallback <- getXdgDirectory XdgState $ "ghc-hie-files" </> "ghc-" <> info.ghcVersionString
+  packages <- listPackages info
+  swap <$> runWriterT do
+    concat <$> for packages (packageHieFiles fallback)
 
-determineHieDirectory :: FilePath -> InstalledPackageInfo -> IO (Maybe FilePath)
-determineHieDirectory boot x = do
+packageHieFiles :: FilePath -> InstalledPackageInfo -> WarningM [FilePath]
+packageHieFiles fallback package = do
   let
-    packageName :: String
-    packageName = unPackageName . pkgName $ sourcePackageId x
+    libToHie :: FilePath -> FilePath
+    libToHie lib = lib </> "extra-compilation-artifacts" </> "hie"
 
-  r <- firstDir $ (libraryDirs x <&> \ name -> name </> "extra-compilation-artifacts" </> "hie") ++ [boot </> packageName]
-  case r of
-    Just p -> do
-      return $ Just p
+    dirs :: [FilePath]
+    dirs = map libToHie package.libraryDirs ++ [fallback </> packageName]
+
+  firstDir dirs >>= \ case
     Nothing -> do
-      warning $ "no HIE directory for " <> display (installedComponentId x)
-      return Nothing
+      warning $ "no HIE directory for " <> display (installedComponentId package)
+      return []
+    Just dir -> do
+      hieFiles dir
+  where
+    warning :: String -> WarningM ()
+    warning = tell . return . Warning
 
-firstDir :: [FilePath] -> IO (Maybe FilePath)
-firstDir = \ case
+    packageName :: String
+    packageName = unPackageName . pkgName $ sourcePackageId package
+
+    hieFiles :: FilePath -> WarningM [FilePath]
+    hieFiles dir = catMaybes <$> for package.exposedModules \ case
+      ExposedModule name Nothing -> do
+        let file = dir </> toFilePath name <.> "hie"
+        liftIO (doesFileExist file) >>= \ case
+          False -> do
+            warning $ "non-existing " <> file
+            return Nothing
+          True -> do
+            return $ Just file
+      ExposedModule name (Just original) -> do
+        warning $ "ignoring re-export " <> display original <> " as " <> packageName <> ":" <> display name
+        return Nothing
+
+firstDir :: MonadIO m => [FilePath] -> m (Maybe FilePath)
+firstDir = liftIO . \ case
   [] -> return Nothing
-  dir : dirs -> do
-    doesDirectoryExist dir >>= \ case
-      True -> return $ Just dir
-      False -> firstDir dirs
+  dir : dirs -> doesDirectoryExist dir >>= \ case
+    True -> return $ Just dir
+    False -> firstDir dirs
 
-
-getPackages :: IO [InstalledPackageInfo]
-getPackages = listPackageConfigs >>= traverse readPackageConfig
+listPackages :: GHC.Info -> IO [InstalledPackageInfo]
+listPackages info = listPackageConfigs info >>= traverse readPackageConfig
 
 readPackageConfig :: FilePath -> IO InstalledPackageInfo
-readPackageConfig p = do
-  C.parseInstalledPackageInfo <$> B.readFile p >>= \ case
-    Left _err -> fail "XXX todo"
-    Right (_, r) -> return r
+readPackageConfig name = B.readFile name <&> parseInstalledPackageInfo >>= \ case
+  Left err -> do
+    die . unlines $
+        unwords ["Reading", name, "failed!"]
+      : ""
+      : NonEmpty.toList err
+  Right (_, package) -> do
+    return package { libraryDirs = map expand package.libraryDirs }
+  where
+    expand :: FilePath -> FilePath
+    expand = T.unpack . T.replace "${pkgroot}" (T.pack . takeDirectory $ takeDirectory name) . T.pack
 
-getGlobalPackageDb :: IO (Maybe String)
-getGlobalPackageDb = do
-  info <- readProcess "ghc" ["--info"] ""
-
-  let
-    globalPackageDb :: Maybe FilePath
-    globalPackageDb = readMaybe info >>= lookup @String "Global Package DB"
-  return globalPackageDb
-
-listPackageConfigs :: IO [FilePath]
-listPackageConfigs = do
-  globalPackageDb <- getGlobalPackageDb
+listPackageConfigs :: GHC.Info -> IO [FilePath]
+listPackageConfigs info = do
   entries <- parseGhcEnvironment
+
   let
-    dbs = maybe id (:) globalPackageDb $ [db | PackageDb db <- entries]
+    dbs = info.globalPackageDb : [db | PackageDb db <- entries]
+    confs = [T.unpack package <> ".conf" | PackageId package <- entries]
 
-    packages = [db | PackageId db <- entries]
-
-  catMaybes <$> for packages \ package -> findFile dbs (T.unpack package <> ".conf")
+  for confs \ conf -> findFile dbs conf >>= \ case
+    Nothing -> die $ unwords ["missing package configuration", conf]
+    Just file -> return file
 
 parseGhcEnvironment :: IO [Entry]
-parseGhcEnvironment = do
-  getEnv "GHC_ENVIRONMENT" >>= \ case
-    Nothing -> return []
-    Just name -> Text.readFile name <&> (T.lines >>> mapMaybe (parseEntry name))
+parseGhcEnvironment = getEnv "GHC_ENVIRONMENT" >>= \ case
+  Nothing -> return []
+  Just name -> T.readFile name <&> parseEntries name >>= either die return
 
-data Entry = 
+data Entry =
     ClearPackageDb
   | GlobalPackageDb
   | UserPackageDb
@@ -129,17 +122,22 @@ data Entry =
   | HidePackage Text
   deriving (Eq, Show)
 
-parseEntry :: FilePath -> Text -> Maybe Entry
+parseEntries :: FilePath -> Text -> Either String [Entry]
+parseEntries file = traverse (parseEntry file) . discardComments . T.lines
+
+discardComments :: [Text] -> [Text]
+discardComments = filter (not . T.isPrefixOf "--")
+
+parseEntry :: FilePath -> Text -> Either String Entry
 parseEntry envfile str = case T.words str of
-  ["clear-package-db"] -> Just ClearPackageDb
-  ["global-package-db"] -> Just GlobalPackageDb
-  ["user-package-db"] -> Just UserPackageDb
-  ("package-db": _) -> Just (PackageDb (envdir </> T.unpack db))
+  ["clear-package-db"] -> return ClearPackageDb
+  ["global-package-db"] -> return GlobalPackageDb
+  ["user-package-db"] -> return UserPackageDb
+  ("package-db": _) -> return (PackageDb (envdir </> T.unpack db))
     -- relative package dbs are interpreted relative to the env file
     where envdir = takeDirectory envfile
           db = T.drop 11 str
-  ["package-id", packageId] -> Just $ PackageId packageId
-  ["hide-package", package] -> Just $ HidePackage package
-  ((T.unpack -> ('-':'-':_)):_) -> Nothing
-  [packageId] -> Just $ PackageId packageId
-  _ -> Nothing
+  ["package-id", packageId] -> return $ PackageId packageId
+  ["hide-package", package] -> return $ HidePackage package
+  [packageId] -> return $ PackageId packageId
+  _ -> Left $ "Can't parse environment file entry: " ++ envfile ++ ": " ++ T.unpack str

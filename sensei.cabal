@@ -36,6 +36,7 @@ library
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
       GHC.EnvironmentFile
+      GHC.Info
       HIE
       HTTP
       HTTP.Util
@@ -114,6 +115,7 @@ executable seito
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
       GHC.EnvironmentFile
+      GHC.Info
       HIE
       HTTP
       HTTP.Util
@@ -194,6 +196,7 @@ executable sensei
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
       GHC.EnvironmentFile
+      GHC.Info
       HIE
       HTTP
       HTTP.Util
@@ -275,6 +278,7 @@ test-suite spec
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
       GHC.EnvironmentFile
+      GHC.Info
       HIE
       HTTP
       HTTP.Util
@@ -298,6 +302,7 @@ test-suite spec
       GHC.DiagnosticSpec
       GHC.EnvironmentFileSpec
       Helper
+      HIESpec
       HTTPSpec
       Language.Haskell.GhciWrapperSpec
       OptionsSpec
