@@ -32,7 +32,7 @@ normalize = normalizeTiming . lines . forGhc9dot4
 
 withSession :: FilePath -> [String] -> (Session -> IO a) -> IO a
 withSession specPath args = do
-  Session.withSession ghciConfig {configWorkingDirectory = Just dir} $
+  Session.withSession ghciConfig {workingDirectory = Just dir} $
       "-fhide-source-paths"
     : "-fno-diagnostics-show-caret"
     : "-fdiagnostics-color=never"

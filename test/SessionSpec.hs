@@ -24,8 +24,8 @@ spec = do
         withTempDirectory $ \ dir -> do
           let
             config = ghciConfig {
-              configIgnoreDotGhci = False
-            , configWorkingDirectory = Just dir
+              ignoreDotGhci = False
+            , workingDirectory = Just dir
             }
           writeFile (dir </> ".ghci") ":set +t +s"
           Session.withSession config [] $ \ Session{..} -> do
@@ -38,7 +38,7 @@ spec = do
 
   describe "modules" do
     it "lists available modules" do
-      let config = ghciConfig { configIgnore_GHC_ENVIRONMENT = True }
+      let config = ghciConfig { ignore_GHC_ENVIRONMENT = True }
       Session.withSession config ["-hide-all-packages", "-package", "haskeline"] \ session -> do
         Session.modules session `shouldReturn` [
             "System.Console.Haskeline"

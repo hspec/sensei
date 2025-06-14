@@ -40,23 +40,23 @@ spec = do
           let dotGhci = dir </> ".ghci"
           writeFile dotGhci ""
           callProcess "chmod" ["go+w", dotGhci]
-          Interpreter.withInterpreter config { configWorkingDirectory = Just dir } [] [] $ \ ghci -> Interpreter.eval ghci "23"
+          Interpreter.withInterpreter config { workingDirectory = Just dir } [] [] $ \ ghci -> Interpreter.eval ghci "23"
 
-      context "when configIgnoreDotGhci is False" $ do
+      context "when ignoreDotGhci is False" $ do
         it "terminates with an error message" $ do
           withTempDirectory $ \ dir -> do
             let dotGhci = dir </> ".ghci"
-            with dir ghciConfig { configIgnoreDotGhci = False } `shouldThrow` (== (ErrorCall . unlines) [
+            with dir ghciConfig { ignoreDotGhci = False } `shouldThrow` (== (ErrorCall . unlines) [
                 dotGhci <> " is writable by others, you can fix this with:"
               , ""
               , "    chmod go-w " <> dotGhci <> " ."
               , ""
               ])
 
-      context "when configIgnoreDotGhci is True" $ do
+      context "when ignoreDotGhci is True" $ do
         it "does not terminate" $ do
           withTempDirectory $ \ dir -> do
-            with dir ghciConfig { configIgnoreDotGhci = True } `shouldReturn` "23\n"
+            with dir ghciConfig { ignoreDotGhci = True } `shouldReturn` "23\n"
 
   describe "evalVerbose" $ do
     it "echos result" $ do

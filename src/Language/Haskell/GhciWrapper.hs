@@ -60,10 +60,10 @@ numericVersion :: [Char] -> IO [Char]
 numericVersion ghc = strip <$> readProcess ghc ["--numeric-version"] ""
 
 data Config = Config {
-  configIgnoreDotGhci :: Bool
-, configIgnore_GHC_ENVIRONMENT :: Bool
-, configWorkingDirectory :: Maybe FilePath
-, configHieDirectory :: Maybe FilePath
+  ignoreDotGhci :: Bool
+, ignore_GHC_ENVIRONMENT :: Bool
+, workingDirectory :: Maybe FilePath
+, hieDirectory :: Maybe FilePath
 , configEcho :: ByteString -> IO ()
 }
 
@@ -102,7 +102,7 @@ sanitizeEnv :: Config -> [(String, String)] -> [(String, String)]
 sanitizeEnv config = filter p
   where
     p ("HSPEC_FAILURES", _) = False
-    p ("GHC_ENVIRONMENT", _) = not config.configIgnore_GHC_ENVIRONMENT
+    p ("GHC_ENVIRONMENT", _) = not config.ignore_GHC_ENVIRONMENT
     p _ = True
 
 new :: FilePath -> Config -> [(String, String)] -> [String] -> IO Interpreter
@@ -123,7 +123,7 @@ new startupFile config@Config{..} envDefaults args_ = do
       | otherwise = ("-fdiagnostics-as-json" :)
 
     writeIdeInfo :: [String]
-    writeIdeInfo = case configHieDirectory of
+    writeIdeInfo = case hieDirectory of
       Just dir | ghcVersion >= Just (makeVersion [8,8]) -> ["-fwrite-ide-info", "-hiedir", dir]
       _ -> []
 
@@ -132,13 +132,13 @@ new startupFile config@Config{..} envDefaults args_ = do
 
     args :: [String]
     args = "-ghci-script" : startupFile : diagnosticsAsJson args_ ++ catMaybes [
-        if configIgnoreDotGhci then Just "-ignore-dot-ghci" else Nothing
+        if ignoreDotGhci then Just "-ignore-dot-ghci" else Nothing
       ] ++ writeIdeInfo ++ mandatoryArgs
 
   (stdoutReadEnd, stdoutWriteEnd) <- createPipe
 
   (Just stdin_, Nothing, Nothing, processHandle ) <- createProcess (proc ghc args) {
-    cwd = configWorkingDirectory
+    cwd = workingDirectory
   , env = Just $ envDefaults ++ env
   , std_in  = CreatePipe
   , std_out = UseHandle stdoutWriteEnd
@@ -164,8 +164,8 @@ new startupFile config@Config{..} envDefaults args_ = do
     Nothing -> return interpreter
   where
     checkDotGhci :: IO ()
-    checkDotGhci = unless configIgnoreDotGhci $ do
-      let dotGhci = fromMaybe "" configWorkingDirectory </> ".ghci"
+    checkDotGhci = unless ignoreDotGhci $ do
+      let dotGhci = fromMaybe "" workingDirectory </> ".ghci"
       isWritableByOthers dotGhci >>= \ case
         False -> pass
         True -> die $ unlines [
