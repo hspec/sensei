@@ -75,10 +75,10 @@ silent _ = pass
 
 ghciConfig :: Config
 ghciConfig = Config {
-  configIgnoreDotGhci = True
-, configIgnore_GHC_ENVIRONMENT = False
-, configWorkingDirectory = Nothing
-, configHieDirectory = Nothing
+  ignoreDotGhci = True
+, ignore_GHC_ENVIRONMENT = False
+, workingDirectory = Nothing
+, hieDirectory = Nothing
 , configEcho = silent
 }
 

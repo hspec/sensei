@@ -126,10 +126,10 @@ defaultRunArgs hieDir = do
   , modules
   , queue = queue
   , sessionConfig = Session.Config {
-      configIgnoreDotGhci = False
-    , configIgnore_GHC_ENVIRONMENT = False
-    , configWorkingDirectory = Nothing
-    , configHieDirectory = hieDir
+      ignoreDotGhci = False
+    , ignore_GHC_ENVIRONMENT = False
+    , workingDirectory = Nothing
+    , hieDirectory = hieDir
     , configEcho = \ string -> ByteString.putStr string >> hFlush stdout
     }
   , withSession = Session.withSession
