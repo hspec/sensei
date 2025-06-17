@@ -67,7 +67,18 @@ withSession getAvailableImports config args action = do
     (ghciArgs, hspecArgs) = splitArgs args
 
 reload :: MonadIO m => Session -> m (String, (ReloadStatus, [Annotated]))
-reload session = liftIO $ Interpreter.reload session.getAvailableImports session.interpreter
+reload session = liftIO do
+  ref <- newIORef Nothing
+  Interpreter.reload (once ref session.getAvailableImports) session.interpreter
+
+once :: IORef (Maybe a) -> IO a -> IO a
+once ref action = readIORef ref >>= \ case
+  Nothing -> do
+    a <- action
+    writeIORef ref $ Just a
+    return a
+  Just a -> do
+    return a
 
 modules :: Session -> IO [String]
 modules session = map read . drop 1 . lines <$> eval session.interpreter ":complete repl \"import \""
