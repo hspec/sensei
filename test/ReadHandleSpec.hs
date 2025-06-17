@@ -14,8 +14,8 @@ import           ReadHandle
 extractReloadDiagnostics :: Extract (Either ReloadStatus Annotated)
 extractReloadDiagnostics = GhciWrapper.extractReloadDiagnostics mempty
 
-extractDiagnostics :: Extract Annotated
-extractDiagnostics = GhciWrapper.extractDiagnostics mempty
+extractDiagnostics :: Extract Diagnostic
+extractDiagnostics = GhciWrapper.extractDiagnostics
 
 chunkByteString :: (Int, Int) -> ByteString -> Gen [ByteString]
 chunkByteString size = go
@@ -119,9 +119,9 @@ spec = do
 
       context "with extractDiagnostics" $ do
         let
-          extract :: Extract Annotated
+          extract :: Extract Diagnostic
           extract = extractDiagnostics {
-            parseMessage = fmap (second $ const "") . extractDiagnostics.parseMessage
+            parseMessage = \ xs -> fmap (second $ const "") <$> extractDiagnostics.parseMessage xs
           }
 
         it "extracts Diagnostic" $ do
@@ -149,7 +149,7 @@ spec = do
               ]
           withRandomChunkSizes chunks $ \ h -> do
             fmap mconcat . withSpy $ \ echo -> do
-              getResult extract h echo `shouldReturn` ("foo\nbar\nbaz\n", [Annotated err1 Nothing [], Annotated err2 Nothing []])
+              getResult extract h echo `shouldReturn` ("foo\nbar\nbaz\n", [err1, err2])
             `shouldReturn` "foo\nbar\nbaz\n"
 
         context "with a partial match" $ do

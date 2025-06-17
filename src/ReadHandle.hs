@@ -79,13 +79,16 @@ newEmptyBuffer = newIORef BufferEmpty
 
 data Extract a = Extract {
   isPartialMessage :: ByteString -> Bool
-, parseMessage :: ByteString -> Maybe (a, ByteString)
+, parseMessage :: ByteString -> IO (Maybe (a, ByteString))
 } deriving Functor
 
 (<+>) :: Extract a -> Extract b -> Extract (Either a b)
 (<+>) a b = Extract {
   isPartialMessage = \ input -> a.isPartialMessage input || b.isPartialMessage input
-, parseMessage = \ input -> first Left <$> a.parseMessage input <|> first Right <$> b.parseMessage input
+, parseMessage = \ input -> do
+    a.parseMessage input >>= \ case
+      Just (r, xs) -> return $ Just (Left r, xs)
+      Nothing -> fmap (first Right) <$> b.parseMessage input
 }
 
 partialMessageStartsWith :: ByteString -> ByteString -> Bool
@@ -114,7 +117,7 @@ getResult extract h echo = fmap reverse <$> do
     extractMessage chunk = case breakAfterNewLine chunk of
       Nothing -> withMoreInput chunk startOfLine
       Just (x, xs) -> do
-        c <- case extract.parseMessage x of
+        c <- extract.parseMessage x >>= \ case
           Nothing -> do
             return x
           Just (message, formatted) -> do

@@ -41,6 +41,7 @@ import           GHC.Diagnostic
 
 data Session = Session {
   interpreter :: Interpreter
+, getAvailableImports :: IO AvailableImports
 , hspecArgs :: [String]
 , hspecPreviousSummaryRef :: IORef (Maybe Summary)
 }
@@ -57,16 +58,16 @@ hspecPreviousSummary session = liftIO $ readIORef session.hspecPreviousSummaryRe
 envDefaults :: [(String, String)]
 envDefaults = [("HSPEC_EXPERT", "yes")]
 
-withSession :: Config -> [String] -> (Session -> IO r) -> IO r
-withSession config args action = do
+withSession :: IO AvailableImports -> Config -> [String] -> (Session -> IO r) -> IO r
+withSession getAvailableImports config args action = do
   withInterpreter config envDefaults ("-Werror" : ghciArgs) $ \ ghci -> do
     ref <- newIORef (Just $ Summary 0 0)
-    action (Session ghci hspecArgs ref)
+    action (Session ghci getAvailableImports hspecArgs ref)
   where
     (ghciArgs, hspecArgs) = splitArgs args
 
 reload :: MonadIO m => Session -> m (String, (ReloadStatus, [Annotated]))
-reload session = liftIO $ Interpreter.reload session.interpreter
+reload session = liftIO $ Interpreter.reload session.getAvailableImports session.interpreter
 
 modules :: Session -> IO [String]
 modules session = map read . drop 1 . lines <$> eval session.interpreter ":complete repl \"import \""
@@ -135,8 +136,8 @@ extractSummary = Extract {
     summaryPrefix :: ByteString
     summaryPrefix = "Summary {"
 
-    parseMessage :: ByteString -> Maybe (Summary, ByteString)
-    parseMessage input = case ByteString.stripPrefix ansiShowCursor input of
+    parseMessage :: ByteString -> IO (Maybe (Summary, ByteString))
+    parseMessage input = return case ByteString.stripPrefix ansiShowCursor input of
       Nothing -> flip (,) "" <$> parseSummary input
       Just i -> flip (,) ansiShowCursor <$> parseSummary i
 

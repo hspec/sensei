@@ -20,12 +20,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
         ghc:
-          - '9.6'
           - '9.8'
           - '9.10'
           - 'latest'
@@ -34,16 +33,22 @@ jobs:
             ghc: system
     steps:
       - uses: actions/checkout@v4
+
       - uses: hspec/setup-haskell@v1
         with:
           ghc-version: ${{ matrix.ghc }}
+
+      - run: 'echo "  ghc-options: -fwrite-ide-info" >> `cabal path --config-file -v0`'
+
+      - run: bash <(curl -fsSL https://raw.githubusercontent.com/sol/ghc-hie-files/main/get.sh)
+
       - uses: sol/run-haskell-tests@v2
         with:
           caching: true
 
       - shell: bash
         run: |
-          for GHC in 9.4
+          for GHC in 9.4 9.6
           do
             ghcup install ghc $GHC --no-set
             SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)
@@ -64,6 +69,32 @@ jobs:
           compression-level: 0
         if: matrix.ghc == 'latest'
 
+      - shell: bash
+        run: |
+          for GHC in 9.4
+          do
+            ghcup install ghc $GHC --no-set
+            SENSEI_GHC=ghc-$GHC $(cabal list-bin spec)
+          done
+        if: matrix.ghc == 'latest'
+
+      - run: vim/test/run.vim
+        if: runner.os == 'Linux'
+
+      - run: vim/test/fixtures/generate.sh
+        if: ${{ runner.os == 'Linux' && matrix.ghc != '9.4' }}
+
+      - run: git diff --exit-code
+
+      - shell: bash
+        run: |
+          untracked=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked" ]; then
+            echo "Untracked files:"
+            echo "$untracked"
+            exit 1
+          fi
+
   success:
     needs: build
     runs-on: ubuntu-latest
@@ -75,7 +106,7 @@ jobs:
 
       - uses: actions/checkout@v4
       - name: Check for trailing whitespace
-        run: '! git grep -I "\s\+$"'
+        run: "! git grep -nI '[[:blank:]]$' -- . ':!vim/test/fixtures'"
 
       - run: curl -sSL https://raw.githubusercontent.com/sol/hpack/main/get-hpack.sh | bash
       - run: hpack && git diff --exit-code
