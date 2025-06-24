@@ -12,7 +12,7 @@ import qualified Language.Haskell.GhciWrapper as GhciWrapper
 import           ReadHandle
 
 extractReloadDiagnostics :: Extract (Either ReloadStatus Annotated)
-extractReloadDiagnostics = GhciWrapper.extractReloadDiagnostics mempty
+extractReloadDiagnostics = GhciWrapper.extractReloadDiagnostics undefined mempty
 
 extractDiagnostics :: Extract Diagnostic
 extractDiagnostics = GhciWrapper.extractDiagnostics
