@@ -4,6 +4,7 @@ import Helper
 import Data.Map qualified as Map
 import Control.Concurrent.Async qualified as Async
 
+import GHC.Diagnostic (ProvidedBy(..))
 import GHC.EnvironmentFile
 import GHC.EnvironmentFileSpec (storePathContains)
 
@@ -20,7 +21,7 @@ spec = do
         Map.lookup "putList" <$> exports `shouldReturn` Nothing
         Async.wait async
         Map.lookup "unlit" <$> exports `shouldReturn` Just ["Text.Markdown.Unlit"]
-        Map.lookup "putList" <$> exports `shouldReturn` Just ["Data.Binary"]
+        Map.lookup "putList" <$> exports `shouldReturn` Just [ProvidedBy "Data.Binary" (Just "Binary")]
 
   describe "readHieFiles" do
     it "reads exports from a list of HIE files" $ whenGhc GHC_908 do
@@ -28,15 +29,15 @@ spec = do
       exports <- newIORef mempty
       _ <- readHieFiles files (modifyIORef' exports)
       Map.toList <$> readIORef exports `shouldReturn` [
-          (":&:", ["Text.Markdown.Unlit"])
-        , (":|:", ["Text.Markdown.Unlit"])
-        , ("Class", ["Text.Markdown.Unlit"])
-        , ("CodeBlock", ["Text.Markdown.Unlit", "Text.Markdown.Unlit"])
-        , ("Not", ["Text.Markdown.Unlit"])
-        , ("Selector", ["Text.Markdown.Unlit"])
-        , ("codeBlockClasses", ["Text.Markdown.Unlit"])
-        , ("codeBlockContent", ["Text.Markdown.Unlit"])
-        , ("codeBlockStartLine", ["Text.Markdown.Unlit"])
+          (":&:", [ProvidedBy "Text.Markdown.Unlit" (Just "Selector")])
+        , (":|:", [ProvidedBy "Text.Markdown.Unlit" (Just "Selector")])
+        , ("Class", [ProvidedBy "Text.Markdown.Unlit" (Just "Selector")])
+        , ("CodeBlock", [ProvidedBy "Text.Markdown.Unlit" (Just "CodeBlock"), ProvidedBy "Text.Markdown.Unlit" (Just "CodeBlock")])
+        , ("Not", [ProvidedBy "Text.Markdown.Unlit" (Just "Selector")])
+        , ("Selector", [ProvidedBy "Text.Markdown.Unlit" (Just "Selector")])
+        , ("codeBlockClasses", [ProvidedBy "Text.Markdown.Unlit" (Just "CodeBlock")])
+        , ("codeBlockContent", [ProvidedBy "Text.Markdown.Unlit" (Just "CodeBlock")])
+        , ("codeBlockStartLine", [ProvidedBy "Text.Markdown.Unlit" (Just "CodeBlock")])
         , ("parse", ["Text.Markdown.Unlit"])
         , ("parseSelector", ["Text.Markdown.Unlit"])
         , ("run", ["Text.Markdown.Unlit"])

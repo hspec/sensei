@@ -34,8 +34,8 @@ import "ghc-hie" GHC.Iface.Ext.Binary as HIE
 import Util
 import GHC.Info as GHC (Info(..))
 import GHC.EnvironmentFile
-import GHC.Diagnostic (AvailableImports)
-import GHC.Diagnostic.Annotated (Module(..))
+import GHC.Diagnostic (AvailableImports, ProvidedBy(..))
+import GHC.Diagnostic.Annotated (Module(..), Type(..))
 
 type PutStr = Text -> IO ()
 
@@ -129,21 +129,22 @@ readExports nameCache updateAvailableImports (Path file) = do
   result <- readHieFile nameCache file
 
   let
-    (module_, names) = hieExports result.hie_file_result
+    exports :: [(Text, ProvidedBy)]
+    exports = hieExports result.hie_file_result
 
-    insert :: Text -> AvailableImports -> AvailableImports
-    insert name = Map.insertWith (++) name [module_]
+    insert :: (Text, ProvidedBy) -> AvailableImports -> AvailableImports
+    insert (name, providedBy) = Map.insertWith (++) name [providedBy]
 
     insertAll :: AvailableImports -> AvailableImports
-    insertAll m = foldr insert m names
+    insertAll m = foldr insert m exports
 
   updateAvailableImports insertAll
 
-hieExports :: HieFile -> (Module, [Text])
-hieExports hieFile = (fromModuleName hieFile.hie_module.moduleName, map fromName exports)
+hieExports :: HieFile -> [(Text, ProvidedBy)]
+hieExports hieFile = concatMap allNames hieFile.hie_exports
   where
-    exports :: [Name]
-    exports = concatMap allNames hieFile.hie_exports
+    module_ :: Module
+    module_ = fromModuleName hieFile.hie_module.moduleName
 
     fromName :: Name -> Text
     fromName = unpackFS . occNameFS . nameOccName
@@ -151,10 +152,10 @@ hieExports hieFile = (fromModuleName hieFile.hie_module.moduleName, map fromName
     fromModuleName :: ModuleName -> Module
     fromModuleName = Module . unpackFS . coerce
 
-    allNames :: AvailInfo -> [Name]
+    allNames :: AvailInfo -> [(Text, ProvidedBy)]
     allNames = \ case
-      Avail name -> [name]
-      AvailTC _ names -> names
+      Avail name -> [(fromName name, ProvidedBy module_ Nothing)]
+      AvailTC type_ names -> [(name, ProvidedBy module_ (Just . Type $ fromName type_)) | name <- map fromName names]
 
 unpackFS :: FastString -> Text
 unpackFS = unsafeShortByteStringAsText . fs_sbs

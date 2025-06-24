@@ -1,0 +1,1 @@
+{"version":"1.0","ghcVersion":"ghc-9.10.0","span":{"file":"test/fixtures/not-in-scope-pattern/Foo.hs","start":{"line":3,"column":3},"end":{"line":3,"column":8}},"severity":"Error","code":76037,"message":["Not in scope: data constructor `NoArg'"],"hints":[]}

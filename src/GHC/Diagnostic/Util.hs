@@ -24,8 +24,8 @@ joinLines required = loop
       x : (T.span isSpace -> (hasRequiredLeadingSpaces -> True, y)) : ys -> loop $ mconcat [x, " ", y] : ys
       x : xs -> x : loop xs
 
-sortImports :: RequiredVariable -> [Module] -> [Module]
-sortImports variable = sortOn \ case
+sortImports :: RequiredVariable -> (a -> Module) -> [a] -> [a]
+sortImports variable f = sortOn $ f >>> \ case
   (Module module_) -> (qualificationIs, map toModuleComponent components)
     where
       qualificationIs :: QualificationIs
