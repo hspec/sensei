@@ -20,6 +20,7 @@ import System.Directory
 import Control.Monad.Trans.Writer.CPS
 
 import Distribution.Text (display)
+import Distribution.Backpack
 import Distribution.ModuleName (toFilePath)
 import Distribution.PackageDescription
 import Distribution.InstalledPackageInfo
@@ -50,7 +51,8 @@ packageHieFiles fallback package = do
 
   firstDir dirs >>= \ case
     Nothing -> do
-      warning $ "no HIE directory for " <> display (installedComponentId package)
+      unless (null $ package.exposedModules) do
+        warning $ "no HIE directory for " <> display (installedComponentId package)
       return []
     Just dir -> do
       hieFiles dir
@@ -67,10 +69,14 @@ packageHieFiles fallback package = do
         let file = dir </> toFilePath name <.> "hie"
         liftIO (doesFileExist file) >>= \ case
           False -> do
-            warning $ "non-existing " <> file
+            let isVirtualModule = packageName == "ghc-prim" && name == "GHC.Prim"
+            unless isVirtualModule do
+              warning $ "non-existing " <> file
             return Nothing
           True -> do
             return . Just $ Path file
+      ExposedModule name (Just (OpenModule _ original)) | name == original -> do
+        return Nothing
       ExposedModule name (Just original) -> do
         warning $ "ignoring re-export " <> display original <> " as " <> packageName <> ":" <> display name
         return Nothing
