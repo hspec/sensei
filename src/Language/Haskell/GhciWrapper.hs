@@ -149,12 +149,15 @@ new startupFile config@Config{..} envDefaults args_ = do
       hSetEncoding h utf8
 
     printStartupMessages :: Interpreter -> IO (String, [Either ReloadStatus Annotated])
-    printStartupMessages ghci = evalVerbose (extractReloadDiagnostics mempty) ghci ""
+    printStartupMessages ghci = do
+      numberForNextSolution <- newIORef 1
+      evalVerbose (extractReloadDiagnostics numberForNextSolution mempty) ghci ""
 
 close :: Interpreter -> IO ()
 close ghci = do
   hClose ghci.hIn
-  ReadHandle.drain (extractReloadDiagnostics mempty) ghci.readHandle ghci.echo
+  numberForNextSolution <- newIORef 1
+  ReadHandle.drain (extractReloadDiagnostics numberForNextSolution mempty) ghci.readHandle ghci.echo
   hClose ghci.hOut
   e <- waitForProcess ghci.process
   when (e /= ExitSuccess) $ do
@@ -166,8 +169,8 @@ putExpression Interpreter{hIn = stdin} e = do
   ByteString.hPut stdin ReadHandle.marker
   hFlush stdin
 
-extractReloadDiagnostics :: IO Diagnostic.AvailableImports -> Extract (Either ReloadStatus Annotated)
-extractReloadDiagnostics getAvailableImports = extractReloadStatus <+> extractAnnotatedDiagnostics getAvailableImports
+extractReloadDiagnostics :: IORef Int -> IO Diagnostic.AvailableImports -> Extract (Either ReloadStatus Annotated)
+extractReloadDiagnostics numberForNextSolution getAvailableImports = extractReloadStatus <+> extractAnnotatedDiagnostics numberForNextSolution getAvailableImports
 
 data ReloadStatus = Ok | Failed
   deriving (Eq, Show)
@@ -185,10 +188,17 @@ extractReloadStatus = Extract {
     ok = "Ok, modules loaded: "
     failed = "Failed, modules loaded: "
 
-extractAnnotatedDiagnostics :: IO Diagnostic.AvailableImports -> ReadHandle.Extract Annotated
-extractAnnotatedDiagnostics getAvailableImports = ReadHandle.Extract {
+extractAnnotatedDiagnostics :: IORef Int -> IO Diagnostic.AvailableImports -> ReadHandle.Extract Annotated
+extractAnnotatedDiagnostics numberForNextSolution getAvailableImports = ReadHandle.Extract {
   isPartialMessage = ByteString.isPrefixOf "{"
-, parseMessage = \ input -> fmap (id &&& T.encodeUtf8 . Diagnostic.formatAnnotated) <$> Diagnostic.parseAnnotated getAvailableImports input
+, parseMessage = \ input -> do
+    Diagnostic.parseAnnotated getAvailableImports input >>= \ case
+      Nothing -> return Nothing
+      Just diagnostic -> do
+        n <- readIORef numberForNextSolution
+        let (next, formatted) = Diagnostic.formatAnnotated n diagnostic
+        writeIORef numberForNextSolution next
+        return $ Just (diagnostic, T.encodeUtf8 formatted)
 }
 
 extractDiagnostics :: ReadHandle.Extract Diagnostic.Diagnostic
@@ -211,6 +221,12 @@ evalVerbose extract ghci expr = putExpression ghci expr >> getResult extract ghc
 
 reload :: IO Diagnostic.AvailableImports -> Interpreter -> IO (String, (ReloadStatus, [Annotated]))
 reload getAvailableImports ghci = do
-  evalVerbose (extractReloadDiagnostics getAvailableImports) ghci ":reload" <&> second \ case
-    (partitionEithers -> ([Ok], diagnostics)) -> (Ok, diagnostics)
-    (partitionEithers ->(_, diagnostics)) -> (Failed, diagnostics)
+  numberForNextSolution <- newIORef 1
+
+  let
+    extract :: Extract (Either ReloadStatus Annotated)
+    extract = (extractReloadDiagnostics numberForNextSolution getAvailableImports)
+
+  evalVerbose extract ghci ":reload" <&> second \ case
+      (partitionEithers -> ([Ok], diagnostics)) -> (Ok, diagnostics)
+      (partitionEithers ->(_, diagnostics)) -> (Failed, diagnostics)

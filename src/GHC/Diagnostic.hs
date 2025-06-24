@@ -36,15 +36,17 @@ import           GHC.Diagnostic.Type as Diagnostic
 import           GHC.Diagnostic.Annotated
 import           GHC.Diagnostic.Util
 
-formatAnnotated :: Annotated -> Text
-formatAnnotated annotated = Builder.toText $
-  fromString (format annotated.diagnostic) <> formatSolutions annotated.solutions
+formatAnnotated :: Int -> Annotated -> (Int, Text)
+formatAnnotated start annotated = case formatSolutions start annotated.solutions of
+  (next, solutions) -> (next, Builder.toText $ fromString (format annotated.diagnostic) <> solutions)
 
-formatSolutions :: [Solution] -> Builder
-formatSolutions = Builder.unlines . zipWith formatNumbered [1..]
+formatSolutions :: Int -> [Solution] -> (Int, Builder)
+formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
+  [] -> (start, mempty)
+  solutions@((succ -> next, _) : _) -> (next, Builder.unlines . reverse $ map snd solutions)
   where
-    formatNumbered :: Int -> Solution -> Builder
-    formatNumbered n solution = formatNumber n <> formatSolution solution
+    formatNumbered :: Int -> Solution -> (Int, Builder)
+    formatNumbered n solution = (n, formatNumber n <> formatSolution solution)
 
     formatNumber :: Int -> Builder
     formatNumber n = Builder.withColor Cyan $ "    " <> "[" <> Builder.show n <> "] "

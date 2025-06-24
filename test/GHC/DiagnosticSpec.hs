@@ -304,12 +304,12 @@ spec = do
   describe "formatAnnotated" do
     it "formats an annotated diagnostic message" do
       Just annotated <- B.readFile "test/fixtures/not-in-scope/err.json" >>= parseAnnotated getAvailableImports
-      formatAnnotated annotated `shouldBe` T.unlines [
+      formatAnnotated 1 annotated `shouldBe` (2, T.unlines [
           "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: c2w"
         , ""
         , T.pack (withColor Cyan "    [1] ") <> "import Data.ByteString.Internal (c2w)"
-        ]
+        ])
 
   describe "applyReplace" do
     it "replaces a given source span with a substitute" do
