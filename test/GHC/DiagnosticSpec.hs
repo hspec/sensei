@@ -81,6 +81,7 @@ getAvailableImports :: IO AvailableImports
 getAvailableImports = return $ Map.fromList [
     ("c2w", ["Data.ByteString.Internal"])
   , ("fromList", ["Data.Map"])
+  , ("NoArg", [ProvidedBy "System.Console.GetOpt" (Just "ArgDescr")])
   ]
 
 unindent :: String -> Text
@@ -115,6 +116,17 @@ spec = do
       foo = c2w
       |] (notInScope "c2w") [importName "Data.ByteString.Internal" "c2w"]
 
+    test "not-in-scope-qualified" [] [r|
+      module Foo where
+      foo = B.c2w
+      |] (notInScope (RequiredVariable "B" "c2w" NoTypeSignature)) [ImportName "Data.ByteString.Internal" "B" "c2w"]
+
+    test "not-in-scope-with-type" [] [r|
+      module Foo where
+      foo :: Int
+      foo = bar "baz"
+      |] (notInScope (RequiredVariable Unqualified "bar" "String -> Int")) []
+
     test "not-in-scope-perhaps-use" [] [r|
       module Foo where
       foo = filter_
@@ -130,6 +142,24 @@ spec = do
       import Data.List
       foo = fold
       |] (notInScope "fold") [UseName "foldl", UseName "foldr"]
+
+    test "not-in-scope-data" [] [r|
+      module Foo where
+      foo = NoArg
+      |] (notInScope "NoArg") [importName "System.Console.GetOpt" "ArgDescr(..)"]
+
+    test "not-in-scope-data-with-type" [] [r|
+      module Foo where
+
+      foo :: Maybe Int
+      foo = Foo (23 :: Int)
+      |] (notInScope (RequiredVariable Unqualified "Foo" "Int -> Maybe Int")) [UseName "foo"]
+
+    test "not-in-scope-pattern" [] [r|
+      module Foo where
+      foo = case undefined of
+        NoArg -> undefined
+      |] (notInScope "NoArg") [importName "System.Console.GetOpt" "ArgDescr(..)"]
 
     test "found-hole" [] [r|
       module Foo where
@@ -300,6 +330,9 @@ spec = do
 
     it "parses a qualified name" do
       qualifiedName "Foo.Bar.baz" `shouldBe` RequiredVariable "Foo.Bar" "baz" NoTypeSignature
+
+    it "parses a name with type signature" do
+      qualifiedName "Foo.Bar.baz :: Int -> Int" `shouldBe` RequiredVariable "Foo.Bar" "baz" "Int -> Int"
 
   describe "formatAnnotated" do
     it "formats an annotated diagnostic message" do

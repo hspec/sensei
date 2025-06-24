@@ -32,7 +32,7 @@ spec = do
         let
           name :: RequiredVariable
           name = "fromList"
-        sortImports name [
+        sortImports name id [
             "Data.List.NonEmpty"
           , "Data.Map"
           , "Data.Map.Internal"
@@ -55,7 +55,7 @@ spec = do
         let
           name :: RequiredVariable
           name = RequiredVariable (Qualified "Map") "fromList" NoTypeSignature
-        sortImports name [
+        sortImports name id [
             "Data.List.NonEmpty"
           , "Data.Map"
           , "Data.Map.Internal"

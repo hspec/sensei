@@ -1,0 +1,4 @@
+test/fixtures/not-in-scope-qualified/Foo.hs:2:7: error: [GHC-76037]
+    Not in scope: `B.c2w'
+    NB: no module named `B' is imported.
+

@@ -3,6 +3,7 @@ module GHC.Diagnostic (
   module Diagnostic
 , Annotated(..)
 , AvailableImports
+, ProvidedBy(..)
 , parseAnnotated
 , formatAnnotated
 
@@ -58,7 +59,13 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
       UseName name -> "Use " <> Builder.fromText name
       ImportName module_ qualification name -> importStatement module_ qualification [name]
 
-type AvailableImports = Map Text [Module]
+data ProvidedBy = ProvidedBy Module (Maybe Type)
+  deriving (Eq, Show)
+
+instance IsString ProvidedBy where
+  fromString = (`ProvidedBy` Nothing) . fromString
+
+type AvailableImports = Map Text [ProvidedBy]
 
 parseAnnotated :: IO AvailableImports -> ByteString -> IO (Maybe Annotated)
 parseAnnotated getAvailableImports input = case parse input of
@@ -88,6 +95,7 @@ analyzeHint hint = asum [
       map EnableExtension . reverse . T.splitOn ", "
 
   , prefix "Perhaps use `" <&> return . takeIdentifier
+  , prefix "Perhaps use variable `" <&> return . takeIdentifier
   , prefix "Perhaps use one of these:" <&> extractIdentifiers
   ]
   where
@@ -137,6 +145,8 @@ parseAnnotation diagnostic = asum [
     analyzeMessageLine input = asum [
         NotInScope <$> variableNotInScope
       , NotInScope <$> qualifiedNameNotInScope
+      , NotInScope <$> dataConstructorNotInScope
+      , NotInScope <$> dataConstructorNotInScopeInPattern
       , foundHole
       ]
       where
@@ -147,13 +157,16 @@ parseAnnotation diagnostic = asum [
         prefix p = stripPrefix p input
 
         variableNotInScope :: Maybe RequiredVariable
-        variableNotInScope = prefix "Variable not in scope: " <&> variable
+        variableNotInScope = prefix "Variable not in scope: " <&> qualifiedName
 
         qualifiedNameNotInScope :: Maybe RequiredVariable
         qualifiedNameNotInScope = prefix "Not in scope: `" >>= stripSuffix "'" <&> qualifiedName
 
-        variable :: Text -> RequiredVariable
-        variable = breakOnTypeSignature $ RequiredVariable Unqualified
+        dataConstructorNotInScope :: Maybe RequiredVariable
+        dataConstructorNotInScope = prefix "Data constructor not in scope: " <&> qualifiedName
+
+        dataConstructorNotInScopeInPattern :: Maybe RequiredVariable
+        dataConstructorNotInScopeInPattern = prefix "Not in scope: data constructor `" >>= stripSuffix "'" <&> qualifiedName
 
     analyzeHoleFits :: Maybe [HoleFit]
     analyzeHoleFits = asum $ map validHoleFitsInclude diagnostic.message
@@ -187,20 +200,20 @@ parseAnnotation diagnostic = asum [
         holeFit :: Text -> HoleFit
         holeFit = breakOn " (bound at " >>> fst >>> T.strip >>> breakOnTypeSignature HoleFit
 
-    breakOnTypeSignature :: (Text -> TypeSignature -> a) -> Text -> a
-    breakOnTypeSignature c t = case breakOn " :: " t of
-      (name, "") -> c name NoTypeSignature
-      (name, type_) -> c name (TypeSignature $ Type type_)
-
     takeTypeSignature :: Text -> Maybe Type
     takeTypeSignature t = case breakOn " :: " t of
       (_, "") -> Nothing
       (_, type_) -> Just (Type type_)
 
+breakOnTypeSignature :: (Text -> TypeSignature -> a) -> Text -> a
+breakOnTypeSignature c t = case breakOn " :: " t of
+  (name, "") -> c name NoTypeSignature
+  (name, type_) -> c name (TypeSignature $ Type type_)
+
 qualifiedName :: Text -> RequiredVariable
-qualifiedName = breakOnEnd "." >>> \ case
-  ("", name) -> RequiredVariable Unqualified name NoTypeSignature
-  (qualification, name) -> RequiredVariable (Qualified qualification) name NoTypeSignature
+qualifiedName = breakOnTypeSignature \ input type_ -> case breakOnEnd "." input of
+  ("", name) -> RequiredVariable Unqualified name type_
+  (qualification, name) -> RequiredVariable (Qualified qualification) name type_
 
 breakOn :: Text -> Text -> (Text, Text)
 breakOn sep = second (T.drop $ T.length sep) . T.breakOn sep
@@ -214,14 +227,19 @@ analyzeAnnotation availableImports = \ case
   NotInScope name -> importRequired name
   FoundHole _ fits -> map (UseName . (.name)) fits
   where
-    importRequired :: RequiredVariable -> [Solution]
-    importRequired required = map importName $ sortImports required modules
-      where
-        modules :: [Module]
-        modules = fromMaybe [] (Map.lookup required.name availableImports)
+    providedByModule :: ProvidedBy -> Module
+    providedByModule (ProvidedBy module_ _) = module_
 
-        importName :: Module -> Solution
-        importName module_ = ImportName module_ required.qualification required.name
+    importRequired :: RequiredVariable -> [Solution]
+    importRequired required = map importName $ sortImports required providedByModule providedBy
+      where
+        providedBy :: [ProvidedBy]
+        providedBy = fromMaybe [] (Map.lookup required.name availableImports)
+
+        importName :: ProvidedBy -> Solution
+        importName = \ case
+          ProvidedBy module_ Nothing -> ImportName module_ required.qualification required.name
+          ProvidedBy module_ (Just (Type type_)) -> ImportName module_ required.qualification (type_ <> "(..)")
 
 data Edit =
     AddExtension FilePath Text
