@@ -29,10 +29,7 @@ spec = do
   describe "sortImports" do
     context "with an unqualified name" do
       it "sorts imports" do
-        let
-          name :: RequiredVariable
-          name = "fromList"
-        sortImports name id [
+        sortImports Unqualified (Name VariableName "foo") id [
             "Data.List.NonEmpty"
           , "Data.Map"
           , "Data.Map.Internal"
@@ -52,10 +49,7 @@ spec = do
 
     context "with a qualified name" do
       it "sorts imports" do
-        let
-          name :: RequiredVariable
-          name = RequiredVariable (Qualified "Map") "fromList" NoTypeSignature
-        sortImports name id [
+        sortImports "Map" (Name VariableName "foo") id [
             "Data.List.NonEmpty"
           , "Data.Map"
           , "Data.Map.Internal"
@@ -75,13 +69,21 @@ spec = do
 
     context "when the components of a module A are a subset of the components of an other module B" do
       it "puts module A before module B" do
-        let
-          name :: RequiredVariable
-          name = RequiredVariable (Qualified "Map") "fromList" NoTypeSignature
-        sortImports name id [
+        sortImports "Map" (Name VariableName "foo") id [
             "Data.Text.Internal.Lazy.Search"
           , "Data.Text.Internal.Search"
           ] `shouldBe` [
             "Data.Text.Internal.Search"
           , "Data.Text.Internal.Lazy.Search"
           ]
+
+    context "when importing types" do
+      context "when the type name is a module name component" do
+        it "prioritizes that module" do
+          sortImports Unqualified (Name TypeName "User") id [
+              "Models.Product"
+            , "Models.User"
+            ] `shouldBe` [
+              "Models.User"
+            , "Models.Product"
+            ]

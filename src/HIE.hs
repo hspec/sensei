@@ -19,7 +19,8 @@ import System.IO.Temp (withSystemTempDirectory)
 
 import GHC.Unit.Types qualified
 import GHC.Types.Avail
-import GHC.Types.Name
+import GHC.Types.Name hiding (Name)
+import GHC.Types.Name qualified as GHC
 import GHC.Types.Name.Cache
 import Language.Haskell.Syntax.Module.Name
 
@@ -34,7 +35,7 @@ import "ghc-hie" GHC.Iface.Ext.Binary as HIE
 import Util
 import GHC.Info as GHC (Info(..))
 import GHC.EnvironmentFile
-import GHC.Diagnostic (AvailableImports, ProvidedBy(..))
+import GHC.Diagnostic (Name(..), NameSpace(..), AvailableImports, ProvidedBy(..))
 import GHC.Diagnostic.Annotated (Module(..), Type(..))
 
 type PutStr = Text -> IO ()
@@ -129,10 +130,10 @@ readExports nameCache updateAvailableImports (Path file) = do
   result <- readHieFile nameCache file
 
   let
-    exports :: [(Text, ProvidedBy)]
+    exports :: [(Name, ProvidedBy)]
     exports = hieExports result.hie_file_result
 
-    insert :: (Text, ProvidedBy) -> AvailableImports -> AvailableImports
+    insert :: (Name, ProvidedBy) -> AvailableImports -> AvailableImports
     insert (name, providedBy) = Map.insertWith (++) name [providedBy]
 
     insertAll :: AvailableImports -> AvailableImports
@@ -140,22 +141,32 @@ readExports nameCache updateAvailableImports (Path file) = do
 
   updateAvailableImports insertAll
 
-hieExports :: HieFile -> [(Text, ProvidedBy)]
+hieExports :: HieFile -> [(Name, ProvidedBy)]
 hieExports hieFile = concatMap allNames hieFile.hie_exports
   where
     module_ :: Module
     module_ = fromModuleName hieFile.hie_module.moduleName
 
-    fromName :: Name -> Text
-    fromName = unpackFS . occNameFS . nameOccName
+    fromName :: GHC.Name -> Name
+    fromName name
+      | nameNameSpace name == tcClsName = Name TypeName (ghcNameAsText name)
+      | otherwise = Name VariableName (ghcNameAsText name)
+
+    ghcNameAsText :: GHC.Name -> Text
+    ghcNameAsText = unpackFS . occNameFS . nameOccName
 
     fromModuleName :: ModuleName -> Module
     fromModuleName = Module . unpackFS . coerce
 
-    allNames :: AvailInfo -> [(Text, ProvidedBy)]
+    available :: Maybe Type -> GHC.Name -> (Name, ProvidedBy)
+    available type_ name = (fromName name, ProvidedBy module_ type_)
+
+    allNames :: AvailInfo -> [(Name, ProvidedBy)]
     allNames = \ case
-      Avail name -> [(fromName name, ProvidedBy module_ Nothing)]
-      AvailTC type_ names -> [(name, ProvidedBy module_ (Just . Type $ fromName type_)) | name <- map fromName names]
+      Avail name -> [available Nothing name]
+      AvailTC type_ names -> map (available (Just t)) names
+        where
+          t = Type (ghcNameAsText type_)
 
 unpackFS :: FastString -> Text
 unpackFS = unsafeShortByteStringAsText . fs_sbs
