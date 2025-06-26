@@ -2,6 +2,8 @@
 module GHC.Diagnostic (
   module Diagnostic
 , Annotated(..)
+, Name(..)
+, NameSpace(..)
 , AvailableImports
 , ProvidedBy(..)
 , parseAnnotated
@@ -15,6 +17,7 @@ module GHC.Diagnostic (
 , analyzeHint
 , extractIdentifiers
 , qualifiedName
+, analyzeAnnotation
 , applyReplace
 #endif
 ) where
@@ -65,7 +68,7 @@ data ProvidedBy = ProvidedBy Module (Maybe Type)
 instance IsString ProvidedBy where
   fromString = (`ProvidedBy` Nothing) . fromString
 
-type AvailableImports = Map Text [ProvidedBy]
+type AvailableImports = Map Name [ProvidedBy]
 
 parseAnnotated :: IO AvailableImports -> ByteString -> IO (Maybe Annotated)
 parseAnnotated getAvailableImports input = case parse input of
@@ -147,6 +150,7 @@ parseAnnotation diagnostic = asum [
       , NotInScope <$> qualifiedNameNotInScope
       , NotInScope <$> dataConstructorNotInScope
       , NotInScope <$> dataConstructorNotInScopeInPattern
+      , typeConstructorNotInScope
       , foundHole
       ]
       where
@@ -166,7 +170,12 @@ parseAnnotation diagnostic = asum [
         dataConstructorNotInScope = prefix "Data constructor not in scope: " <&> qualifiedName
 
         dataConstructorNotInScopeInPattern :: Maybe RequiredVariable
-        dataConstructorNotInScopeInPattern = prefix "Not in scope: data constructor `" >>= stripSuffix "'" <&> qualifiedName
+        dataConstructorNotInScopeInPattern = prefix "Not in scope: data constructor `" >>= stripSuffix "'"
+          <&> qualifiedName
+
+        typeConstructorNotInScope :: Maybe Annotation
+        typeConstructorNotInScope = (prefix "Not in scope: type constructor or class `" >>= stripSuffix "'")
+          <&> qualified TypeNotInScope
 
     analyzeHoleFits :: Maybe [HoleFit]
     analyzeHoleFits = asum $ map validHoleFitsInclude diagnostic.message
@@ -211,9 +220,12 @@ breakOnTypeSignature c t = case breakOn " :: " t of
   (name, type_) -> c name (TypeSignature $ Type type_)
 
 qualifiedName :: Text -> RequiredVariable
-qualifiedName = breakOnTypeSignature \ input type_ -> case breakOnEnd "." input of
-  ("", name) -> RequiredVariable Unqualified name type_
-  (qualification, name) -> RequiredVariable (Qualified qualification) name type_
+qualifiedName = breakOnTypeSignature $ qualified RequiredVariable
+
+qualified :: (Qualification -> Text -> t) -> Text -> t
+qualified c input = case breakOnEnd "." input of
+  ("", name) -> c Unqualified name
+  (qualification, name) -> c (Qualified qualification) name
 
 breakOn :: Text -> Text -> (Text, Text)
 breakOn sep = second (T.drop $ T.length sep) . T.breakOn sep
@@ -224,22 +236,28 @@ breakOnEnd sep = first (T.dropEnd $ T.length sep) . T.breakOnEnd sep
 analyzeAnnotation :: AvailableImports -> Annotation -> [Solution]
 analyzeAnnotation availableImports = \ case
   RedundantImport -> [RemoveImport]
-  NotInScope name -> importRequired name
+  NotInScope variable -> importName variable.qualification (Name VariableName variable.name)
+  TypeNotInScope qualification name -> importName qualification (Name TypeName name)
   FoundHole _ fits -> map (UseName . (.name)) fits
   where
     providedByModule :: ProvidedBy -> Module
     providedByModule (ProvidedBy module_ _) = module_
 
-    importRequired :: RequiredVariable -> [Solution]
-    importRequired required = map importName $ sortImports required providedByModule providedBy
+    importName :: Qualification -> Name -> [Solution]
+    importName qualification required = map solution $ sortByModule providedBy
       where
-        providedBy :: [ProvidedBy]
-        providedBy = fromMaybe [] (Map.lookup required.name availableImports)
+        sortByModule :: [ProvidedBy] -> [ProvidedBy]
+        sortByModule = sortImports qualification required providedByModule
 
-        importName :: ProvidedBy -> Solution
-        importName = \ case
-          ProvidedBy module_ Nothing -> ImportName module_ required.qualification required.name
-          ProvidedBy module_ (Just (Type type_)) -> ImportName module_ required.qualification (type_ <> "(..)")
+        providedBy :: [ProvidedBy]
+        providedBy = fromMaybe [] (Map.lookup required availableImports)
+
+        solution :: ProvidedBy -> Solution
+        solution = \ case
+          ProvidedBy module_ (Just (Type type_)) -> ImportName module_ qualification case required.nameSpace of
+            VariableName -> type_ <> "(..)"
+            TypeName -> type_
+          ProvidedBy module_ Nothing -> ImportName module_ qualification required.name
 
 data Edit =
     AddExtension FilePath Text

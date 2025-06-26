@@ -2,18 +2,21 @@
 {-# LANGUAGE QuasiQuotes #-}
 module GHC.DiagnosticSpec (spec) where
 
-import           Helper hiding (diagnostic)
-import           Test.Hspec.Expectations.Contrib qualified as Hspec
-import           Text.RawString.QQ (r, rQ)
+import Helper hiding (diagnostic)
+import Test.Hspec.Expectations.Contrib qualified as Hspec
+import Text.RawString.QQ (r, rQ)
 
-import           System.Process
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import           Data.ByteString qualified as B
-import qualified Data.Map as Map
+import System.Process
+import Control.Concurrent.Async qualified as Async
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
+import Data.ByteString qualified as B
+import Data.Map qualified as Map
 
-import           GHC.Diagnostic
-import           GHC.Diagnostic.Annotated
+import HIE qualified as HIE
+
+import GHC.Diagnostic
+import GHC.Diagnostic.Annotated
 
 shouldAnnotate :: Bool
 shouldAnnotate = True
@@ -79,9 +82,9 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
 
 getAvailableImports :: IO AvailableImports
 getAvailableImports = return $ Map.fromList [
-    ("c2w", ["Data.ByteString.Internal"])
-  , ("fromList", ["Data.Map"])
-  , ("NoArg", [ProvidedBy "System.Console.GetOpt" (Just "ArgDescr")])
+    (Name VariableName "c2w", ["Data.ByteString.Internal"])
+  , (Name VariableName "fromList", ["Data.Map"])
+  , (Name VariableName "NoArg", [ProvidedBy "System.Console.GetOpt" (Just "ArgDescr")])
   ]
 
 unindent :: String -> Text
@@ -142,6 +145,18 @@ spec = do
       import Data.List
       foo = fold
       |] (notInScope "fold") [UseName "foldl", UseName "foldr"]
+
+    test "not-in-scope-type" [] [r|
+      module Foo where
+      foo :: Map
+      foo = undefined
+      |] (Just $ TypeNotInScope Unqualified "Map") []
+
+    test "not-in-scope-type-qualified" [] [r|
+      module Foo where
+      foo :: My.Map
+      foo = undefined
+      |] (Just $ TypeNotInScope "My" "Map") []
 
     test "not-in-scope-data" [] [r|
       module Foo where
@@ -343,6 +358,57 @@ spec = do
         , ""
         , T.pack (withColor Cyan "    [1] ") <> "import Data.ByteString.Internal (c2w)"
         ])
+
+  describe "analyzeAnnotation" do
+    let
+      withAvailableImports :: (AvailableImports -> IO a) -> IO a
+      withAvailableImports item = do
+        require GHC_908
+        info <- ghcInfo
+        HIE.with (\ _ -> pass) info \ _ getAvailable async -> do
+          Async.wait async
+          getAvailable >>= item
+
+    aroundAll withAvailableImports do
+      context "with NotInScope" do
+        it "suggests functions" \ availableImports -> do
+          let
+            annotation :: Annotation
+            annotation = NotInScope (RequiredVariable Unqualified "unlit" NoTypeSignature)
+          analyzeAnnotation availableImports annotation `shouldBe` [
+              ImportName "Text.Markdown.Unlit" Unqualified "unlit"
+            ]
+
+        it "suggests constructors" \ availableImports -> do
+          let
+            annotation :: Annotation
+            annotation = NotInScope (RequiredVariable Unqualified "Option" NoTypeSignature)
+          analyzeAnnotation availableImports annotation `shouldBe` [
+              ImportName "System.Console.GetOpt" Unqualified "OptDescr(..)"
+            ]
+
+        it "does not suggest types" \ availableImports -> do
+          let
+            annotation :: Annotation
+            annotation = NotInScope (RequiredVariable Unqualified "OptDescr" NoTypeSignature)
+          analyzeAnnotation availableImports annotation `shouldBe` [
+            ]
+
+      context "with TypeNotInScope" do
+        it "suggests types" \ availableImports -> do
+          let
+            annotation :: Annotation
+            annotation = TypeNotInScope Unqualified "OptDescr"
+          analyzeAnnotation availableImports annotation `shouldBe` [
+              ImportName "System.Console.GetOpt" Unqualified "OptDescr"
+            ]
+
+        it "does not suggest constructors" \ availableImports -> do
+          let
+            annotation :: Annotation
+            annotation = TypeNotInScope Unqualified "Option"
+          analyzeAnnotation availableImports annotation `shouldBe` [
+            ]
 
   describe "applyReplace" do
     it "replaces a given source span with a substitute" do

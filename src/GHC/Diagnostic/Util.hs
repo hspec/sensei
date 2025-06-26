@@ -1,6 +1,9 @@
 module GHC.Diagnostic.Util (
   joinMessageLines
 , joinLines
+
+, Name(..)
+, NameSpace(..)
 , sortImports
 ) where
 
@@ -26,12 +29,31 @@ joinLines required = loop
       x : (T.span isSpace -> (hasRequiredLeadingSpaces -> True, y)) : ys -> loop $ mconcat [x, " ", y] : ys
       x : xs -> x : loop xs
 
-sortImports :: RequiredVariable -> (a -> Module) -> [a] -> [a]
-sortImports variable f = sortOn $ f >>> \ case
-  (Module module_) -> (qualificationIs, moduleComponents components)
+data Name = Name {
+  nameSpace :: NameSpace
+, name :: Text
+} deriving (Eq, Show, Ord)
+
+data NameSpace =
+    VariableName
+  | TypeName
+  deriving (Eq, Show, Ord)
+
+sortImports :: Qualification -> Name -> (a -> Module) -> [a] -> [a]
+sortImports qual required f = sortOn $ f >>> \ case
+  (Module module_) -> (
+      type_name_is_a_module_name_component
+    , qualification_is_related_to_module_name
+    , moduleComponents
+    )
     where
-      qualificationIs :: QualificationIs
-      qualificationIs = case variable.qualification of
+      type_name_is_a_module_name_component :: Bool
+      type_name_is_a_module_name_component = case required.nameSpace of
+        VariableName -> False
+        TypeName -> not $ required.name `Set.member` componentsSet
+
+      qualification_is_related_to_module_name :: QualificationIs
+      qualification_is_related_to_module_name = case qual of
           Unqualified -> QualificationIsUnrelatedToModuleName
           Qualified qualification
             | qualification `elem` components -> QualificationIsModuleComponent
@@ -41,6 +63,12 @@ sortImports variable f = sortOn $ f >>> \ case
       components :: [Text]
       components = T.splitOn "." module_
 
+      componentsSet :: Set Text
+      componentsSet = Set.fromList components
+
+      moduleComponents :: ModuleComponents
+      moduleComponents = ModuleComponents (map toModuleComponent components) componentsSet
+
 data ModuleComponents = ModuleComponents {
   components :: [ModuleComponent]
 , asSet :: Set Text
@@ -48,9 +76,6 @@ data ModuleComponents = ModuleComponents {
 
 instance Eq ModuleComponents where
   a == b = a.components == b.components
-
-moduleComponents :: [Text] -> ModuleComponents
-moduleComponents components = ModuleComponents (map toModuleComponent components) (Set.fromList components)
 
 instance Ord ModuleComponents where
   compare a b
