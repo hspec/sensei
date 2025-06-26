@@ -45,8 +45,8 @@ spec = do
           , "Data.Map"
           , "Data.Map.Lazy"
           , "Data.Map.Strict"
-          , "Data.Map.Strict.Internal"
           , "Data.Map.Internal"
+          , "Data.Map.Strict.Internal"
           , "Data.Set"
           ]
 
@@ -67,8 +67,21 @@ spec = do
             "Data.Map"
           , "Data.Map.Lazy"
           , "Data.Map.Strict"
-          , "Data.Map.Strict.Internal"
           , "Data.Map.Internal"
+          , "Data.Map.Strict.Internal"
           , "Data.List.NonEmpty"
           , "Data.Set"
+          ]
+
+    context "when the components of a module A are a subset of the components of an other module B" do
+      it "puts module A before module B" do
+        let
+          name :: RequiredVariable
+          name = RequiredVariable (Qualified "Map") "fromList" NoTypeSignature
+        sortImports name id [
+            "Data.Text.Internal.Lazy.Search"
+          , "Data.Text.Internal.Search"
+          ] `shouldBe` [
+            "Data.Text.Internal.Search"
+          , "Data.Text.Internal.Lazy.Search"
           ]
