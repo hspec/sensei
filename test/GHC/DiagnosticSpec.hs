@@ -7,6 +7,7 @@ import Test.Hspec.Expectations.Contrib qualified as Hspec
 import Text.RawString.QQ (r, rQ)
 
 import System.Process
+import System.Console.ANSI.Codes
 import Control.Concurrent.Async qualified as Async
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
@@ -351,12 +352,17 @@ spec = do
 
   describe "formatAnnotated" do
     it "formats an annotated diagnostic message" do
+      let
+        set = T.pack $ setSGRCode [SetColor Foreground Vivid Magenta, SetConsoleIntensity BoldIntensity]
+        reset = T.pack $ setSGRCode [Reset]
+
       Just annotated <- B.readFile "test/fixtures/not-in-scope/err.json" >>= parseAnnotated getAvailableImports
       formatAnnotated 1 annotated `shouldBe` (2, T.unlines [
           "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: c2w"
         , ""
-        , T.pack (withColor Cyan "    [1] ") <> "import Data.ByteString.Internal (c2w)"
+        , set <> "    [1] " <> reset <> "import Data.ByteString.Internal (c2w)"
+        , ""
         ])
 
   describe "analyzeAnnotation" do
