@@ -23,8 +23,9 @@ module GHC.Diagnostic (
 ) where
 
 import           Imports hiding (stripPrefix, takeExtensions)
-import           Builder (Builder, Color(..))
+import           Builder (Builder)
 import qualified Builder
+import           System.Console.ANSI.Types
 
 import           System.IO
 import qualified Data.List as List
@@ -47,13 +48,14 @@ formatAnnotated start annotated = case formatSolutions start annotated.solutions
 formatSolutions :: Int -> [Solution] -> (Int, Builder)
 formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
   [] -> (start, mempty)
-  solutions@((succ -> next, _) : _) -> (next, Builder.unlines . reverse $ map snd solutions)
+  solutions@((succ -> next, _) : _) -> (next, Builder.unlines (reverse $ map snd solutions) <> "\n")
   where
     formatNumbered :: Int -> Solution -> (Int, Builder)
     formatNumbered n solution = (n, formatNumber n <> formatSolution solution)
 
     formatNumber :: Int -> Builder
-    formatNumber n = Builder.withColor Cyan $ "    " <> "[" <> Builder.show n <> "] "
+    formatNumber n = Builder.withSGR [SetColor Foreground Vivid Magenta, SetConsoleIntensity BoldIntensity] $
+      "    " <> "[" <> Builder.show n <> "] "
 
     formatSolution :: Solution -> Builder
     formatSolution = \ case

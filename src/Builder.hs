@@ -51,13 +51,16 @@ unlines = \ case
   l : ls -> l <> "\n" <> unlines ls
 
 withColor :: Color -> Builder -> Builder
-withColor color string =  set <> string <> reset
+withColor color = withSGR [SetColor Foreground Dull color]
+
+withSGR :: [SGR] -> Builder -> Builder
+withSGR sgr string = set <> string <> reset
   where
     set :: Builder
-    set = Builder.fromString $ setSGRCode [SetColor Foreground Dull color]
+    set = Builder.fromString $ setSGRCode sgr
 
     reset :: Builder
-    reset = Builder.fromString $ setSGRCode []
+    reset = Builder.fromString $ setSGRCode [Reset]
 
 toByteString :: Builder -> ByteString
 toByteString = Text.encodeUtf8 . Builder.toText
