@@ -41,9 +41,10 @@ data NameSpace =
 
 sortImports :: Qualification -> Name -> (a -> Module) -> [a] -> [a]
 sortImports qual required f = sortOn $ f >>> \ case
-  (Module module_) -> (
+  (Module package module_) -> (
       type_name_is_a_module_name_component
     , qualification_is_related_to_module_name
+    , deprioritize_ghc_modules_from_base
     , moduleComponents
     )
     where
@@ -59,6 +60,9 @@ sortImports qual required f = sortOn $ f >>> \ case
             | qualification `elem` components -> QualificationIsModuleComponent
             | any (T.isPrefixOf qualification) components -> QualificationIsPrefixOfModuleComponent
             | otherwise -> QualificationIsUnrelatedToModuleName
+
+      deprioritize_ghc_modules_from_base :: Bool
+      deprioritize_ghc_modules_from_base = package == "base" && head components == Just "GHC"
 
       components :: [Text]
       components = T.splitOn "." module_

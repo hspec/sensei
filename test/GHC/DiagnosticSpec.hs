@@ -3,12 +3,12 @@
 module GHC.DiagnosticSpec (spec) where
 
 import Helper hiding (diagnostic)
+import Util
 import Test.Hspec.Expectations.Contrib qualified as Hspec
 import Text.RawString.QQ (r, rQ)
 
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
-import System.Console.ANSI.Codes
 import Control.Concurrent.Async qualified as Async
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
@@ -394,29 +394,22 @@ spec = do
 
   describe "formatAnnotated" do
     let
-      set :: Text
-      set = T.pack $ setSGRCode [SetColor Foreground Vivid Magenta, SetConsoleIntensity BoldIntensity]
-
-      reset :: Text
-      reset = T.pack $ setSGRCode [Reset]
-
-      solution :: Int -> Text -> Text
-      solution n m = mconcat [set, "    [", fromString (show n), "] ", reset, m]
+      solution :: Int -> String -> String
+      solution n m = mconcat ["    [", fromString (show n), "] ", m]
 
     it "formats an annotated diagnostic message" do
-
       Just annotated <- B.readFile "test/fixtures/not-in-scope/err.json" >>= parseAnnotated getAvailableImports
-      formatAnnotated 1 annotated `shouldBe` (2, T.unlines [
+      stripAnsi . T.unpack <$> formatAnnotated 1 annotated `shouldBe` (2, unlines [
           "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: catMaybes"
         , ""
-        , solution 1 "import Data.Maybe (catMaybes)"
+        , solution 1 "import Data.Maybe (catMaybes) (base)"
         , ""
         ])
 
     it "formats an annotated diagnostic message" do
       Just annotated <- B.readFile "test/fixtures/not-in-scope-operator/err.json" >>= parseAnnotated getAvailableImports
-      formatAnnotated 1 annotated `shouldBe` (5, T.unlines [
+      stripAnsi . T.unpack <$> formatAnnotated 1 annotated `shouldBe` (5, unlines [
           "test/fixtures/not-in-scope-operator/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: <&>"
         , "    Suggested fix:"
@@ -427,19 +420,29 @@ spec = do
         , solution 1 "Use <>"
         , solution 2 "Use <$>"
         , solution 3 "Use <*>"
-        , solution 4 "import Data.Functor ((<&>))"
+        , solution 4 "import Data.Functor ((<&>)) (base)"
         , ""
         ])
 
   describe "analyzeAnnotation" do
     beforeAll getAvailableImports do
-      context "with NotInScope" do
+      context "with VariableNotInScope" do
         it "suggests functions" \ availableImports -> do
           let
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "unlit" NoTypeSignature)
           analyzeAnnotation availableImports annotation `shouldBe` [
-              ImportName "Text.Markdown.Unlit" Unqualified "unlit"
+              ImportName (Module "markdown-unlit" "Text.Markdown.Unlit") Unqualified "unlit"
+            ]
+
+        it "suggests class methods" \ availableImports -> do
+          let
+            annotation :: Annotation
+            annotation = VariableNotInScope (RequiredVariable Unqualified "show" NoTypeSignature)
+          analyzeAnnotation availableImports annotation `shouldBe` [
+              ImportName "Prelude" Unqualified "Show(..)"
+            , ImportName "Text.Show" Unqualified "Show(..)"
+            , ImportName "GHC.Show" Unqualified "Show(..)"
             ]
 
         it "suggests constructors" \ availableImports -> do

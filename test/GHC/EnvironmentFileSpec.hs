@@ -24,7 +24,7 @@ spec = do
         stripHome :: FilePath -> FilePath
         stripHome = fromMaybe <*> stripPrefix home
 
-      files <- map (stripHome . unPath) . snd <$> listAllHieFiles info
+      files <- map (stripHome . (.path)) . snd <$> listAllHieFiles info
 
       let
         containing :: String -> [FilePath]

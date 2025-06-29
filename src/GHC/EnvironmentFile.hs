@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 module GHC.EnvironmentFile (
   Warning(..)
+, HieFilePath(..)
 , listAllHieFiles
 #ifdef TEST
 , readPackageConfig
@@ -24,7 +25,6 @@ import Distribution.Backpack
 import Distribution.ModuleName (toFilePath)
 import Distribution.PackageDescription
 import Distribution.InstalledPackageInfo
-import "ghc-hie" GHC.Iface.Ext.Types (HieFile)
 
 import GHC.Info qualified as GHC (Info(..))
 
@@ -33,14 +33,19 @@ type WarningM = WriterT [Warning] IO
 newtype Warning = Warning String
   deriving newtype (Eq, Show)
 
-listAllHieFiles :: GHC.Info -> IO ([Warning], [Path HieFile])
+data HieFilePath = HieFilePath {
+  package :: String
+, path :: FilePath
+} deriving (Eq, Show)
+
+listAllHieFiles :: GHC.Info -> IO ([Warning], [HieFilePath])
 listAllHieFiles info = do
   fallback <- getXdgDirectory XdgState $ "ghc-hie-files" </> "ghc-" <> info.ghcVersionString
   packages <- listPackages info
   swap <$> runWriterT do
     concat <$> for packages (packageHieFiles fallback)
 
-packageHieFiles :: FilePath -> InstalledPackageInfo -> WarningM [Path HieFile]
+packageHieFiles :: FilePath -> InstalledPackageInfo -> WarningM [HieFilePath ]
 packageHieFiles fallback package = do
   let
     libToHie :: FilePath -> FilePath
@@ -63,7 +68,7 @@ packageHieFiles fallback package = do
     packageName :: String
     packageName = unPackageName . pkgName $ sourcePackageId package
 
-    hieFiles :: FilePath -> WarningM [Path HieFile]
+    hieFiles :: FilePath -> WarningM [HieFilePath]
     hieFiles dir = catMaybes <$> for package.exposedModules \ case
       ExposedModule name Nothing -> do
         let file = dir </> toFilePath name <.> "hie"
@@ -74,7 +79,7 @@ packageHieFiles fallback package = do
               warning $ "non-existing " <> file
             return Nothing
           True -> do
-            return . Just $ Path file
+            return . Just $ HieFilePath packageName file
       ExposedModule name (Just (OpenModule _ original)) | name == original -> do
         return Nothing
       ExposedModule name (Just original) -> do

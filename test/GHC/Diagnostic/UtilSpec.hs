@@ -47,6 +47,17 @@ spec = do
           , "Data.Set"
           ]
 
+      it "deprioritizes the base:GHC.* namespace" do
+        sortImports Unqualified (Name VariableName "show") id [
+            "GHC.Show"
+          , "Prelude"
+          , "Text.Show"
+          ] `shouldBe` [
+            "Prelude"
+          , "Text.Show"
+          , "GHC.Show"
+          ]
+
     context "with a qualified name" do
       it "sorts imports" do
         sortImports "Map" (Name VariableName "foo") id [
