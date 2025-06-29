@@ -108,7 +108,7 @@ instance Semigroup Result where
 instance Monoid Result where
   mempty = Result 0 []
 
-readHieFiles :: [Path HieFile] -> ((AvailableImports -> AvailableImports) -> IO ()) -> IO Result
+readHieFiles :: [HieFilePath] -> ((AvailableImports -> AvailableImports) -> IO ()) -> IO Result
 readHieFiles files updateAvailableImports = do
   nameCache <- initNameCache 'r' []
   (duration, errors) <- timeAction $ catMaybes <$> for files \ file -> do
@@ -117,21 +117,21 @@ readHieFiles files updateAvailableImports = do
       Right () -> return Nothing
   return Result { duration, errors }
   where
-    formatException :: Path HieFile -> SomeException -> String
-    formatException (Path file) err = unlines $
-        unwords ["Reading", file, "failed:"]
+    formatException :: HieFilePath -> SomeException -> String
+    formatException file err = unlines $
+        unwords ["Reading", file.path, "failed:"]
       : map ("  " <>) (lines $ displayWithoutCallStack err)
 
     displayWithoutCallStack :: SomeException -> String
     displayWithoutCallStack = toException >>> displayException
 
-readExports :: NameCache -> ((AvailableImports -> AvailableImports) -> IO ()) -> Path HieFile -> IO ()
-readExports nameCache updateAvailableImports (Path file) = do
-  result <- readHieFile nameCache file
+readExports :: NameCache -> ((AvailableImports -> AvailableImports) -> IO ()) -> HieFilePath -> IO ()
+readExports nameCache updateAvailableImports file = do
+  result <- readHieFile nameCache file.path
 
   let
     exports :: [(Name, ProvidedBy)]
-    exports = hieExports result.hie_file_result
+    exports = hieExports (T.pack file.package) result.hie_file_result
 
     insert :: (Name, ProvidedBy) -> AvailableImports -> AvailableImports
     insert (name, providedBy) = Map.insertWith (++) name [providedBy]
@@ -141,8 +141,8 @@ readExports nameCache updateAvailableImports (Path file) = do
 
   updateAvailableImports insertAll
 
-hieExports :: HieFile -> [(Name, ProvidedBy)]
-hieExports hieFile = concatMap allNames hieFile.hie_exports
+hieExports :: Text -> HieFile -> [(Name, ProvidedBy)]
+hieExports package hieFile = concatMap allNames hieFile.hie_exports
   where
     module_ :: Module
     module_ = fromModuleName hieFile.hie_module.moduleName
@@ -156,7 +156,7 @@ hieExports hieFile = concatMap allNames hieFile.hie_exports
     ghcNameAsText = unpackFS . occNameFS . nameOccName
 
     fromModuleName :: ModuleName -> Module
-    fromModuleName = Module . unpackFS . coerce
+    fromModuleName = Module package . unpackFS . coerce
 
     available :: Maybe Type -> GHC.Name -> (Name, ProvidedBy)
     available type_ name = (fromName name, ProvidedBy module_ type_)
@@ -174,5 +174,5 @@ unpackFS = unsafeShortByteStringAsText . fs_sbs
 unsafeShortByteStringAsText :: ShortByteString -> Text
 unsafeShortByteStringAsText bs = text bs.unShortByteString 0 (ShortByteString.length bs)
 
-findHieFiles :: FilePath -> IO [Path HieFile]
-findHieFiles dir = map Path . lines <$> readCreateProcess (shell $ "find " <> dir <> " -name '*.hie'") ""
+findHieFiles :: FilePath -> IO [HieFilePath]
+findHieFiles dir = map (HieFilePath "main") . lines <$> readCreateProcess (shell $ "find " <> dir <> " -name '*.hie'") ""

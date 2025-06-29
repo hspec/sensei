@@ -54,18 +54,27 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
     formatNumbered n solution = (n, formatNumber n <> formatSolution solution)
 
     formatNumber :: Int -> Builder
-    formatNumber n = Builder.withSGR [SetColor Foreground Vivid Magenta, SetConsoleIntensity BoldIntensity] $
-      "    " <> "[" <> Builder.show n <> "] "
+    formatNumber n = highlight $ "    " <> "[" <> Builder.show n <> "] "
+
+    highlight :: Builder -> Builder
+    highlight = Builder.withSGR [SetColor Foreground Vivid Magenta, SetConsoleIntensity BoldIntensity]
 
     formatSolution :: Solution -> Builder
     formatSolution = \ case
       EnableExtension name -> "Enable " <> Builder.fromText name
       RemoveImport -> "Remove import"
       UseName name -> "Use " <> Builder.fromText name
-      ImportName module_ qualification name -> importStatement module_ qualification [name]
+      ImportName module_ qualification name -> importStatement module_ qualification [name] <> faint package
+        where
+          package = " (" <> Builder.fromText module_.package <> ")"
 
-data ProvidedBy = ProvidedBy Module (Maybe Type)
-  deriving (Eq, Show)
+    faint :: Builder -> Builder
+    faint = Builder.withSGR [SetConsoleIntensity FaintIntensity]
+
+data ProvidedBy = ProvidedBy {
+  module_ :: Module
+, type_ :: Maybe Type
+} deriving (Eq, Show)
 
 instance IsString ProvidedBy where
   fromString = (`ProvidedBy` Nothing) . fromString
@@ -247,11 +256,20 @@ analyzeAnnotation availableImports = \ case
   TypeNotInScope qualification name -> importName qualification (Name TypeName name)
   FoundHole _ fits -> map (UseName . (.name)) fits
   where
+    ignore :: [Module]
+    ignore = [
+        Module "hspec-meta" "Test.Hspec.Discover"
+      , Module "hspec" "Test.Hspec.Discover"
+      ]
+
+    discardIgnored :: [ProvidedBy] -> [ProvidedBy]
+    discardIgnored = filter $ providedByModule >>> (`notElem` ignore)
+
     providedByModule :: ProvidedBy -> Module
     providedByModule (ProvidedBy module_ _) = module_
 
     importName :: Qualification -> Name -> [Solution]
-    importName qualification required = map solution $ sortByModule providedBy
+    importName qualification required = map solution . sortByModule $ discardIgnored providedBy
       where
         sortByModule :: [ProvidedBy] -> [ProvidedBy]
         sortByModule = sortImports qualification required providedByModule
@@ -327,7 +345,7 @@ addImport statement input = case break (B.isPrefixOf "import ") input of
   (xs, ys) -> xs ++ Builder.toByteString statement : ys
 
 importStatement :: Module -> Qualification -> [Text] -> Builder
-importStatement (Module (Builder.fromText -> module_)) qualification names = case qualification of
+importStatement (Module _ (Builder.fromText -> module_)) qualification names = case qualification of
   Unqualified -> "import " <> module_ <> " (" <> Builder.join ", " (map formatImportItem names) <> ")"
   Qualified name -> "import " <> module_ <> " qualified as " <> Builder.fromText name
   where

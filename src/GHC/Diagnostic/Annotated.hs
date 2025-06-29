@@ -50,8 +50,13 @@ data TypeSignature = NoTypeSignature | TypeSignature Type
 instance IsString TypeSignature where
   fromString = TypeSignature . fromString
 
-newtype Module = Module Text
-  deriving newtype (Eq, Ord, Show, IsString)
+data Module = Module {
+  package :: Text
+, name :: Text
+} deriving (Eq, Ord, Show)
+
+instance IsString Module where
+  fromString = Module "base" . fromString
 
 newtype Type = Type Text
   deriving newtype (Eq, Ord, Show, IsString)

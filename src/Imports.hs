@@ -174,9 +174,3 @@ handleTerminateProcess action = try action >>= either terminate return
 
 die :: String -> IO a
 die err = throwIO $ TerminateProcess err
-
-newtype Path tag = Path FilePath
-  deriving newtype (Eq, Show, Ord, IsString)
-
-unPath :: Path tag -> FilePath
-unPath (Path p) = p
