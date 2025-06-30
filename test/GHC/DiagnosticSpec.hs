@@ -219,6 +219,16 @@ spec = do
         importName "System.Console.GetOpt" "ArgDescr(..)"
       ]
 
+    test "term-level-use-of-type-constructor" [] [r|
+      module Foo where
+      data Foo = Fooa | Fooi
+      foo = Foo
+      |] (Just $ TermLevelUseOfTypeConstructor Unqualified "Foo") [
+          UseName "foo"
+        , UseName "Fooa"
+        , UseName "Fooi"
+        ]
+
     test "found-hole" [] [r|
       module Foo where
       foo :: FilePath -> IO String

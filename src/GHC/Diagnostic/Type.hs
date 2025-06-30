@@ -14,6 +14,7 @@ import           Imports hiding ((<>), unlines, empty, unlines)
 import           Data.Text qualified as T
 import           Data.Aeson (decode)
 import           Data.ByteString.Lazy (fromStrict)
+import           Text.Printf (printf)
 import           Text.PrettyPrint
 
 data Diagnostic = Diagnostic {
@@ -88,7 +89,7 @@ format diagnostic = render $ unlines [
     code :: Doc
     code = case diagnostic.code of
       Nothing -> empty
-      Just c -> brackets $ "GHC-" <> int c
+      Just c -> brackets $ "GHC-" <> text (printf "%05d" c)
 
     reason :: Doc
     reason = case diagnostic.reason of
@@ -109,7 +110,7 @@ format diagnostic = render $ unlines [
             ReasonCategory {} -> "-Werror="
 
     message :: Doc
-    message = bulleted $ map verbatim diagnostic.message
+    message = bulleted $ map (verbatim . T.stripStart) diagnostic.message
 
     hints :: [Doc]
     hints = map verbatim diagnostic.hints

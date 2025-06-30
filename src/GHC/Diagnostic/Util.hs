@@ -42,12 +42,16 @@ data NameSpace =
 sortImports :: Qualification -> Name -> (a -> Module) -> [a] -> [a]
 sortImports qual required f = sortOn $ f >>> \ case
   (Module package module_) -> (
-      type_name_is_a_module_name_component
+      from_main_package
+    , type_name_is_a_module_name_component
     , qualification_is_related_to_module_name
     , deprioritize_ghc_modules_from_base
     , moduleComponents
     )
     where
+      from_main_package :: Bool
+      from_main_package = not $ package == "main"
+
       type_name_is_a_module_name_component :: Bool
       type_name_is_a_module_name_component = case required.nameSpace of
         VariableName -> False

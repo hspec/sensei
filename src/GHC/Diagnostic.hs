@@ -95,7 +95,8 @@ annotate getAvailableImports diagnostic = getAvailableImports >>= \ case
 
       solutions :: [Solution]
       solutions =
-          analyzeHints diagnostic.hints
+           analyzeHints diagnostic.message
+        ++ analyzeHints diagnostic.hints
         ++ maybe [] (analyzeAnnotation availableImports) annotation
 
 analyzeHints :: [Text] -> [Solution]
@@ -161,6 +162,7 @@ parseAnnotation diagnostic = asum [
       , VariableNotInScope <$> qualifiedNameNotInScope
       , VariableNotInScope <$> dataConstructorNotInScope
       , VariableNotInScope <$> dataConstructorNotInScopeInPattern
+      , termLevelUseOfTypeConstructor
       , typeConstructorNotInScope
       , foundHole
       ]
@@ -171,22 +173,27 @@ parseAnnotation diagnostic = asum [
         prefix :: Text -> Maybe Text
         prefix p = stripPrefix p input
 
+        match :: Text -> Maybe Text
+        match t = prefix (t <> " `") >>= stripSuffix "'"
+
         variableNotInScope :: Maybe RequiredVariable
         variableNotInScope = prefix "Variable not in scope: " <&> qualifiedName
 
         qualifiedNameNotInScope :: Maybe RequiredVariable
-        qualifiedNameNotInScope = prefix "Not in scope: `" >>= stripSuffix "'" <&> qualifiedName
+        qualifiedNameNotInScope = match "Not in scope:" <&> qualifiedName
 
         dataConstructorNotInScope :: Maybe RequiredVariable
         dataConstructorNotInScope = prefix "Data constructor not in scope: " <&> qualifiedName
 
         dataConstructorNotInScopeInPattern :: Maybe RequiredVariable
-        dataConstructorNotInScopeInPattern = prefix "Not in scope: data constructor `" >>= stripSuffix "'"
-          <&> qualifiedName
+        dataConstructorNotInScopeInPattern = match "Not in scope: data constructor" <&> qualifiedName
+
+        termLevelUseOfTypeConstructor :: Maybe Annotation
+        termLevelUseOfTypeConstructor = match "Illegal term-level use of the type constructor"
+          <&> qualified TermLevelUseOfTypeConstructor
 
         typeConstructorNotInScope :: Maybe Annotation
-        typeConstructorNotInScope = (prefix "Not in scope: type constructor or class `" >>= stripSuffix "'")
-          <&> qualified TypeNotInScope
+        typeConstructorNotInScope = match "Not in scope: type constructor or class" <&> qualified TypeNotInScope
 
     analyzeHoleFits :: Maybe [HoleFit]
     analyzeHoleFits = asum $ map validHoleFitsInclude diagnostic.message
@@ -253,6 +260,7 @@ analyzeAnnotation :: AvailableImports -> Annotation -> [Solution]
 analyzeAnnotation availableImports = \ case
   RedundantImport -> [RemoveImport]
   VariableNotInScope variable -> importName variable.qualification (Name VariableName variable.name)
+  TermLevelUseOfTypeConstructor qualification name -> importName qualification (Name VariableName name)
   TypeNotInScope qualification name -> importName qualification (Name TypeName name)
   FoundHole _ fits -> map (UseName . (.name)) fits
   where
