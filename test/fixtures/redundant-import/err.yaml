@@ -1,0 +1,18 @@
+version: '1.0'
+ghcVersion: ghc-9.10.0
+span:
+  file: test/fixtures/redundant-import/Foo.hs
+  start:
+    line: 2
+    column: 1
+  end:
+    line: 2
+    column: 18
+severity: Warning
+code: 66111
+message:
+- |-
+  The import of `Data.Maybe' is redundant
+    except perhaps to import instances from `Data.Maybe'
+  To import instances alone, use: import Data.Maybe()
+hints: []

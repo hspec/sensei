@@ -1,1 +1,0 @@
-{"version":"1.0","ghcVersion":"ghc-9.10.0","span":{"file":"test/fixtures/not-in-scope-perhaps-use/Foo.hs","start":{"line":2,"column":7},"end":{"line":2,"column":14}},"severity":"Error","code":88464,"message":["Variable not in scope: filter_"],"hints":["Perhaps use `filter' (imported from Prelude)"]}

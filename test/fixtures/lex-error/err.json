@@ -1,1 +1,0 @@
-{"version":"1.0","ghcVersion":"ghc-9.10.0","span":{"file":"test/fixtures/lex-error/Foo.hs","start":{"line":3,"column":11},"end":{"line":3,"column":11}},"severity":"Error","code":21231,"message":["lexical error in string/character literal at character '\\n'"],"hints":[]}

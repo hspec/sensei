@@ -1,1 +1,0 @@
-{"version":"1.0","ghcVersion":"ghc-9.10.0","span":{"file":"test/fixtures/not-in-scope/Foo.hs","start":{"line":2,"column":7},"end":{"line":2,"column":16}},"severity":"Error","code":88464,"message":["Variable not in scope: catMaybes"],"hints":[]}

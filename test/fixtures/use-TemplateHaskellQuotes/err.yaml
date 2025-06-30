@@ -1,0 +1,21 @@
+version: '1.0'
+ghcVersion: ghc-9.10.0
+span:
+  file: test/fixtures/use-TemplateHaskellQuotes/Foo.hs
+  start:
+    line: 2
+    column: 7
+  end:
+    line: 2
+    column: 13
+severity: Error
+code: 62558
+message:
+- Syntax error on [| 23 |]
+- In the Template Haskell quotation [| 23 |]
+hints:
+- |-
+  Enable any of the following extensions: TemplateHaskell, TemplateHaskellQuotes
+  You may enable these language extensions in GHCi with:
+    :set -XTemplateHaskell
+    :set -XTemplateHaskellQuotes
