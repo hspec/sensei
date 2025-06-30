@@ -25,7 +25,7 @@ import           Network.HTTP.Simple
 import           Builder (Builder)
 import qualified Builder
 import           Sensei.API (Instructions(..))
-import           GHC.Diagnostic (Diagnostic, Span, Location)
+import           GHC.Diagnostic (Diagnostic, Span, Location, ShowErrorContext(..))
 import qualified GHC.Diagnostic.Type as Diagnostic
 import qualified Config.DeepSeek as Config
 import           DeepSeek.Types
@@ -146,7 +146,7 @@ createPrompt dir span instructions = do
         , "The GHC diagnostics message:"
         , ""
         , "```console"
-        , Builder.fromText . Text.stripEnd . pack $ Diagnostic.format diagnostic
+        , Builder.fromText . Text.stripEnd . pack $ Diagnostic.format ShowErrorContext diagnostic
         , "```"
         ]
 

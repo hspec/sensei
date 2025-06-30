@@ -6,6 +6,8 @@ module GHC.Diagnostic.Type (
 , Severity(..)
 , Reason(..)
 , parse
+
+, ShowErrorContext(..)
 , format
 ) where
 
@@ -65,8 +67,11 @@ data Category = Category {
 parse :: ByteString -> Maybe Diagnostic
 parse = fmap removeGhciSpecificHints . decodeThrow
 
-format :: Diagnostic -> String
-format diagnostic = render $ unlines [
+data ShowErrorContext = ShowErrorContext | NoShowErrorContext
+  deriving (Eq, Show)
+
+format :: ShowErrorContext -> Diagnostic -> String
+format showErrorContext diagnostic = render $ unlines [
     hang header 4 messageWithHints
   , ""
   , ""
@@ -109,7 +114,9 @@ format diagnostic = render $ unlines [
             ReasonCategory {} -> "-Werror="
 
     message :: Doc
-    message = bulleted $ map (verbatim . T.stripStart) diagnostic.message
+    message = bulleted $ map (verbatim . T.stripStart) case showErrorContext of
+      ShowErrorContext -> diagnostic.message
+      NoShowErrorContext -> dropErrorContext diagnostic.message
 
     hints :: [Doc]
     hints = map verbatim diagnostic.hints
@@ -151,3 +158,15 @@ removeGhciSpecificHints diagnostic = diagnostic { hints = map processHint diagno
       hint : "You may enable these language extensions in GHCi with:" : ghciHints
         | all isSetLanguageExtension ghciHints -> hint
       _ -> input
+
+dropErrorContext :: [Text] -> [Text]
+dropErrorContext = filter \ m -> not $ or $ map ($ m) [
+    startsWith "  defined at "
+  , startsWith "In an equation for "
+  , startsWith "In a stmt of a "
+  , startsWith "In the expression: "
+  , startsWith "In the Template Haskell quotation "
+  ]
+  where
+    startsWith :: Text -> Text -> Bool
+    startsWith = T.isPrefixOf

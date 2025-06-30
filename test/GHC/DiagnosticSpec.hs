@@ -77,7 +77,10 @@ testWith :: HasCallStack => FilePath -> GHC -> [String] -> String -> Maybe Annot
 testWith name requiredVersion extraArgs (unindent -> code) annotation solutions = it name do
   unless (T.null code) do
     ensureFile src $ T.encodeUtf8 code
+
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
+  errNoContext <- translate <$> ghc ["-fno-diagnostics-show-caret", "-fno-show-error-context"]
+
   json <- pretty <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
   ensureFile (dir </> "err.out") (encodeUtf8 err)
   ensureFile (dir </> "err.yaml") (encodeUtf8 $ normalizeGhcVersion json)
@@ -86,7 +89,9 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
       expectationFailure $ "Parsing JSON failed:\n\n" <> json
     Just annotated -> addAnnotation (separator <> err <> separator) do
       whenGhc requiredVersion do
-        format annotated.diagnostic `shouldBe` err
+        format ShowErrorContext annotated.diagnostic `shouldBe` err
+        format NoShowErrorContext annotated.diagnostic `shouldBe` errNoContext
+
       annotated.annotation `shouldBe` annotation
       annotated.solutions `shouldBe` solutions
   where
@@ -467,7 +472,7 @@ spec = do
 
     it "formats an annotated diagnostic message" do
       Just annotated <- B.readFile "test/fixtures/not-in-scope/err.yaml" >>= parseAnnotated getAvailableImports
-      stripAnsi . unpack <$> formatAnnotated 1 annotated `shouldBe` (2, unlines [
+      stripAnsi . unpack <$> formatAnnotated NoShowErrorContext 1 annotated `shouldBe` (2, unlines [
           "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: catMaybes"
         , ""
@@ -477,7 +482,7 @@ spec = do
 
     it "formats an annotated diagnostic message" do
       Just annotated <- B.readFile "test/fixtures/not-in-scope-operator/err.yaml" >>= parseAnnotated getAvailableImports
-      stripAnsi . unpack <$> formatAnnotated 1 annotated `shouldBe` (5, unlines [
+      stripAnsi . unpack <$> formatAnnotated NoShowErrorContext 1 annotated `shouldBe` (5, unlines [
           "test/fixtures/not-in-scope-operator/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: <&>"
         , "    Suggested fix:"
