@@ -4,6 +4,8 @@ module GHC.DiagnosticSpec (spec) where
 
 import Helper hiding (diagnostic)
 import Util
+import System.IO
+import GHC.Fingerprint
 import Test.Hspec.Expectations.Contrib qualified as Hspec
 import Text.RawString.QQ (r, rQ)
 
@@ -69,17 +71,41 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
     ghc args = do
       require GHC_910
       info <- ghcInfo
-      let
-        process :: CreateProcess
-        process = proc info.ghc (["-XNoStarIsType", "-fno-code"] ++ args ++ extraArgs ++ [src])
-      (_, _, err) <- readCreateProcessWithExitCode process ""
-      return err
+      cached info.ghc (["-XNoStarIsType", "-fno-code"] ++ args ++ extraArgs ++ [src])
 
     translate :: String -> String
     translate = map \ case
       '‘' -> '`'
       '’' -> '\''
       c -> c
+
+cached :: FilePath -> [String] -> IO String
+cached program args = do
+  fingerprint <- combine program . fingerprintFingerprints <$> for args \ arg -> doesFileExist arg >>= \ case
+    False -> return $ fingerprintString arg
+    True -> combine arg <$> getFileHash arg
+
+  cache <- getCacheDirectory
+
+  let
+    cacheFile :: String
+    cacheFile = cache </> show fingerprint
+
+    process :: CreateProcess
+    process = proc program args
+
+  doesFileExist cacheFile >>= \ case
+    False -> do
+      (_, _, err) <- readCreateProcessWithExitCode process ""
+      bracket (openTempFile cache "sensei") (hClose . snd) \ (file, h) -> do
+        hPutStr h err
+        renameFile file cacheFile
+      return err
+    True -> do
+      readFile cacheFile
+  where
+    combine :: String -> Fingerprint -> Fingerprint
+    combine a b = fingerprintFingerprints [fingerprintString a, b]
 
 getAvailableImports :: IO AvailableImports
 getAvailableImports = do

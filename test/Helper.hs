@@ -6,6 +6,7 @@ module Helper (
 , Info(..)
 , ghcInfo
 , ghciConfig
+, getCacheDirectory
 
 , AppConfig(..)
 , appConfig
@@ -71,7 +72,7 @@ import           GHC.Diagnostic
 import           GHC.Diagnostic.Annotated
 
 import           GHC.Info (Info(..))
-import           SpecHook (ghcInfo)
+import           SpecHook (ghcInfo, getCacheDirectory)
 
 timeout :: HasCallStack => IO a -> IO a
 timeout action = do

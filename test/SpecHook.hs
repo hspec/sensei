@@ -1,6 +1,7 @@
 module SpecHook (
   hook
 , ghcInfo
+, getCacheDirectory
 ) where
 
 import Imports
@@ -10,6 +11,7 @@ import System.Process
 import System.Directory
 import System.Environment
 import System.IO.Unsafe (unsafePerformIO)
+import System.IO.Temp
 import GHC.Conc
 
 import GHC.Info qualified as GHC
@@ -30,9 +32,9 @@ ensurePackageEnvironment ghc file = doesFileExist file >>= \ case
 setPackageEnvironment :: IO ()
 setPackageEnvironment = do
   lookupEnv "SENSEI_TEST_GHC" >>= maybe pass (setEnv GHC.sensei_ghc)
-  dir <- getCurrentDirectory
+  dir <- getCacheDirectory
   info <- ghcInfo
-  let file = dir </> "dist-newstyle" </> "test-env" </> info.ghcVersionString
+  let file = dir </> info.ghcVersionString <.> "ghc" <.> "env"
   ensurePackageEnvironment info.ghc file
   setEnv "GHC_ENVIRONMENT" file
 
@@ -44,3 +46,13 @@ ghcInfo :: IO GHC.Info
 ghcInfo = unsafePerformIO do
   info <- GHC.info
   return $ return info
+
+getCacheDirectory :: IO String
+getCacheDirectory = lookupEnv "SENSEI_TEST_CACHE" >>= \ case
+  Nothing -> do
+    tmp <- getCanonicalTemporaryDirectory
+    dir <- createTempDirectory tmp "sensei-tests"
+    setEnv "SENSEI_TEST_CACHE" dir
+    return dir
+  Just dir -> do
+    return dir
