@@ -15,6 +15,7 @@ data Solution =
   | RemoveImport
   | UseName Text
   | ImportName Module Qualification Text
+  | AddToImportList Text Text Span
   deriving (Eq, Show)
 
 data Annotation =
