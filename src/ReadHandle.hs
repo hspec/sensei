@@ -28,7 +28,7 @@ import           Data.ByteString (dropEnd)
 -- has been obtained from random.org.  Do not expect this module to work
 -- properly, if you reuse it for any purpose!
 marker :: ByteString
-marker = pack (show @String "be77d2c8427d29cd1d62b7612d8e98cc") <> "\n"
+marker = ByteString.pack (show @String "be77d2c8427d29cd1d62b7612d8e98cc") <> "\n"
 
 partialMarkers :: [ByteString]
 partialMarkers = reverse . drop 1 . init $ ByteString.inits marker

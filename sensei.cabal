@@ -91,7 +91,7 @@ library
     , process
     , stm
     , temporary
-    , text
+    , text >=2.1
     , time
     , transformers
     , unix
@@ -172,7 +172,7 @@ executable seito
     , process
     , stm
     , temporary
-    , text
+    , text >=2.1
     , time
     , transformers
     , unix
@@ -253,7 +253,7 @@ executable sensei
     , process
     , stm
     , temporary
-    , text
+    , text >=2.1
     , time
     , transformers
     , unix
@@ -366,7 +366,7 @@ test-suite spec
     , raw-strings-qq
     , stm
     , temporary
-    , text
+    , text >=2.1
     , time
     , transformers
     , unix

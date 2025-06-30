@@ -30,10 +30,8 @@ import           System.Console.ANSI.Types
 import           System.IO
 import qualified Data.List as List
 import           Data.Text (stripPrefix, stripSuffix)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.ByteString.Char8 as B
-import           Data.ByteString.Builder (hPutBuilder)
+import qualified Data.Text as T hiding (stripPrefix, stripSuffix)
+import qualified Data.Text.IO.Utf8 as Utf8
 import           Data.Map (Map)
 import qualified Data.Map as Map
 
@@ -125,12 +123,12 @@ analyzeHint hint = asum [
 
         takeExtensionGhc912 :: Maybe [Solution]
         takeExtensionGhc912 = map EnableExtension <$> do
-          T.stripPrefix "the `" input <&> T.span (/= '\'') >>= \ case
+          stripPrefix "the `" input <&> T.span (/= '\'') >>= \ case
             (extension, "' extension") -> Just [extension]
             (implied, impliedBy -> Just extension) -> Just [implied, extension]
             _ -> Nothing
           where
-            impliedBy = T.stripPrefix "' extension (implied by `" >=> T.stripSuffix "')"
+            impliedBy = stripPrefix "' extension (implied by `" >=> stripSuffix "')"
 
     takeIdentifier :: Text -> Solution
     takeIdentifier = UseName . T.takeWhile (/= '\'')
@@ -206,7 +204,7 @@ parseAnnotation diagnostic = asum [
 
         oneLine :: Maybe [HoleFit]
         oneLine = return . holeFit <$> asum do
-          map (T.stripPrefix $ prefix <> " ") input
+          map (stripPrefix $ prefix <> " ") input
 
         multiline :: Maybe [HoleFit]
         multiline = case List.break (== prefix) input of
@@ -214,7 +212,7 @@ parseAnnotation diagnostic = asum [
           _ -> Nothing
           where
             joinHoleFits :: [Text] -> [Text]
-            joinHoleFits = discardBoring . joinLines 3 . mapMaybe (T.stripPrefix "  ")
+            joinHoleFits = discardBoring . joinLines 3 . mapMaybe (stripPrefix "  ")
 
             discardBoring :: [Text] -> [Text]
             discardBoring = filter isBoring
@@ -248,7 +246,7 @@ qualified c input = case stripParensAroundOperators input of
     (qualification, name) -> c (Qualified qualification) name
 
 stripParensAroundOperators :: Text -> Maybe Text
-stripParensAroundOperators = T.stripPrefix "(" >=> T.stripSuffix ")"
+stripParensAroundOperators = stripPrefix "(" >=> stripSuffix ")"
 
 breakOn :: Text -> Text -> (Text, Text)
 breakOn sep = second (T.drop $ T.length sep) . T.breakOn sep
@@ -348,9 +346,9 @@ applyEdit = \ case
   Replace span substitute -> do
     modifyFile span.file $ applyReplace span.start span.end substitute
 
-addImport :: Builder -> [ByteString] -> [ByteString]
-addImport statement input = case break (B.isPrefixOf "import ") input of
-  (xs, ys) -> xs ++ Builder.toByteString statement : ys
+addImport :: Builder -> [Text] -> [Text]
+addImport statement input = case break (T.isPrefixOf "import ") input of
+  (xs, ys) -> xs ++ Builder.toText statement : ys
 
 importStatement :: Module -> Qualification -> [Text] -> Builder
 importStatement (Module _ (Builder.fromText -> module_)) qualification names = case qualification of
@@ -362,32 +360,30 @@ importStatement (Module _ (Builder.fromText -> module_)) qualification names = c
       Just (c, _) | isLetter c || c == '_' -> Builder.fromText name
       _ -> "(" <> Builder.fromText name <> ")"
 
-applyReplace :: Location -> Location -> Text -> [ByteString] -> [ByteString]
+applyReplace :: Location -> Location -> Text -> [Text] -> [Text]
 applyReplace start end substitute input =
   let
     (before, rest) = splitAt (start.line - 1) input
 
-    after :: [ByteString]
+    after :: [Text]
     after = drop (end.line - start.line + 1) rest
 
-    decodedLines :: [Text]
-    decodedLines = map T.decodeUtf8Lenient rest
   in case do
-    firstLine <- head decodedLines
-    lastLine <- head $ drop (end.line - start.line) decodedLines
+    firstLine <- head rest
+    lastLine <- head $ drop (end.line - start.line) rest
     return $ mconcat [T.take (start.column - 1) firstLine, substitute, T.drop (end.column - 1) lastLine]
   of
     Nothing -> input
-    Just substituted -> before ++ T.encodeUtf8 substituted : after
+    Just substituted -> before ++ substituted : after
 
 prependToFile :: FilePath -> Text -> IO ()
 prependToFile file contents = do
-  old <- B.readFile file
+  old <- Utf8.readFile file
   withFile file WriteMode $ \ h -> do
-    hPutBuilder h $ T.encodeUtf8Builder contents
-    B.hPutStr h old
+    Utf8.hPutStr h contents
+    Utf8.hPutStr h old
 
-modifyFile :: FilePath -> ([ByteString] -> [ByteString]) -> IO ()
+modifyFile :: FilePath -> ([Text] -> [Text]) -> IO ()
 modifyFile file f = do
-  old <- B.lines <$> B.readFile file
-  B.writeFile file . B.unlines $ f old
+  old <- T.lines <$> Utf8.readFile file
+  Utf8.writeFile file . T.unlines $ f old

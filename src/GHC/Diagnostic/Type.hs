@@ -128,7 +128,7 @@ format diagnostic = render $ unlines [
       docs -> vcat $ map (char '•' <+>) docs
 
     verbatim :: Text -> Doc
-    verbatim = unlines . map (text . T.unpack) . T.lines
+    verbatim = unlines . map (text . unpack) . T.lines
 
     unlines :: [Doc] -> Doc
     unlines = foldr ($+$) empty

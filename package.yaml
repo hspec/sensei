@@ -33,7 +33,7 @@ dependencies:
   - http-types
   - http-media
   - stm
-  - text
+  - text >= 2.1
   - network
   - ansi-terminal
   - directory

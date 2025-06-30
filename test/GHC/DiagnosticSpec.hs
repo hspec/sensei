@@ -37,7 +37,7 @@ _ignore :: ()
 _ignore = let _ = (ftest, xtest) in ()
 
 normalizeGhcVersion :: String -> String
-normalizeGhcVersion = T.unpack . T.replace __GLASGOW_HASKELL_FULL_VERSION__ "9.10.0" . T.pack
+normalizeGhcVersion = unpack . T.replace __GLASGOW_HASKELL_FULL_VERSION__ "9.10.0" . T.pack
 
 testWith :: HasCallStack => FilePath -> GHC -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
 testWith name requiredVersion extraArgs (unindent -> code) annotation solutions = it name do
@@ -96,7 +96,7 @@ getAvailableImports_ = unsafePerformIO do
   return $ return imports
 
 unindent :: String -> Text
-unindent (T.pack >>> T.dropWhileEnd isSpace >>> T.lines -> input) = go input
+unindent (pack >>> T.dropWhileEnd isSpace >>> T.lines -> input) = go input
   where
     go :: [Text] -> Text
     go = map (T.drop $ indentation input) >>> T.unlines >>> T.dropWhile isSpace
@@ -409,7 +409,7 @@ spec = do
 
     it "formats an annotated diagnostic message" do
       Just annotated <- B.readFile "test/fixtures/not-in-scope/err.json" >>= parseAnnotated getAvailableImports
-      stripAnsi . T.unpack <$> formatAnnotated 1 annotated `shouldBe` (2, unlines [
+      stripAnsi . unpack <$> formatAnnotated 1 annotated `shouldBe` (2, unlines [
           "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: catMaybes"
         , ""
@@ -419,7 +419,7 @@ spec = do
 
     it "formats an annotated diagnostic message" do
       Just annotated <- B.readFile "test/fixtures/not-in-scope-operator/err.json" >>= parseAnnotated getAvailableImports
-      stripAnsi . T.unpack <$> formatAnnotated 1 annotated `shouldBe` (5, unlines [
+      stripAnsi . unpack <$> formatAnnotated 1 annotated `shouldBe` (5, unlines [
           "test/fixtures/not-in-scope-operator/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: <&>"
         , "    Suggested fix:"

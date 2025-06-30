@@ -24,7 +24,7 @@ import           Data.Either as Imports
 import           Data.List as Imports hiding (insert, span, head)
 import           Data.Maybe as Imports
 import           Data.String as Imports
-import           Data.ByteString.Char8 as Imports (ByteString, pack, unpack)
+import           Data.ByteString.Char8 as Imports (ByteString)
 import           Data.ByteString.Lazy as Imports (LazyByteString)
 import           Data.Tuple as Imports
 import           Data.Set as Imports (Set)
@@ -34,7 +34,7 @@ import           Text.Read as Imports (readMaybe)
 import           System.Exit as Imports (ExitCode(..))
 import           Control.Monad.IO.Class as Imports
 import           Data.Version as Imports (Version(..), showVersion, makeVersion)
-import           Data.Text as Imports (Text)
+import           Data.Text as Imports (Text, pack, unpack)
 
 import           Data.Text.IO.Utf8 (hPutStrLn)
 import           System.Exit (exitFailure)
@@ -47,7 +47,6 @@ import           GHC.Generics
 import qualified Data.Version as Version
 import           Text.ParserCombinators.ReadP
 
-import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 
 import           Text.Casing
@@ -97,10 +96,10 @@ createPipe :: IO (Handle, Handle)
 createPipe = Process.createPipe
 
 encodeUtf8 :: String -> ByteString
-encodeUtf8 = T.encodeUtf8 . T.pack
+encodeUtf8 = T.encodeUtf8 . pack
 
 decodeUtf8 :: ByteString -> String
-decodeUtf8 = T.unpack . T.decodeUtf8Lenient
+decodeUtf8 = unpack . T.decodeUtf8Lenient
 
 strip :: String -> String
 strip = reverse . dropWhile isSpace . reverse . dropWhile isSpace
@@ -169,7 +168,7 @@ handleTerminateProcess action = try action >>= either terminate return
     terminate :: TerminateProcess -> IO a
     terminate (TerminateProcess err) = do
       name <- getProgName
-      hPutStrLn stderr . T.pack $ name <> ": " <> err
+      hPutStrLn stderr . pack $ name <> ": " <> err
       exitFailure
 
 die :: String -> IO a

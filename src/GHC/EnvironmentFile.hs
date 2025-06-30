@@ -107,7 +107,7 @@ readPackageConfig name = B.readFile name <&> parseInstalledPackageInfo >>= \ cas
     return package { libraryDirs = map expand package.libraryDirs }
   where
     expand :: FilePath -> FilePath
-    expand = T.unpack . T.replace "${pkgroot}" (T.pack . takeDirectory $ takeDirectory name) . T.pack
+    expand = unpack . T.replace "${pkgroot}" (pack . takeDirectory $ takeDirectory name) . pack
 
 listPackageConfigs :: GHC.Info -> IO [FilePath]
 listPackageConfigs info = do
@@ -115,7 +115,7 @@ listPackageConfigs info = do
 
   let
     dbs = info.globalPackageDb : [db | PackageDb db <- entries]
-    confs = [T.unpack package <> ".conf" | PackageId package <- entries]
+    confs = [unpack package <> ".conf" | PackageId package <- entries]
 
   for confs \ conf -> findFile dbs conf >>= \ case
     Nothing -> die $ unwords ["missing package configuration", conf]
@@ -146,11 +146,11 @@ parseEntry envfile str = case T.words str of
   ["clear-package-db"] -> return ClearPackageDb
   ["global-package-db"] -> return GlobalPackageDb
   ["user-package-db"] -> return UserPackageDb
-  ("package-db": _) -> return (PackageDb (envdir </> T.unpack db))
+  ("package-db": _) -> return (PackageDb (envdir </> unpack db))
     -- relative package dbs are interpreted relative to the env file
     where envdir = takeDirectory envfile
           db = T.drop 11 str
   ["package-id", packageId] -> return $ PackageId packageId
   ["hide-package", package] -> return $ HidePackage package
   [packageId] -> return $ PackageId packageId
-  _ -> Left $ "Can't parse environment file entry: " ++ envfile ++ ": " ++ T.unpack str
+  _ -> Left $ "Can't parse environment file entry: " ++ envfile ++ ": " ++ unpack str
