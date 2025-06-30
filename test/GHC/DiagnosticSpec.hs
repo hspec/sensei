@@ -5,8 +5,12 @@ module GHC.DiagnosticSpec (spec) where
 import Helper hiding (diagnostic)
 import Util
 import System.IO
+import Data.Ord (comparing)
 import GHC.Fingerprint
 import Test.Hspec.Expectations.Contrib qualified as Hspec
+import Data.Yaml (Value)
+import Data.Yaml qualified as Yaml
+import Data.Yaml.Pretty qualified as Yaml
 import Text.RawString.QQ (r, rQ)
 
 import System.IO.Unsafe (unsafePerformIO)
@@ -41,14 +45,42 @@ _ignore = let _ = (ftest, xtest) in ()
 normalizeGhcVersion :: String -> String
 normalizeGhcVersion = unpack . T.replace __GLASGOW_HASKELL_FULL_VERSION__ "9.10.0" . T.pack
 
+pretty :: String -> String
+pretty input = case Yaml.decodeThrow @Maybe @Value $ encodeUtf8 input of
+  Nothing -> input
+  Just value -> decodeUtf8 (Yaml.encodePretty conf value)
+  where
+    conf = Yaml.setConfCompare (comparing f) Yaml.defConfig
+
+    f :: Text -> Int
+    f name = fromMaybe maxBound (lookup name fieldOrder)
+
+fieldOrder :: [(Text, Int)]
+fieldOrder = flip zip [1..] [
+    "version"
+  , "ghcVersion"
+  , "span"
+  , "severity"
+  , "code"
+  , "message"
+  , "hints"
+  , "reason"
+
+  , "file"
+  , "start"
+  , "end"
+  , "line"
+  , "column"
+  ]
+
 testWith :: HasCallStack => FilePath -> GHC -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
 testWith name requiredVersion extraArgs (unindent -> code) annotation solutions = it name do
   unless (T.null code) do
     ensureFile src $ T.encodeUtf8 code
   err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
-  json <- ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
+  json <- pretty <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
   ensureFile (dir </> "err.out") (encodeUtf8 err)
-  ensureFile (dir </> "err.json") (encodeUtf8 $ normalizeGhcVersion json)
+  ensureFile (dir </> "err.yaml") (encodeUtf8 $ normalizeGhcVersion json)
   parseAnnotated getAvailableImports (encodeUtf8 json) >>= \ case
     Nothing -> do
       expectationFailure $ "Parsing JSON failed:\n\n" <> json
@@ -434,7 +466,7 @@ spec = do
       solution n m = mconcat ["    [", fromString (show n), "] ", m]
 
     it "formats an annotated diagnostic message" do
-      Just annotated <- B.readFile "test/fixtures/not-in-scope/err.json" >>= parseAnnotated getAvailableImports
+      Just annotated <- B.readFile "test/fixtures/not-in-scope/err.yaml" >>= parseAnnotated getAvailableImports
       stripAnsi . unpack <$> formatAnnotated 1 annotated `shouldBe` (2, unlines [
           "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: catMaybes"
@@ -444,7 +476,7 @@ spec = do
         ])
 
     it "formats an annotated diagnostic message" do
-      Just annotated <- B.readFile "test/fixtures/not-in-scope-operator/err.json" >>= parseAnnotated getAvailableImports
+      Just annotated <- B.readFile "test/fixtures/not-in-scope-operator/err.yaml" >>= parseAnnotated getAvailableImports
       stripAnsi . unpack <$> formatAnnotated 1 annotated `shouldBe` (5, unlines [
           "test/fixtures/not-in-scope-operator/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: <&>"

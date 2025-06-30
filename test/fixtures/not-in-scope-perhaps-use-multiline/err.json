@@ -1,1 +1,0 @@
-{"version":"1.0","ghcVersion":"ghc-9.10.0","span":{"file":"test/fixtures/not-in-scope-perhaps-use-multiline/Foo.hs","start":{"line":3,"column":7},"end":{"line":3,"column":11}},"severity":"Error","code":88464,"message":["Variable not in scope: fold"],"hints":["Perhaps use one of these:\n  `foldl' (imported from Data.List),\n  `foldr' (imported from Data.List)"]}

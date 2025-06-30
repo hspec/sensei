@@ -1,0 +1,19 @@
+version: '1.0'
+ghcVersion: ghc-9.10.0
+span:
+  file: A
+  start:
+    line: 3
+    column: 5
+  end:
+    line: 3
+    column: 6
+severity: Error
+code: 88464
+message:
+- 'Found hole: _ :: A'
+- 'In an equation for `a'': a = _'
+- |-
+  Relevant bindings include a :: A (bound at A:3:1)
+  Valid hole fits include a :: A (bound at A:3:1)
+hints: []

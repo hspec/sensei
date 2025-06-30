@@ -1,0 +1,22 @@
+version: '1.0'
+ghcVersion: ghc-9.10.0
+span:
+  file: test/fixtures/use-BlockArguments/Foo.hs
+  start:
+    line: 5
+    column: 10
+  end:
+    line: 5
+    column: 22
+severity: Error
+code: 52095
+message:
+- |-
+  Unexpected do block in function application:
+      do return ()
+hints:
+- Use parentheses.
+- |-
+  Perhaps you intended to use BlockArguments
+  You may enable this language extension in GHCi with:
+    :set -XBlockArguments

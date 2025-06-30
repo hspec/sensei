@@ -1,1 +1,0 @@
-{"version":"1.0","ghcVersion":"ghc-9.10.0","span":{"file":"test/fixtures/multiple-error-messages/Foo.hs","start":{"line":3,"column":13},"end":{"line":3,"column":14}},"severity":"Error","code":39999,"message":["No instance for `Num String' arising from a use of `+'","In the expression: \"foo\" + 23\nIn an equation for `foo': foo = \"foo\" + 23"],"hints":[]}

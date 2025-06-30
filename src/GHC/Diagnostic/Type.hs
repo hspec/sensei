@@ -12,8 +12,7 @@ module GHC.Diagnostic.Type (
 import           Imports hiding ((<>), unlines, empty, unlines)
 
 import           Data.Text qualified as T
-import           Data.Aeson (decode)
-import           Data.ByteString.Lazy (fromStrict)
+import           Data.Yaml (decodeThrow)
 import           Text.Printf (printf)
 import           Text.PrettyPrint
 
@@ -64,7 +63,7 @@ data Category = Category {
 } deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 parse :: ByteString -> Maybe Diagnostic
-parse = fmap removeGhciSpecificHints . decode . fromStrict
+parse = fmap removeGhciSpecificHints . decodeThrow
 
 format :: Diagnostic -> String
 format diagnostic = render $ unlines [

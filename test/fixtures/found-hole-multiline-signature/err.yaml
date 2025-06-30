@@ -1,0 +1,57 @@
+version: '1.0'
+ghcVersion: ghc-9.10.0
+span:
+  file: test/fixtures/found-hole-multiline-signature/Foo.hs
+  start:
+    line: 2
+    column: 5
+  end:
+    line: 2
+    column: 6
+severity: Error
+code: 88464
+message:
+- |-
+  Found hole:
+    _ :: String
+         -> String
+         -> String
+         -> String
+         -> String
+         -> String
+         -> String
+         -> String
+- 'In an equation for `a'': a = _'
+- |-
+  Relevant bindings include
+    a :: String
+         -> String
+         -> String
+         -> String
+         -> String
+         -> String
+         -> String
+         -> String
+      (bound at test/fixtures/found-hole-multiline-signature/Foo.hs:2:1)
+  Valid hole fits include
+    a :: String
+         -> String
+         -> String
+         -> String
+         -> String
+         -> String
+         -> String
+         -> String
+      (bound at test/fixtures/found-hole-multiline-signature/Foo.hs:2:1)
+    mempty :: forall a. Monoid a => a
+      with mempty @(String
+                    -> String
+                    -> String
+                    -> String
+                    -> String
+                    -> String
+                    -> String
+                    -> String)
+      (imported from `Prelude' at test/fixtures/found-hole-multiline-signature/Foo.hs:1:1
+       (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.Base'))
+hints: []
