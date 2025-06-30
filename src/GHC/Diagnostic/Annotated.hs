@@ -20,6 +20,7 @@ data Solution =
 data Annotation =
     RedundantImport
   | VariableNotInScope RequiredVariable
+  | TermLevelUseOfTypeConstructor Qualification Text
   | TypeNotInScope Qualification Text
   | FoundHole Type [HoleFit]
   deriving (Eq, Show)
