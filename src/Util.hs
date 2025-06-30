@@ -78,8 +78,11 @@ gitCheckIgnore dir files = do
   (_, ignoredFiles, err) <- readProcessWithExitCode "git" ["-C", dir, "check-ignore", "--stdin", "-z"] $ join_ files
   return (gitCheckIgnoreFeedback err, split ignoredFiles)
   where
+    join_ :: [String] -> String
     join_ = intercalate "\0"
-    split = map T.unpack . T.split (== '\0') . T.pack
+
+    split :: String -> [String]
+    split = map unpack . T.split (== '\0') . pack
 
 gitCheckIgnoreFeedback :: String -> Feedback
 gitCheckIgnoreFeedback err

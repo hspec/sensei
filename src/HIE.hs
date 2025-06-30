@@ -10,7 +10,6 @@ module HIE (
 import Imports
 
 import Data.Coerce
-import Data.Text qualified as T
 import Data.Double.Conversion.Text qualified as Double
 import Data.Map qualified as Map
 import Control.Concurrent.Async (Async, withAsync)
@@ -65,7 +64,7 @@ reportConstructionTime putStr what action = do
   constructing
   Result duration errors <- action
   done duration
-  for_ errors $ putStr . T.pack
+  for_ errors $ putStr . pack
   where
     constructing :: IO ()
     constructing = putStr $ "constructing " <> what <> " identifier map... "
@@ -73,10 +72,10 @@ reportConstructionTime putStr what action = do
     done :: Double -> IO ()
     done dt = do
       if dt == 0 then do
-        putStr . T.pack $ withColor Yellow "⟳\n"
+        putStr . pack $ withColor Yellow "⟳\n"
       else do
         putStr $ formatTime dt
-        putStr . T.pack $ withColor Green " ✔\n"
+        putStr . pack $ withColor Green " ✔\n"
 
     formatTime :: Double -> Text
     formatTime dt = Double.toFixed 2 dt <> "s"
@@ -95,7 +94,7 @@ asyncLoadAllPackages putStr info identifierMap loadResult action = do
   withAsync load action
   where
     putStrLn :: String -> IO ()
-    putStrLn message = putStr (T.pack message <> "\n")
+    putStrLn message = putStr (pack message <> "\n")
 
 data Result = Result {
   duration :: Double
@@ -131,7 +130,7 @@ readExports nameCache updateAvailableImports file = do
 
   let
     exports :: [(Name, ProvidedBy)]
-    exports = hieExports (T.pack file.package) result.hie_file_result
+    exports = hieExports (pack file.package) result.hie_file_result
 
     insert :: (Name, ProvidedBy) -> AvailableImports -> AvailableImports
     insert (name, providedBy) = Map.insertWith (++) name [providedBy]

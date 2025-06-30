@@ -48,7 +48,7 @@ apply putStrLn config dir instructions = case spanFromInstructions instructions 
     case response.choices of
       [] -> pass
       choice : _ -> do
-        case extractPatch span (Text.unpack choice.message.content) of
+        case extractPatch span (unpack choice.message.content) of
           Nothing -> putStrLn $ section "no patch"
           Just patch -> applyPatch putStrLn dir patch
         putStrLn separator
@@ -146,7 +146,7 @@ createPrompt dir span instructions = do
         , "The GHC diagnostics message:"
         , ""
         , "```console"
-        , Builder.fromText . Text.stripEnd . Text.pack $ Diagnostic.format diagnostic
+        , Builder.fromText . Text.stripEnd . pack $ Diagnostic.format diagnostic
         , "```"
         ]
 
