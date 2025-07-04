@@ -1,15 +1,19 @@
-module OptionsSpec (main, spec) where
+module OptionsSpec (spec) where
 
 import           Helper
 
 import           Options
 
-main :: IO ()
-main = hspec spec
-
 spec :: Spec
 spec = do
   describe "splitArgs" $ do
+    it "" $ do
+      splitArgs ["-fno-diagnostics-as-json", "-fchecks"] `shouldBe` (["-fno-diagnostics-as-json"], ["-fchecks"])
+
+    it "" $ do
+      splitArgs ["-fdiagnostics-color=never"] `shouldBe` (["-fdiagnostics-color=never"], [])
+
+
     it "returns longest matching list of Hspec options from end of given list" $ do
       splitArgs ["foo", "--bar", "-m", "FooSpec", "-a", "1000"] `shouldBe` (["foo", "--bar"], ["-m", "FooSpec", "-a", "1000"])
 

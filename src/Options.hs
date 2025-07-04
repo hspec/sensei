@@ -1,23 +1,49 @@
 module Options (splitArgs) where
 
 import           Imports
+import           Data.Coerce (coerce)
+import qualified GHC.List as List
 
 import           System.Console.GetOpt
+import qualified Options.GHC as GHC
 
 splitArgs :: [String] -> ([String], [String])
 splitArgs args = case break (== "--") $ reverse args of
   (xs, "--" : ys) -> (reverse ys, reverse xs)
-  _ -> case filter isHspecArgs $ tails args of
-    x : _ -> (dropEnd (length x) args, x)
-    [] -> (args, [])
-  where
-    isHspecArgs :: [String] -> Bool
-    isHspecArgs xs = case getOpt Permute options xs of
-      (result, [], []) -> all (== Valid) result
-      _ -> False
+  _ -> partitionOptions $ classify args
 
-    dropEnd :: Int -> [a] -> [a]
-    dropEnd n = reverse . drop n . reverse
+newtype GhcOption = GhcOption [String]
+newtype HspecOption = HspecOption [String]
+
+type Option = Either GhcOption HspecOption
+
+ghcOption :: [String] -> Option
+ghcOption = Left . GhcOption
+
+hspecOption :: [String] -> Option
+hspecOption = Right . HspecOption
+
+partitionOptions :: [Option] -> ([String], [String])
+partitionOptions = bimap (List.concat . coerce) (List.concat . coerce) . partitionEithers
+
+classify :: [String] -> [Option]
+classify = GHC.takeGhc >>> \ case
+  ([], args) -> case takeHspec args of
+    ([], []) -> []
+    ([], file : rest) -> ghcOption [file] : classify rest
+    (hspec, rest) -> hspecOption hspec : classify rest
+  (ghc, rest) -> ghcOption ghc : classify rest
+
+takeHspec :: [String] -> ([String], [String])
+takeHspec = \ case
+  a : args | isHspecArgs [a] -> ([a], args)
+  a : b : args | isHspecArgs [a, b] -> ([a, b], args)
+  args -> ([], args)
+
+isHspecArgs :: [String] -> Bool
+isHspecArgs xs = case getOpt Permute options xs of
+  (result, [], []) -> all (== Valid) result
+  _ -> False
 
 data Valid = Valid | Invalid
   deriving (Eq, Show)
