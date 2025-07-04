@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-module Language.Haskell.GhciWrapperSpec (main, spec) where
+module Language.Haskell.GhciWrapperSpec (spec) where
 
 import           Helper hiding (diagnostic, ghciConfig)
 import qualified Helper
@@ -8,9 +8,6 @@ import qualified Data.ByteString.Char8 as ByteString
 
 import           Language.Haskell.GhciWrapper (Config(..), Interpreter(..), ReloadStatus(..), Extract(..))
 import qualified Language.Haskell.GhciWrapper as Interpreter
-
-main :: IO ()
-main = hspec spec
 
 withInterpreter :: [String] -> (Interpreter -> IO a) -> IO a
 withInterpreter args action = do

@@ -1,23 +1,46 @@
 module Options (splitArgs) where
 
 import           Imports
+import           Data.Coerce (coerce)
+import qualified GHC.List as List
 
 import           System.Console.GetOpt
 
 splitArgs :: [String] -> ([String], [String])
 splitArgs args = case break (== "--") $ reverse args of
   (xs, "--" : ys) -> (reverse ys, reverse xs)
-  _ -> case filter isHspecArgs $ tails args of
-    x : _ -> (dropEnd (length x) args, x)
-    [] -> (args, [])
-  where
-    isHspecArgs :: [String] -> Bool
-    isHspecArgs xs = case getOpt Permute options xs of
-      (result, [], []) -> all (== Valid) result
-      _ -> False
+  _ -> partitionOptions $ classify args
 
-    dropEnd :: Int -> [a] -> [a]
-    dropEnd n = reverse . drop n . reverse
+newtype GhcOption = GhcOption [String]
+newtype HspecOption = HspecOption [String]
+
+type Option = Either GhcOption HspecOption
+
+ghcOption :: [String] -> Option
+ghcOption = Left . GhcOption
+
+hspecOption :: [String] -> Option
+hspecOption = Right . HspecOption
+
+partitionOptions :: [Option] -> ([String], [String])
+partitionOptions = bimap (List.concat . coerce) (List.concat . coerce) . partitionEithers
+
+classify :: [String] -> [Option]
+classify = takeHspec >>> \ case
+  ([], []) -> []
+  ([], ghc : args) -> ghcOption [ghc] : classify args
+  (hspec, args) -> hspecOption hspec : classify args
+
+takeHspec :: [String] -> ([String], [String])
+takeHspec = \ case
+  a : args | isHspecArgs [a] -> ([a], args)
+  a : b : args | isHspecArgs [a, b] -> ([a, b], args)
+  args -> ([], args)
+
+isHspecArgs :: [String] -> Bool
+isHspecArgs xs = case getOpt Permute options xs of
+  (result, [], []) -> all (== Valid) result
+  _ -> False
 
 data Valid = Valid | Invalid
   deriving (Eq, Show)
@@ -52,7 +75,7 @@ options = concat [
   , reqArg "" "seed" "N"
   , reqArg "" "skip" "PATTERN"
   , reqArg "a" "qc-max-success" "N"
-  , reqArg "f" "format" "NAME"
+  , reqArg "" "format" "NAME"
   , reqArg "m" "match" "PATTERN"
   , [Option "p" ["print-slow-items"] (OptArg (maybe Valid intArg) "N") ""]
   ]
