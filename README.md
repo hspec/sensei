@@ -12,13 +12,17 @@ additional GHC options on the command line:
 
     sensei -isrc -itest test/Spec.hs
 
-Command-line arguments that look like Hspec options are passed to Hspec.  To
-avoid ambiguity, GHC options have to be given before any Hspec options:
+Command-line arguments that look like Hspec options are passed to Hspec:
 
     sensei -isrc -itest test/Spec.hs --no-color --match foo
 
-All command-line arguments after the last `--` are passed to Hspec, regardless
-of how they look:
+Hspec's `-f` option collides with GHC flags.  To avoid ambiguity, `sensei` does
+not accept Hspec's `-f` option.  Use `--format` instead:
+
+    sensei -isrc -itest test/Spec.hs --format progress -fdiagnostics-as-json
+
+A `--` disables any command-line processing.  All command-line arguments after
+the last `--` are unconditionally passed to Hspec:
 
     sensei -isrc -itest test/Spec.hs -- --no-color --match foo
 
