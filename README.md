@@ -37,6 +37,12 @@ When `sensei` is used inside a Git repository, it ignores modifications to
 
     cabal exec sensei test/Spec.hs
 
+### Disambiguation of command-line arguments
+
+1. Command-line arguments that look like GHC options are passed to GHC
+1. Command-line arguments that look like Hspec options are passed to Hspec
+1. Any other command-line arguments are passed to GHC
+
 ## 生徒 (*rōmaji*: seito): Accessing results on the command line
 
 You can access the results of the last test run with `seito`:
