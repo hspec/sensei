@@ -44,6 +44,7 @@ library
       Input
       Language.Haskell.GhciWrapper
       Options
+      Options.GHC
       Pager
       ReadHandle
       Run
@@ -123,6 +124,7 @@ executable seito
       Input
       Language.Haskell.GhciWrapper
       Options
+      Options.GHC
       Pager
       ReadHandle
       Run
@@ -204,6 +206,7 @@ executable sensei
       Input
       Language.Haskell.GhciWrapper
       Options
+      Options.GHC
       Pager
       ReadHandle
       Run
@@ -286,6 +289,7 @@ test-suite spec
       Input
       Language.Haskell.GhciWrapper
       Options
+      Options.GHC
       Pager
       ReadHandle
       Run
@@ -305,6 +309,7 @@ test-suite spec
       HIESpec
       HTTPSpec
       Language.Haskell.GhciWrapperSpec
+      Options.GHCSpec
       OptionsSpec
       PagerSpec
       ReadHandleSpec
