@@ -1,3 +1,4 @@
 module Foo where
-data Foo = Fooa | Fooi
-foo = Foo
+import Text.Markdown.Unlit (CodeBlock)
+data Foo = CodeBloc
+foo = CodeBlock

@@ -1,8 +1,10 @@
-test/fixtures/term-level-use-of-type-constructor/Foo.hs:3:7: error: [GHC-01928]
-    • Illegal term-level use of the type constructor `Foo'
-    • defined at test/fixtures/term-level-use-of-type-constructor/Foo.hs:2:1
-    • Perhaps use one of these:
-        variable `foo' (line 3), `Fooa' (line 2), `Fooi' (line 2)
-    • In the expression: Foo
-      In an equation for `foo': foo = Foo
+test/fixtures/term-level-use-of-type-constructor/Foo.hs:4:7: error: [GHC-01928]
+    • Illegal term-level use of the type constructor `CodeBlock'
+    • imported from `Text.Markdown.Unlit' at test/fixtures/term-level-use-of-type-constructor/Foo.hs:2:29-37
+    • Perhaps use `CodeBloc' (line 3)
+      Add `CodeBlock' to the import list in the import of
+      `Text.Markdown.Unlit'
+      (at test/fixtures/term-level-use-of-type-constructor/Foo.hs:2:1-38).
+    • In the expression: CodeBlock
+      In an equation for `foo': foo = CodeBlock
 
