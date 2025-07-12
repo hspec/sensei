@@ -1,6 +1,8 @@
+{-# LANGUAGE TemplateHaskellQuotes #-}
 module GHC.EnvironmentFileSpec (spec, storePathContains) where
 
 import Helper
+import Data.Set qualified as Set
 import GHC.OldList qualified as List
 import System.Environment (getEnv)
 import Distribution.Types.InstalledPackageInfo (libraryDirs)
@@ -48,6 +50,58 @@ spec = do
           , "Data/Binary/Get/Internal.hie"
           , "Data/Binary/Put.hie"
           ]
+
+  describe_ 'readDependencies do
+    it "reads dependencies from .cabal file" do
+      readDependencies "." `shouldReturn` Set.fromList [
+          "Cabal-syntax"
+        , "HUnit"
+        , "QuickCheck"
+        , "aeson"
+        , "ansi-terminal"
+        , "async"
+        , "base"
+        , "bytestring"
+        , "casing"
+        , "clock"
+        , "containers"
+        , "directory"
+        , "double-conversion"
+        , "filepath"
+        , "fsnotify"
+        , "ghc"
+        , "ghc-hie"
+        , "hspec"
+        , "hspec-contrib"
+        , "hspec-expectations"
+        , "hspec-wai"
+        , "http-client"
+        , "http-conduit"
+        , "http-media"
+        , "http-types"
+        , "mockery"
+        , "mtl"
+        , "network"
+        , "pretty"
+        , "process"
+        , "raw-strings-qq"
+        , "stm"
+        , "template-haskell"
+        , "temporary"
+        , "text"
+        , "time"
+        , "transformers"
+        , "unix"
+        , "vcr"
+        , "wai"
+        , "wai-extra"
+        , "warp"
+        , "yaml"
+        ]
+
+    context "without a .cabal file" do
+      it "returns mempty" do
+        readDependencies "src" `shouldReturn` mempty
 
   describe "readPackageConfig" do
     it "expands ${pkgroot}" do

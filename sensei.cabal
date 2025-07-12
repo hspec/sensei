@@ -365,6 +365,7 @@ test-suite spec
     , process
     , raw-strings-qq
     , stm
+    , template-haskell
     , temporary
     , text >=2.1
     , time
