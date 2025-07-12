@@ -35,7 +35,7 @@ import Util
 import GHC.Info as GHC (Info(..))
 import GHC.EnvironmentFile
 import GHC.Diagnostic (Name(..), NameSpace(..), AvailableImports, ProvidedBy(..))
-import GHC.Diagnostic.Annotated (Module(..), Type(..))
+import GHC.Diagnostic.Annotated
 
 type PutStr = Text -> IO ()
 
@@ -130,7 +130,7 @@ readExports nameCache updateAvailableImports file = do
 
   let
     exports :: [(Name, ProvidedBy)]
-    exports = hieExports (pack file.package) result.hie_file_result
+    exports = hieExports file.package result.hie_file_result
 
     insert :: (Name, ProvidedBy) -> AvailableImports -> AvailableImports
     insert (name, providedBy) = Map.insertWith (++) name [providedBy]
@@ -140,7 +140,7 @@ readExports nameCache updateAvailableImports file = do
 
   updateAvailableImports insertAll
 
-hieExports :: Text -> HieFile -> [(Name, ProvidedBy)]
+hieExports :: Package -> HieFile -> [(Name, ProvidedBy)]
 hieExports package hieFile = concatMap allNames hieFile.hie_exports
   where
     module_ :: Module
@@ -174,4 +174,4 @@ unsafeShortByteStringAsText :: ShortByteString -> Text
 unsafeShortByteStringAsText bs = text bs.unShortByteString 0 (ShortByteString.length bs)
 
 findHieFiles :: FilePath -> IO [HieFilePath]
-findHieFiles dir = map (HieFilePath "main") . lines <$> readCreateProcess (shell $ "find " <> dir <> " -name '*.hie'") ""
+findHieFiles dir = map (HieFilePath (Package CurrentPackage "main")) . lines <$> readCreateProcess (shell $ "find " <> dir <> " -name '*.hie'") ""

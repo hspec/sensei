@@ -64,7 +64,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
       UseName name -> "Use " <> Builder.fromText name
       ImportName module_ qualification name -> importStatement module_ qualification [name] <> faint package
         where
-          package = " (" <> Builder.fromText module_.package <> ")"
+          package = " (" <> Builder.fromText module_.package.name <> ")"
 
     faint :: Builder -> Builder
     faint = Builder.withSGR [SetConsoleIntensity FaintIntensity]
@@ -73,9 +73,6 @@ data ProvidedBy = ProvidedBy {
   module_ :: Module
 , type_ :: Maybe Type
 } deriving (Eq, Show)
-
-instance IsString ProvidedBy where
-  fromString = (`ProvidedBy` Nothing) . fromString
 
 type AvailableImports = Map Name [ProvidedBy]
 
@@ -262,14 +259,11 @@ analyzeAnnotation availableImports = \ case
   TypeNotInScope qualification name -> importName qualification (Name TypeName name)
   FoundHole _ fits -> map (UseName . (.name)) fits
   where
-    ignore :: [Module]
-    ignore = [
-        Module "hspec-meta" "Test.Hspec.Discover"
-      , Module "hspec" "Test.Hspec.Discover"
-      ]
+    ignore :: Module -> Bool
+    ignore module_ = module_.name == "Test.Hspec.Discover"
 
     discardIgnored :: [ProvidedBy] -> [ProvidedBy]
-    discardIgnored = filter $ providedByModule >>> (`notElem` ignore)
+    discardIgnored = filter $ providedByModule >>> (not . ignore)
 
     providedByModule :: ProvidedBy -> Module
     providedByModule (ProvidedBy module_ _) = module_

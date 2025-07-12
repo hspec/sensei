@@ -505,7 +505,7 @@ spec = do
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "unlit" NoTypeSignature)
           analyzeAnnotation availableImports annotation `shouldBe` [
-              ImportName (Module "markdown-unlit" "Text.Markdown.Unlit") Unqualified "unlit"
+              ImportName (Module (Package TransitiveDependency "markdown-unlit") "Text.Markdown.Unlit") Unqualified "unlit"
             ]
 
         it "suggests class methods" \ availableImports -> do

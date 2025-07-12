@@ -89,5 +89,6 @@ tests:
       - mockery
       - vcr
       - raw-strings-qq
+      - template-haskell
     cpp-options: -DTEST
     build-tools: hspec-discover

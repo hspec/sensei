@@ -31,14 +31,8 @@ data RequiredVariable = RequiredVariable {
 , type_ :: TypeSignature
 } deriving (Eq, Show)
 
-instance IsString RequiredVariable where
-  fromString name = RequiredVariable Unqualified (fromString name) NoTypeSignature
-
 data Qualification = Unqualified | Qualified Text
   deriving (Eq, Show)
-
-instance IsString Qualification where
-  fromString = Qualified . fromString
 
 data HoleFit = HoleFit {
   name :: Text
@@ -48,16 +42,18 @@ data HoleFit = HoleFit {
 data TypeSignature = NoTypeSignature | TypeSignature Type
   deriving (Eq, Ord, Show)
 
-instance IsString TypeSignature where
-  fromString = TypeSignature . fromString
-
 data Module = Module {
-  package :: Text
+  package :: Package
 , name :: Text
 } deriving (Eq, Ord, Show)
 
-instance IsString Module where
-  fromString = Module "base" . fromString
+data Package = Package {
+  type_ :: PackageType
+, name :: Text
+} deriving (Eq, Ord, Show)
+
+data PackageType = CurrentPackage | DirectDependency | TransitiveDependency
+  deriving (Eq, Ord, Show)
 
 newtype Type = Type Text
   deriving newtype (Eq, Ord, Show, IsString)

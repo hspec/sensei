@@ -1,11 +1,12 @@
+{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 module HIESpec (spec) where
 
 import Helper hiding (lookup)
 import Data.Map qualified as Map
 import Control.Concurrent.Async qualified as Async
 
-import GHC.Diagnostic (Name(..), NameSpace(..), ProvidedBy(..))
-import GHC.Diagnostic.Annotated (Module(..))
+import GHC.Diagnostic
+import GHC.Diagnostic.Annotated
 import GHC.EnvironmentFile
 import GHC.EnvironmentFileSpec (storePathContains)
 
@@ -16,8 +17,13 @@ spec = do
   info <- runIO ghcInfo
 
   let
-    providedBy_markdown_unlit = ProvidedBy (Module "markdown-unlit" "Text.Markdown.Unlit") Nothing
+    providedBy_markdown_unlit :: ProvidedBy
+    providedBy_markdown_unlit = ProvidedBy (Module (Package TransitiveDependency "markdown-unlit") "Text.Markdown.Unlit") Nothing
+
+    providedBy_markdown_unlit_Selector :: ProvidedBy
     providedBy_markdown_unlit_Selector = providedBy_markdown_unlit { type_ = Just "Selector" }
+
+    providedBy_markdown_unlit_CodeBlock :: ProvidedBy
     providedBy_markdown_unlit_CodeBlock = providedBy_markdown_unlit { type_ = Just "CodeBlock" }
 
   describe "with" do
@@ -28,7 +34,7 @@ spec = do
         lookup "putList" `shouldReturn` Nothing
         Async.wait async
         lookup "unlit" `shouldReturn` Just [providedBy_markdown_unlit]
-        lookup "putList" `shouldReturn` Just [ProvidedBy (Module "binary" "Data.Binary") (Just "Binary")]
+        lookup "putList" `shouldReturn` Just [ProvidedBy (Module (Package TransitiveDependency "binary") "Data.Binary") (Just "Binary")]
 
   describe "readHieFiles" do
     it "reads exports from a list of HIE files" $ whenGhc GHC_908 do

@@ -48,14 +48,33 @@ spec = do
           ]
 
       it "deprioritizes the base:GHC.* namespace" do
+        let
+          textShow :: Module
+          textShow = Module (Package DirectDependency "text") "Text.Show"
+
         sortImports Unqualified (Name VariableName "show") id [
             "GHC.Show"
           , "Prelude"
-          , "Text.Show"
+          , textShow
           ] `shouldBe` [
             "Prelude"
-          , "Text.Show"
+          , textShow
           , "GHC.Show"
+          ]
+
+      it "deprioritizes transitive dependencies" do
+        let
+          textShow :: Module
+          textShow = Module (Package TransitiveDependency "text") "Text.Show"
+
+        sortImports Unqualified (Name VariableName "show") id [
+            "GHC.Show"
+          , "Prelude"
+          , textShow
+          ] `shouldBe` [
+            "Prelude"
+          , "GHC.Show"
+          , textShow
           ]
 
     context "with a qualified name" do

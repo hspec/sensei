@@ -4,6 +4,7 @@ module GHC.EnvironmentFile (
 , HieFilePath(..)
 , listAllHieFiles
 #ifdef TEST
+, readDependencies
 , readPackageConfig
 , Entry(..)
 , parseEntries
@@ -14,6 +15,7 @@ import Imports
 
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.ByteString qualified as B
+import Data.Set qualified as Set
 import System.Environment.Blank (getEnv)
 import Data.Text qualified as T
 import Data.Text.IO.Utf8 qualified as T (readFile)
@@ -24,9 +26,47 @@ import Distribution.Text (display)
 import Distribution.Backpack
 import Distribution.ModuleName (toFilePath)
 import Distribution.PackageDescription
+import Distribution.PackageDescription.Parsec
+import Distribution.PackageDescription.Configuration
 import Distribution.InstalledPackageInfo
 
 import GHC.Info qualified as GHC (Info(..))
+import GHC.Diagnostic.Annotated
+
+getCabalFiles :: FilePath -> IO [FilePath]
+getCabalFiles dir = filter (not . ("." `isPrefixOf`)) . filter (".cabal" `isSuffixOf`) <$> getDirectoryContents dir
+
+readDependencies :: FilePath -> IO (Set Text)
+readDependencies dir = getCabalFiles dir >>= \ case
+  [file] -> B.readFile file <&> parseGenericPackageDescriptionMaybe >>= \ case
+    Nothing -> mempty
+    Just (flattenPackageDescription -> package) -> do
+      let
+        libraryDependencies :: [Dependency]
+        libraryDependencies  = maybe [] (targetBuildDepends . libBuildInfo) (library package)
+
+        subLibraryDependencies :: [Dependency]
+        subLibraryDependencies = concatMap targetBuildDepends $ map libBuildInfo (subLibraries package)
+
+        executableDependencies :: [Dependency]
+        executableDependencies = concatMap targetBuildDepends $ map buildInfo (executables package)
+
+        testDependencies :: [Dependency]
+        testDependencies = concatMap targetBuildDepends $ map testBuildInfo (testSuites package)
+
+        benchmarkDependencies :: [Dependency]
+        benchmarkDependencies = concatMap targetBuildDepends $ map benchmarkBuildInfo (benchmarks package)
+
+        dependencies :: Set Text
+        dependencies = Set.fromList . map (pack . unPackageName . depPkgName) $ concat [
+            libraryDependencies
+          , subLibraryDependencies
+          , executableDependencies
+          , testDependencies
+          , benchmarkDependencies
+          ]
+      return dependencies
+  _ -> mempty
 
 type WarningM = WriterT [Warning] IO
 
@@ -34,7 +74,7 @@ newtype Warning = Warning String
   deriving newtype (Eq, Show)
 
 data HieFilePath = HieFilePath {
-  package :: String
+  package :: Package
 , path :: FilePath
 } deriving (Eq, Show)
 
@@ -42,11 +82,12 @@ listAllHieFiles :: GHC.Info -> IO ([Warning], [HieFilePath])
 listAllHieFiles info = do
   fallback <- getXdgDirectory XdgState $ "ghc-hie-files" </> "ghc-" <> info.ghcVersionString
   packages <- listPackages info
+  dependencies <- readDependencies "."
   swap <$> runWriterT do
-    concat <$> for packages (packageHieFiles fallback)
+    concat <$> for packages (packageHieFiles dependencies fallback)
 
-packageHieFiles :: FilePath -> InstalledPackageInfo -> WarningM [HieFilePath ]
-packageHieFiles fallback package = do
+packageHieFiles :: Set Text -> FilePath -> InstalledPackageInfo -> WarningM [HieFilePath ]
+packageHieFiles dependencies fallback package = do
   let
     libToHie :: FilePath -> FilePath
     libToHie lib = lib </> "extra-compilation-artifacts" </> "hie"
@@ -68,6 +109,17 @@ packageHieFiles fallback package = do
     packageName :: String
     packageName = unPackageName . pkgName $ sourcePackageId package
 
+    dependency :: Package
+    dependency = Package { type_,  name }
+      where
+        name :: Text
+        name = pack packageName
+
+        type_ :: PackageType
+        type_ = case name `Set.member` dependencies of
+          False -> TransitiveDependency
+          True -> DirectDependency
+
     hieFiles :: FilePath -> WarningM [HieFilePath]
     hieFiles dir = catMaybes <$> for package.exposedModules \ case
       ExposedModule name Nothing -> do
@@ -79,7 +131,7 @@ packageHieFiles fallback package = do
               warning $ "non-existing " <> file
             return Nothing
           True -> do
-            return . Just $ HieFilePath packageName file
+            return . Just $ HieFilePath dependency file
       ExposedModule name (Just (OpenModule _ original)) | name == original -> do
         return Nothing
       ExposedModule name (Just original) -> do

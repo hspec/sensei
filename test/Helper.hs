@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 module Helper (
   module Imports
@@ -41,9 +42,13 @@ module Helper (
 
 , shouldBe
 , shouldReturn
+
+, describe_
 ) where
 
 import           Imports
+
+import qualified Language.Haskell.TH.Syntax as TH
 
 import           System.Directory as Imports
 import           System.IO.Temp (withSystemTempDirectory)
@@ -215,3 +220,21 @@ shouldBe = Hspec.shouldBe
 
 shouldReturn :: HasCallStack => (Eq a, Show a) => IO a -> a -> IO ()
 shouldReturn = Hspec.shouldReturn
+
+describe_ :: TH.Name -> SpecWith a -> SpecWith a
+describe_ = describe . TH.nameBase
+
+instance IsString RequiredVariable where
+  fromString name = RequiredVariable Unqualified (fromString name) NoTypeSignature
+
+instance IsString Qualification where
+  fromString = Qualified . fromString
+
+instance IsString TypeSignature where
+  fromString = TypeSignature . fromString
+
+instance IsString Module where
+  fromString = Module "base" . fromString
+
+instance IsString Package where
+  fromString = Package DirectDependency . fromString
