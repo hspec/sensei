@@ -167,10 +167,10 @@ spec = do
             fitterNotNull :: [String] -> [String]
             fitterNotNull = filter (not . null)
 
-          (fmap fitterNotNull <$> (trigger session >> trigger session)) `shouldReturn` (Failure, [
+          (fmap (map stripAnsi . fitterNotNull) <$> (trigger session >> trigger session)) `shouldReturn` (Failure, [
               "[1 of 1] Compiling Spec"
             , "Spec.hs:9:7: error: [GHC-88464] Variable not in scope: bar"
-            , withColor Red "RELOADING FAILED"
+            , "RELOADING FAILED"
             ])
 
     context "with a failing spec" $ do

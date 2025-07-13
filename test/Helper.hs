@@ -3,6 +3,7 @@
 module Helper (
   module Imports
 , silent
+, stripAnsi
 
 , Info(..)
 , ghcInfo

@@ -7,16 +7,17 @@ module GHC.Diagnostic.Type (
 , Reason(..)
 , parse
 
-, ShowErrorContext(..)
+, FormatConfig(..)
 , format
 ) where
 
-import           Imports hiding ((<>), unlines, empty, unlines)
+import           Imports hiding ((<>), empty, unlines)
 
 import           Data.Text qualified as T
 import           Data.Yaml (decodeThrow)
 import           Text.Printf (printf)
 import           Text.PrettyPrint
+import           System.Console.ANSI.Codes
 
 data Diagnostic = Diagnostic {
   version :: String
@@ -67,18 +68,20 @@ data Category = Category {
 parse :: ByteString -> Maybe Diagnostic
 parse = fmap removeGhciSpecificHints . decodeThrow
 
-data ShowErrorContext = ShowErrorContext | NoShowErrorContext
-  deriving (Eq, Show)
+data FormatConfig = FormatConfig {
+  showErrorContext :: Bool
+, color :: Bool
+} deriving (Eq, Show)
 
-format :: ShowErrorContext -> Diagnostic -> String
-format showErrorContext diagnostic = render $ unlines [
-    hang header 4 messageWithHints
+format :: FormatConfig -> Diagnostic -> String
+format config diagnostic = render $ unlines [
+    bold (hang header 4 messageWithHints) <> reset
   , ""
   , ""
   ]
   where
     header :: Doc
-    header = span <> colon <+> severity <> colon <+> code <+> reason
+    header = span <> colon <+> severity <> colon <+> code <+> reason <> reset <> reset <> setBold
 
     span :: Doc
     span = case diagnostic.span of
@@ -86,7 +89,7 @@ format showErrorContext diagnostic = render $ unlines [
       Just loc -> text loc.file <> colon <> int loc.start.line <> colon <> int loc.start.column
 
     severity :: Doc
-    severity = case diagnostic.severity of
+    severity = colorize case diagnostic.severity of
       Warning -> "warning"
       Error -> "error"
 
@@ -103,7 +106,7 @@ format showErrorContext diagnostic = render $ unlines [
         ReasonCategory (Category category) -> [category]
         where
           formatFlag :: String -> [Doc]
-          formatFlag (text -> flag) =
+          formatFlag (text -> flag) = map colorize $
             "-W" <> flag : case diagnostic.severity of
               Warning -> []
               Error -> [errorFlag <> flag]
@@ -114,9 +117,9 @@ format showErrorContext diagnostic = render $ unlines [
             ReasonCategory {} -> "-Werror="
 
     message :: Doc
-    message = bulleted $ map (verbatim . T.stripStart) case showErrorContext of
-      ShowErrorContext -> diagnostic.message
-      NoShowErrorContext -> dropErrorContext diagnostic.message
+    message = bulleted $ map (verbatim . T.stripStart) case config.showErrorContext of
+      False -> dropErrorContext diagnostic.message
+      True -> diagnostic.message
 
     hints :: [Doc]
     hints = map verbatim diagnostic.hints
@@ -144,6 +147,36 @@ format showErrorContext diagnostic = render $ unlines [
 
     punctuateComma :: [Doc] -> Doc
     punctuateComma = hcat . punctuate (text ", ")
+
+    colorize :: Doc -> Doc
+    colorize doc = bold (
+      case diagnostic.severity of
+        Warning -> magenta doc
+        Error -> red doc
+      ) <> setBold
+
+    red :: Doc -> Doc
+    red doc = setColor Red <> doc <> reset
+
+    magenta :: Doc -> Doc
+    magenta doc = setColor Magenta <> doc <> reset
+
+    bold :: Doc -> Doc
+    bold doc = setBold <> doc <> reset
+
+    setColor :: Color -> Doc
+    setColor c = ansi (setSGRCode [SetColor Foreground Dull c])
+
+    setBold :: Doc
+    setBold = ansi "\ESC[;1m"
+
+    reset :: Doc
+    reset = ansi (setSGRCode [Reset])
+
+    ansi :: String -> Doc
+    ansi
+      | config.color = zeroWidthText
+      | otherwise = mempty
 
 removeGhciSpecificHints :: Diagnostic -> Diagnostic
 removeGhciSpecificHints diagnostic = diagnostic { hints = map processHint diagnostic.hints }

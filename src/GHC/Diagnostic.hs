@@ -39,9 +39,9 @@ import           GHC.Diagnostic.Type as Diagnostic
 import           GHC.Diagnostic.Annotated
 import           GHC.Diagnostic.Util
 
-formatAnnotated :: ShowErrorContext -> Int -> Annotated -> (Int, Text)
-formatAnnotated showErrorContext start annotated = case formatSolutions start annotated.solutions of
-  (next, solutions) -> (next, Builder.toText $ fromString (format showErrorContext annotated.diagnostic) <> solutions)
+formatAnnotated :: FormatConfig -> Int -> Annotated -> (Int, Text)
+formatAnnotated config start annotated = case formatSolutions start annotated.solutions of
+  (next, solutions) -> (next, Builder.toText $ fromString (format config annotated.diagnostic) <> solutions)
 
 formatSolutions :: Int -> [Solution] -> (Int, Builder)
 formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
