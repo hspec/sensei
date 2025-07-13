@@ -18,7 +18,6 @@ module GHC.Diagnostic (
 , extractIdentifiers
 , qualifiedName
 , analyzeAnnotation
-, applyReplace
 #endif
 ) where
 
@@ -38,6 +37,7 @@ import qualified Data.Map as Map
 import           GHC.Diagnostic.Type as Diagnostic
 import           GHC.Diagnostic.Annotated
 import           GHC.Diagnostic.Util
+import qualified GHC.Diagnostic.Edit as Edit
 
 formatAnnotated :: FormatConfig -> Int -> Annotated -> (Int, Text)
 formatAnnotated config start annotated = case formatSolutions start annotated.solutions of
@@ -61,6 +61,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
     formatSolution = \ case
       EnableExtension name -> "Enable " <> Builder.fromText name
       RemoveImport -> "Remove import"
+      ReplaceImport _ new -> "Use " <> Builder.fromText new
       UseName name -> "Use " <> Builder.fromText name
       ImportName module_ qualification name -> importStatement module_ qualification [name] <> faint package
         where
@@ -137,19 +138,38 @@ extractIdentifiers input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ input
     | otherwise -> UseName identifier : extractIdentifiers rest
 
 parseAnnotation :: Diagnostic -> Maybe Annotation
-parseAnnotation diagnostic = asum [
-    matchCode 66111 $> RedundantImport
-  , analyzeMessage
-  ]
+parseAnnotation diagnostic = case diagnostic.code of
+  Just 66111 -> Just RedundantImport
+  Just 61948 -> parseUnknownImport
+  _ -> analyzeMessage
   where
-    matchCode :: Int -> Maybe ()
-    matchCode expected = guard $ diagnostic.code == Just expected
+    parseUnknownImport :: Maybe Annotation
+    parseUnknownImport = case diagnostic.message of
+      [] -> Nothing
+      message : _ -> case T.lines message of
+        [] -> Nothing
+        name : suggestions -> UnknownImport <$> unknownModule name <*> pure (moduleSuggestions suggestions)
+      where
+        unknownModule :: Text -> Maybe Text
+        unknownModule = stripPrefix "Could not find module `" >=> stripSuffix "'."
 
-    message :: [Text]
-    message = map joinMessageLines diagnostic.message
+        moduleSuggestions :: [Text] -> [Text]
+        moduleSuggestions input = case input of
+          "Perhaps you meant" : suggestions -> takeSuggestions suggestions
+          (stripPrefix "Perhaps you meant " -> Just suggestion) : _ -> [takeSuggestion suggestion]
+          _ -> []
+
+        takeSuggestions :: [Text] -> [Text]
+        takeSuggestions = map takeSuggestion . takeWhile (T.isPrefixOf "  ")
+
+        takeSuggestion :: Text -> Text
+        takeSuggestion = T.dropWhile (== ' ') >>> T.takeWhile (/= ' ')
 
     analyzeMessage :: Maybe Annotation
     analyzeMessage = asum . map analyzeMessageLine $ concatMap T.lines message
+      where
+        message :: [Text]
+        message = map joinMessageLines diagnostic.message
 
     analyzeMessageLine :: Text -> Maybe Annotation
     analyzeMessageLine input = asum [
@@ -254,6 +274,7 @@ breakOnEnd sep = first (T.dropEnd $ T.length sep) . T.breakOnEnd sep
 analyzeAnnotation :: AvailableImports -> Annotation -> [Solution]
 analyzeAnnotation availableImports = \ case
   RedundantImport -> [RemoveImport]
+  UnknownImport name suggestions -> map (ReplaceImport name) suggestions
   VariableNotInScope variable -> importName variable.qualification (Name VariableName variable.name)
   TermLevelUseOfTypeConstructor qualification name -> importName qualification (Name VariableName name)
   TypeNotInScope qualification name -> importName qualification (Name TypeName name)
@@ -288,6 +309,7 @@ data Edit =
     AddExtension FilePath Text
   | AddImport FilePath Module Qualification [Text]
   | Replace Span Text
+  | ReplaceFirst Span Text Text
   deriving (Eq, Show)
 
 edits :: Annotated -> [Edit]
@@ -299,6 +321,7 @@ edits annotated = case annotated.diagnostic.span of
       toEdit = \ case
         EnableExtension name -> AddExtension file name
         RemoveImport -> removeLines
+        ReplaceImport old new -> ReplaceFirst span old new
         UseName name -> Replace span name
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
 
@@ -328,6 +351,7 @@ relativeTo dir = \ case
   AddExtension file name -> AddExtension (dir </> file) name
   AddImport file module_ qualification names -> AddImport (dir </> file) module_ qualification names
   Replace span substitute -> Replace span { file = dir </> span.file } substitute
+  ReplaceFirst span old new -> ReplaceFirst span { file = dir </> span.file } old new
 
 applyEdit :: Edit -> IO ()
 applyEdit = \ case
@@ -340,9 +364,12 @@ applyEdit = \ case
   Replace span substitute -> do
     modifyFile span.file $ applyReplace span.start span.end substitute
 
-addImport :: Builder -> [Text] -> [Text]
-addImport statement input = case break (T.isPrefixOf "import ") input of
-  (xs, ys) -> xs ++ Builder.toText statement : ys
+  ReplaceFirst span old new -> do
+    modifyFile span.file $ applyReplaceFirst span.start span.end old new
+
+addImport :: Builder -> Text -> Text
+addImport statement input = case break (T.isPrefixOf "import ") $ T.lines input of
+  (xs, ys) -> T.unlines $ xs ++ Builder.toText statement : ys
 
 importStatement :: Module -> Qualification -> [Text] -> Builder
 importStatement (Module _ (Builder.fromText -> module_)) qualification names = case qualification of
@@ -354,21 +381,13 @@ importStatement (Module _ (Builder.fromText -> module_)) qualification names = c
       Just (c, _) | isLetter c || c == '_' -> Builder.fromText name
       _ -> "(" <> Builder.fromText name <> ")"
 
-applyReplace :: Location -> Location -> Text -> [Text] -> [Text]
-applyReplace start end substitute input =
-  let
-    (before, rest) = splitAt (start.line - 1) input
+applyReplace :: Location -> Location -> Text -> Text -> Text
+applyReplace start end new input = case Edit.cut start end input of
+  (prefix, _, suffix) -> mconcat [prefix, new, suffix]
 
-    after :: [Text]
-    after = drop (end.line - start.line + 1) rest
-
-  in case do
-    firstLine <- head rest
-    lastLine <- head $ drop (end.line - start.line) rest
-    return $ mconcat [T.take (start.column - 1) firstLine, substitute, T.drop (end.column - 1) lastLine]
-  of
-    Nothing -> input
-    Just substituted -> before ++ substituted : after
+applyReplaceFirst :: Location -> Location -> Text -> Text -> Text -> Text
+applyReplaceFirst start end old new input = case Edit.cut start end input of
+  (prefix, focus, suffix) -> mconcat [prefix, Edit.replaceFirst old new focus, suffix]
 
 prependToFile :: FilePath -> Text -> IO ()
 prependToFile file contents = do
@@ -377,7 +396,5 @@ prependToFile file contents = do
     Utf8.hPutStr h contents
     Utf8.hPutStr h old
 
-modifyFile :: FilePath -> ([Text] -> [Text]) -> IO ()
-modifyFile file f = do
-  old <- T.lines <$> Utf8.readFile file
-  Utf8.writeFile file . T.unlines $ f old
+modifyFile :: FilePath -> (Text -> Text) -> IO ()
+modifyFile file f = Utf8.readFile file >>= Utf8.writeFile file . f

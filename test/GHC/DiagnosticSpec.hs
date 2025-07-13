@@ -186,6 +186,28 @@ importName module_ = ImportName module_ Unqualified
 spec :: Spec
 spec = do
   describe "format" do
+    test "could-not-find-module" [] [r|
+      module Foo where
+      import Syste.IO
+      |] (Just $ UnknownImport "Syste.IO" [
+        "System.IO"
+      ]) [
+        ReplaceImport "Syste.IO" "System.IO"
+      ]
+
+    test "could-not-find-module-multiline" [] [r|
+      module Foo where
+      import Data.Binary.Gut
+      |] (Just $ UnknownImport "Data.Binary.Gut" [
+        "Data.Binary.Get"
+      , "Data.Binary.Put"
+      , "Data.Binary"
+      ]) [
+        ReplaceImport "Data.Binary.Gut" "Data.Binary.Get"
+      , ReplaceImport "Data.Binary.Gut" "Data.Binary.Put"
+      , ReplaceImport "Data.Binary.Gut" "Data.Binary"
+      ]
+
     test "not-in-scope" [] [r|
       module Foo where
       foo = catMaybes
@@ -552,25 +574,3 @@ spec = do
             annotation = TypeNotInScope Unqualified "Option"
           analyzeAnnotation availableImports annotation `shouldBe` [
             ]
-
-  describe "applyReplace" do
-    it "replaces a given source span with a substitute" do
-      applyReplace (Location 2 7) (Location 2 14) "filter" [
-          "module Foo where"
-        , "foo = filter_ p xs"
-        ] `shouldBe` [
-          "module Foo where"
-        , "foo = filter p xs"
-        ]
-
-    it "correctly handles source spans that span over multiple lines" do
-      applyReplace (Location 2 8) (Location 3 7) "Ya" [
-          "module Foo where"
-        , "import Data.Maybe"
-        , "foo = bar"
-        , "one = two"
-        ] `shouldBe` [
-          "module Foo where"
-        , "import Yabar"
-        , "one = two"
-        ]

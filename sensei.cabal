@@ -33,6 +33,7 @@ library
       EventQueue
       GHC.Diagnostic
       GHC.Diagnostic.Annotated
+      GHC.Diagnostic.Edit
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
       GHC.EnvironmentFile
@@ -112,6 +113,7 @@ executable seito
       EventQueue
       GHC.Diagnostic
       GHC.Diagnostic.Annotated
+      GHC.Diagnostic.Edit
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
       GHC.EnvironmentFile
@@ -193,6 +195,7 @@ executable sensei
       EventQueue
       GHC.Diagnostic
       GHC.Diagnostic.Annotated
+      GHC.Diagnostic.Edit
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
       GHC.EnvironmentFile
@@ -275,6 +278,7 @@ test-suite spec
       EventQueue
       GHC.Diagnostic
       GHC.Diagnostic.Annotated
+      GHC.Diagnostic.Edit
       GHC.Diagnostic.Type
       GHC.Diagnostic.Util
       GHC.EnvironmentFile
@@ -298,6 +302,7 @@ test-suite spec
       ConfigSpec
       DeepSeekSpec
       EventQueueSpec
+      GHC.Diagnostic.EditSpec
       GHC.Diagnostic.UtilSpec
       GHC.DiagnosticSpec
       GHC.EnvironmentFileSpec
