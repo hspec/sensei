@@ -1,4 +1,4 @@
-version: '1.0'
+version: '1.1'
 ghcVersion: ghc-9.10.0
 span:
   file: test/fixtures/use-TemplateHaskellQuotes/Foo.hs
@@ -15,7 +15,6 @@ message:
 - In the Template Haskell quotation [| 23 |]
 hints:
 - |-
-  Enable any of the following extensions: TemplateHaskell, TemplateHaskellQuotes
-  You may enable these language extensions in GHCi with:
-    :set -XTemplateHaskell
+  Perhaps you intended to use the `TemplateHaskellQuotes' extension (implied by `TemplateHaskell')
+  You may enable this language extension in GHCi with:
     :set -XTemplateHaskellQuotes

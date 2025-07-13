@@ -1,4 +1,4 @@
-version: '1.0'
+version: '1.1'
 ghcVersion: ghc-9.10.0
 span:
   file: test/fixtures/found-hole-no-type/Foo.hs
@@ -31,22 +31,22 @@ message:
     foo (bound at test/fixtures/found-hole-no-type/Foo.hs:3:1)
     readFile
       (imported from `Prelude' at test/fixtures/found-hole-no-type/Foo.hs:1:8-10
-       (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.System.IO'))
+       (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.System.IO'))
     readIO
       with readIO @String
       (imported from `Prelude' at test/fixtures/found-hole-no-type/Foo.hs:1:8-10
-       (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.System.IO'))
+       (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.System.IO'))
     return
       with return @IO @FilePath
       (imported from `Prelude' at test/fixtures/found-hole-no-type/Foo.hs:1:8-10
-       (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.Base'))
+       (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.Base'))
     fail
       with fail @IO @String
       (imported from `Prelude' at test/fixtures/found-hole-no-type/Foo.hs:1:8-10
-       (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.Control.Monad.Fail'))
+       (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.Control.Monad.Fail'))
     pure
       with pure @IO @FilePath
       (imported from `Prelude' at test/fixtures/found-hole-no-type/Foo.hs:1:8-10
-       (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.Base'))
+       (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.Base'))
     (Some hole fits suppressed; use -fmax-valid-hole-fits=N or -fno-max-valid-hole-fits)
 hints: []

@@ -1,4 +1,4 @@
-version: '1.0'
+version: '1.1'
 ghcVersion: ghc-9.10.0
 span:
   file: test/fixtures/not-in-scope-qualified/Foo.hs
@@ -13,5 +13,5 @@ code: 76037
 message:
 - |-
   Not in scope: `M.catMaybes'
-  NB: no module named `M' is imported.
+  Note: No module named `M' is imported.
 hints: []

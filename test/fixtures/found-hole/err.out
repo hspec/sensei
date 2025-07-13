@@ -17,22 +17,22 @@ test/fixtures/found-hole/Foo.hs:4:8: error: [GHC-88464]
           (bound at test/fixtures/found-hole/Foo.hs:3:1)
         readFile :: FilePath -> IO String
           (imported from `Prelude' at test/fixtures/found-hole/Foo.hs:1:8-10
-           (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.System.IO'))
+           (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.System.IO'))
         readIO :: forall a. Read a => String -> IO a
           with readIO @String
           (imported from `Prelude' at test/fixtures/found-hole/Foo.hs:1:8-10
-           (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.System.IO'))
+           (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.System.IO'))
         return :: forall (m :: Type -> Type) a. Monad m => a -> m a
           with return @IO @FilePath
           (imported from `Prelude' at test/fixtures/found-hole/Foo.hs:1:8-10
-           (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.Base'))
+           (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.Base'))
         fail :: forall (m :: Type -> Type) a. MonadFail m => String -> m a
           with fail @IO @String
           (imported from `Prelude' at test/fixtures/found-hole/Foo.hs:1:8-10
-           (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.Control.Monad.Fail'))
+           (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.Control.Monad.Fail'))
         pure :: forall (f :: Type -> Type) a. Applicative f => a -> f a
           with pure @IO @FilePath
           (imported from `Prelude' at test/fixtures/found-hole/Foo.hs:1:8-10
-           (and originally defined in `ghc-internal-9.1001.0:GHC.Internal.Base'))
+           (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.Base'))
         (Some hole fits suppressed; use -fmax-valid-hole-fits=N or -fno-max-valid-hole-fits)
 
