@@ -31,7 +31,7 @@ import           System.Exit (exitFailure)
 import           Util (isWritableByOthers)
 import           ReadHandle hiding (getResult)
 import qualified ReadHandle
-import           GHC.Diagnostic (ShowErrorContext(..), Annotated)
+import           GHC.Diagnostic (Annotated, FormatConfig(..))
 import qualified GHC.Diagnostic as Diagnostic
 
 data Config = Config {
@@ -196,15 +196,18 @@ extractAnnotatedDiagnostics numberForNextSolution getAvailableImports = ReadHand
       Nothing -> return Nothing
       Just diagnostic -> do
         n <- readIORef numberForNextSolution
-        let (next, formatted) = Diagnostic.formatAnnotated NoShowErrorContext n diagnostic
+        let (next, formatted) = Diagnostic.formatAnnotated formatConfig n diagnostic
         writeIORef numberForNextSolution next
         return $ Just (diagnostic, T.encodeUtf8 formatted)
 }
 
+formatConfig :: FormatConfig
+formatConfig = FormatConfig { showErrorContext = False, color = True }
+
 extractDiagnostics :: ReadHandle.Extract Diagnostic.Diagnostic
 extractDiagnostics = ReadHandle.Extract {
   isPartialMessage = ByteString.isPrefixOf "{"
-, parseMessage = \ input -> return $ (id &&& encodeUtf8 . Diagnostic.format NoShowErrorContext) <$> Diagnostic.parse input
+, parseMessage = \ input -> return $ (id &&& encodeUtf8 . Diagnostic.format formatConfig) <$> Diagnostic.parse input
 }
 
 getResult :: Extract a -> Interpreter -> IO (String, [a])

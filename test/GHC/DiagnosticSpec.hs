@@ -3,7 +3,6 @@
 module GHC.DiagnosticSpec (spec) where
 
 import Helper hiding (diagnostic)
-import Util
 import System.IO
 import Data.Ord (comparing)
 import GHC.Fingerprint
@@ -78,19 +77,21 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
   unless (T.null code) do
     ensureFile src $ T.encodeUtf8 code
 
-  err <- translate <$> ghc ["-fno-diagnostics-show-caret"]
-  errNoContext <- translate <$> ghc ["-fno-diagnostics-show-caret", "-fno-show-error-context"]
+  err <- translate <$> ghc []
+  errNoContext <- translate <$> ghc ["-fno-show-error-context"]
 
   json <- pretty <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
-  ensureFile (dir </> "err.out") (encodeUtf8 err)
+  ensureFile (dir </> "err.out") (encodeUtf8 $ stripAnsi err)
   ensureFile (dir </> "err.yaml") (encodeUtf8 $ normalizeGhcVersion json)
   parseAnnotated getAvailableImports (encodeUtf8 json) >>= \ case
     Nothing -> do
       expectationFailure $ "Parsing JSON failed:\n\n" <> json
-    Just annotated -> addAnnotation (separator <> err <> separator) do
+    Just annotated -> addAnnotation (separator <> json <> separator <> err <> separator) do
       whenGhc requiredVersion do
-        format ShowErrorContext annotated.diagnostic `shouldBe` err
-        format NoShowErrorContext annotated.diagnostic `shouldBe` errNoContext
+        format FormatConfig { showErrorContext = True, color = False } annotated.diagnostic `shouldBe` stripAnsi err
+        format FormatConfig { showErrorContext = False, color = False } annotated.diagnostic `shouldBe` stripAnsi errNoContext
+        format FormatConfig { showErrorContext = True, color = True } annotated.diagnostic `shouldBe` err
+        format FormatConfig { showErrorContext = False, color = True } annotated.diagnostic `shouldBe` errNoContext
 
       annotated.annotation `shouldBe` annotation
       annotated.solutions `shouldBe` solutions
@@ -108,7 +109,7 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
     ghc args = do
       require GHC_910
       info <- ghcInfo
-      cached info.ghc (["-XNoStarIsType", "-fno-code"] ++ args ++ extraArgs ++ [src])
+      cached info.ghc (["-XNoStarIsType", "-fno-code", "-fno-diagnostics-show-caret", "-fdiagnostics-color=always", "-fprint-error-index-links=never"] ++ args ++ extraArgs ++ [src])
 
     translate :: String -> String
     translate = map \ case
@@ -470,9 +471,12 @@ spec = do
       solution :: Int -> String -> String
       solution n m = mconcat ["    [", fromString (show n), "] ", m]
 
+      formatConfig :: FormatConfig
+      formatConfig = FormatConfig { showErrorContext = False, color = True }
+
     it "formats an annotated diagnostic message" do
       Just annotated <- B.readFile "test/fixtures/not-in-scope/err.yaml" >>= parseAnnotated getAvailableImports
-      stripAnsi . unpack <$> formatAnnotated NoShowErrorContext 1 annotated `shouldBe` (2, unlines [
+      stripAnsi . unpack <$> formatAnnotated formatConfig 1 annotated `shouldBe` (2, unlines [
           "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: catMaybes"
         , ""
@@ -482,7 +486,7 @@ spec = do
 
     it "formats an annotated diagnostic message" do
       Just annotated <- B.readFile "test/fixtures/not-in-scope-operator/err.yaml" >>= parseAnnotated getAvailableImports
-      stripAnsi . unpack <$> formatAnnotated NoShowErrorContext 1 annotated `shouldBe` (5, unlines [
+      stripAnsi . unpack <$> formatAnnotated formatConfig 1 annotated `shouldBe` (5, unlines [
           "test/fixtures/not-in-scope-operator/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: <&>"
         , "    Suggested fix:"
