@@ -1,4 +1,4 @@
-version: '1.0'
+version: '1.1'
 ghcVersion: ghc-9.10.0
 span:
   file: test/fixtures/use-BlockArguments/Foo.hs
@@ -17,6 +17,6 @@ message:
 hints:
 - Use parentheses.
 - |-
-  Perhaps you intended to use BlockArguments
+  Perhaps you intended to use the `BlockArguments' extension
   You may enable this language extension in GHCi with:
     :set -XBlockArguments

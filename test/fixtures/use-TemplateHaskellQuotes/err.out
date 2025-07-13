@@ -2,5 +2,5 @@ test/fixtures/use-TemplateHaskellQuotes/Foo.hs:2:7: error: [GHC-62558]
     • Syntax error on [| 23 |]
     • In the Template Haskell quotation [| 23 |]
     Suggested fix:
-      Enable any of the following extensions: TemplateHaskell, TemplateHaskellQuotes
+      Perhaps you intended to use the `TemplateHaskellQuotes' extension (implied by `TemplateHaskell')
 
