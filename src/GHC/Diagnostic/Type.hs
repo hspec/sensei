@@ -179,8 +179,13 @@ format config diagnostic = render $ unlines [
       | otherwise = mempty
 
 removeGhciSpecificHints :: Diagnostic -> Diagnostic
-removeGhciSpecificHints diagnostic = diagnostic { hints = map processHint diagnostic.hints }
+removeGhciSpecificHints diagnostic = diagnostic {
+    message = map processMessage diagnostic.message
+  , hints = map processHint diagnostic.hints }
   where
+    processMessage :: Text -> Text
+    processMessage = T.replace "Use :set -v to see a list of the files searched for." "Use -v to see a list of the files searched for."
+
     isSetLanguageExtension :: Text -> Bool
     isSetLanguageExtension = T.isPrefixOf "  :set -X"
 

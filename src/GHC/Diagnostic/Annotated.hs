@@ -13,12 +13,14 @@ data Annotated = Annotated {
 data Solution =
     EnableExtension Text
   | RemoveImport
+  | ReplaceImport Text Text
   | UseName Text
   | ImportName Module Qualification Text
   deriving (Eq, Show)
 
 data Annotation =
     RedundantImport
+  | UnknownImport Text [Text]
   | VariableNotInScope RequiredVariable
   | TermLevelUseOfTypeConstructor Qualification Text
   | TypeNotInScope Qualification Text
