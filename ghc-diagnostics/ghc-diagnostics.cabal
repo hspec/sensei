@@ -1,0 +1,120 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.38.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           ghc-diagnostics
+version:        0.0.0
+category:       Development
+homepage:       https://github.com/hspec/sensei#readme
+bug-reports:    https://github.com/hspec/sensei/issues
+author:         Simon Hengel <sol@typeful.net>
+maintainer:     Simon Hengel <sol@typeful.net>
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/hspec/sensei
+
+library
+  exposed-modules:
+      GHC.Diagnostic
+      GHC.Diagnostic.Type
+      GHC.Diagnostic.Annotated
+  other-modules:
+      Builder
+      GHC.Diagnostic.Edit
+      GHC.Diagnostic.Util
+      Imports
+  hs-source-dirs:
+      src
+  default-extensions:
+      NoImplicitPrelude
+      DuplicateRecordFields
+      LambdaCase
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedStrings
+      RecordWildCards
+      ViewPatterns
+      BlockArguments
+      PackageImports
+      DerivingVia
+  ghc-options: -Wall -threaded -Wunused-packages
+  build-depends:
+      aeson
+    , ansi-terminal
+    , base >=4.18 && <5
+    , bytestring >=0.11
+    , containers
+    , filepath
+    , pretty
+    , text >=2.1
+    , yaml
+  default-language: GHC2021
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Builder
+      GHC.Diagnostic
+      GHC.Diagnostic.Annotated
+      GHC.Diagnostic.Edit
+      GHC.Diagnostic.Type
+      GHC.Diagnostic.Util
+      Imports
+      BuilderSpec
+      GHC.Diagnostic.EditSpec
+      GHC.Diagnostic.UtilSpec
+      GHC.DiagnosticSpec
+      GHC.HIE
+      Helper
+      SpecHook
+  hs-source-dirs:
+      src
+      test
+  default-extensions:
+      NoImplicitPrelude
+      DuplicateRecordFields
+      LambdaCase
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedStrings
+      RecordWildCards
+      ViewPatterns
+      BlockArguments
+      PackageImports
+      DerivingVia
+  ghc-options: -Wall -threaded -Wunused-packages
+  cpp-options: -DTEST
+  build-tool-depends:
+      hspec-discover:hspec-discover
+  build-depends:
+      aeson
+    , ansi-terminal
+    , base >=4.18 && <5
+    , bytestring >=0.11
+    , containers
+    , directory
+    , filepath
+    , ghc
+    , ghc-hie >=0.0.2
+    , hspec >=2.9.0
+    , hspec-contrib >=0.5.2
+    , hspec-expectations >=0.5.2
+    , mockery
+    , pretty
+    , process
+    , raw-strings-qq
+    , strip-ansi
+    , template-haskell
+    , temporary
+    , text >=2.1
+    , yaml
+  default-language: GHC2021
+  if impl(ghc < 9.10)
+    buildable: False

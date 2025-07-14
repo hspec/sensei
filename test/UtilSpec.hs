@@ -2,7 +2,6 @@ module UtilSpec (spec) where
 
 import           Helper
 
-import qualified System.Console.ANSI as Ansi
 import           System.Posix.Files
 
 import           Util
@@ -19,13 +18,6 @@ chmod mode file = callProcess "chmod" [mode, file]
 
 spec :: Spec
 spec = do
-  describe "stripAnsi" $ do
-    it "removes ANSI color sequences" $ do
-      stripAnsi ("some " <> withColor Green "colorized" <> " text") `shouldBe` "some colorized text"
-
-    it "removes DEC private mode sequences" $ do
-      stripAnsi (Ansi.hideCursorCode <> "some text" <> Ansi.showCursorCode) `shouldBe` "some text"
-
   describe "isBoring" $ do
     it "ignores files in .git/" $ do
       isBoring "/foo/bar/.git/baz/foo.txt" `shouldBe` True

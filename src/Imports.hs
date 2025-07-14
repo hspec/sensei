@@ -28,6 +28,7 @@ import           Data.ByteString.Char8 as Imports (ByteString)
 import           Data.ByteString.Lazy as Imports (LazyByteString)
 import           Data.Tuple as Imports
 import           Data.Set as Imports (Set)
+import           Data.String.ANSI.Strip as Imports (stripAnsi)
 import           System.FilePath as Imports hiding (addExtension, combine)
 import           System.IO.Error as Imports (isDoesNotExistError)
 import           Text.Read as Imports (readMaybe)

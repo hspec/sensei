@@ -2,7 +2,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 module GHC.DiagnosticSpec (spec) where
 
-import Helper hiding (diagnostic)
+import Helper
+
 import System.IO
 import Data.Ord (comparing)
 import GHC.Fingerprint
@@ -14,13 +15,17 @@ import Text.RawString.QQ (r, rQ)
 
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
-import Control.Concurrent.Async qualified as Async
+import System.Directory
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.ByteString qualified as B
+import Data.Map.Strict qualified as Map
+import Data.String.ANSI.Strip (stripAnsi)
 
-import HIE qualified as HIE
+import "ghc-hie" GHC.Iface.Ext.Binary
+import GHC.Types.Name.Cache (initNameCache)
 
+import GHC.HIE
 import GHC.Diagnostic
 import GHC.Diagnostic.Annotated
 
@@ -107,9 +112,7 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
 
     ghc :: [String] -> IO String
     ghc args = do
-      require GHC_910
-      info <- ghcInfo
-      cached info.ghc (["-XNoStarIsType", "-fno-code", "-fno-diagnostics-show-caret", "-fdiagnostics-color=always", "-fprint-error-index-links=never"] ++ args ++ extraArgs ++ [src])
+      cached "ghc" (["-XNoStarIsType", "-fno-code", "-fno-diagnostics-show-caret", "-fdiagnostics-color=always", "-fprint-error-index-links=never"] ++ args ++ extraArgs ++ [src])
 
     translate :: String -> String
     translate = map \ case
@@ -147,17 +150,22 @@ cached program args = do
 
 getAvailableImports :: IO AvailableImports
 getAvailableImports = do
-  require GHC_908
   getAvailableImports_
 
 {-# NOINLINE getAvailableImports_ #-}
 getAvailableImports_ :: IO AvailableImports
 getAvailableImports_ = unsafePerformIO do
-  info <- ghcInfo
-  imports <- HIE.with (\ _ -> pass) info \ _ getImports async -> do
-    Async.wait async
-    getImports
-  return $ return imports
+  home <- getHomeDirectory
+  files <- listHieFiles $ home </> ".local" </> "state" </> "ghc-hie-files" </> "ghc-9.12.2" </> "base"
+  nameCache <- initNameCache 'r' []
+  hieFiles <- map hie_file_result <$> mapM (readHieFile nameCache) files
+  let
+    base :: Package
+    base = Package DirectDependency "base"
+
+    exports :: [(Name, ProvidedBy)]
+    exports = concatMap (hieExports base) hieFiles
+  return . return . Map.fromListWith (++) $ map (fmap singleton) exports
 
 unindent :: String -> Text
 unindent (pack >>> T.dropWhileEnd isSpace >>> T.lines -> input) = go input
@@ -529,9 +537,9 @@ spec = do
         it "suggests functions" \ availableImports -> do
           let
             annotation :: Annotation
-            annotation = VariableNotInScope (RequiredVariable Unqualified "unlit" NoTypeSignature)
+            annotation = VariableNotInScope (RequiredVariable Unqualified "getFileHash" NoTypeSignature)
           analyzeAnnotation availableImports annotation `shouldBe` [
-              ImportName (Module (Package TransitiveDependency "markdown-unlit") "Text.Markdown.Unlit") Unqualified "unlit"
+              ImportName "GHC.Fingerprint" Unqualified "getFileHash"
             ]
 
         it "suggests class methods" \ availableImports -> do

@@ -80,7 +80,8 @@ data HieFilePath = HieFilePath {
 
 listAllHieFiles :: GHC.Info -> IO ([Warning], [HieFilePath])
 listAllHieFiles info = do
-  fallback <- getXdgDirectory XdgState $ "ghc-hie-files" </> "ghc-" <> info.ghcVersionString
+  home <- getHomeDirectory
+  let fallback = home </> ".local" </> "state" </> "ghc-hie-files" </> "ghc-" <> info.ghcVersionString
   packages <- listPackages info
   dependencies <- readDependencies "."
   swap <$> runWriterT do

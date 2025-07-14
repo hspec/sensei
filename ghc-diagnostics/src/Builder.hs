@@ -5,6 +5,7 @@ import Imports hiding (join, unlines)
 
 import Data.List qualified as List
 import Data.Text.Internal.StrictBuilder qualified as StrictBuilder
+import System.Console.ANSI
 
 newtype Builder = Builder
 #if MIN_VERSION_text(2,1,2)
@@ -36,3 +37,12 @@ unlines :: [Builder] -> Builder
 unlines = \ case
   [] -> mempty
   l : ls -> l <> "\n" <> unlines ls
+
+withSGR :: [SGR] -> Builder -> Builder
+withSGR sgr string = set <> string <> reset
+  where
+    set :: Builder
+    set = Builder.fromString $ setSGRCode sgr
+
+    reset :: Builder
+    reset = Builder.fromString $ setSGRCode [Reset]

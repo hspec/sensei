@@ -18,6 +18,7 @@ import           Data.ByteString.Lazy (toStrict)
 import           Data.Aeson
 import qualified Data.Yaml.Pretty as Yaml
 import qualified Data.Text as Text
+import qualified Data.Text.IO.Utf8 as Utf8
 import           Network.HTTP.Types
 import           Network.HTTP.Client
 import           Network.HTTP.Simple
@@ -127,7 +128,7 @@ query putStrLn config (RequestBodyLBS . encode -> requestBody) = do
 
 createPrompt :: FilePath -> Span -> These Diagnostic Instructions -> IO Text
 createPrompt dir span instructions = do
-  source <- Builder.readFile (dir </> span.file)
+  source <- Builder.fromText <$> Utf8.readFile (dir </> span.file)
   let
     aDiagnosticsMessageAndProgrammerInstructions :: Builder
     aDiagnosticsMessageAndProgrammerInstructions = case instructions of

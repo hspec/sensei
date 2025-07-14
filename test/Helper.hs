@@ -3,12 +3,10 @@
 module Helper (
   module Imports
 , silent
-, stripAnsi
 
 , Info(..)
 , ghcInfo
 , ghciConfig
-, getCacheDirectory
 
 , AppConfig(..)
 , appConfig
@@ -39,8 +37,6 @@ module Helper (
 , ifGhc
 , whenGhc
 
-, ensureFile
-
 , shouldBe
 , shouldReturn
 
@@ -63,13 +59,11 @@ import           Test.HUnit
 import           System.Environment
 import qualified System.Timeout
 
-import qualified Data.ByteString as ByteString
 import           Data.ByteString.Lazy (toStrict)
 import           Data.Aeson (encode)
 
 import           Run ()
 import           HTTP (AppConfig(..))
-import           Config (tryReadFile)
 import           Util
 import           Language.Haskell.GhciWrapper
 import qualified Trigger
@@ -78,7 +72,7 @@ import           GHC.Diagnostic
 import           GHC.Diagnostic.Annotated
 
 import           GHC.Info (Info(..))
-import           SpecHook (ghcInfo, getCacheDirectory)
+import           SpecHook (ghcInfo)
 
 timeout :: HasCallStack => IO a -> IO a
 timeout action = do
@@ -206,13 +200,6 @@ toVersion = makeVersion . \ case
   GHC_908 -> [9,8]
   GHC_910 -> [9,10]
   GHC_912 -> [9,12]
-
-ensureFile :: FilePath -> ByteString -> IO ()
-ensureFile name new = do
-  createDirectoryIfMissing True $ takeDirectory name
-  old <- tryReadFile name
-  unless (old == Just new) $ do
-    ByteString.writeFile name new
 
 infixr 0 `shouldBe`, `shouldReturn`
 
