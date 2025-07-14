@@ -3,20 +3,22 @@ ghcVersion: ghc-9.10.0
 span:
   file: test/fixtures/term-level-use-of-type-constructor/Foo.hs
   start:
-    line: 3
+    line: 4
     column: 7
   end:
-    line: 3
-    column: 10
+    line: 4
+    column: 16
 severity: Error
 code: 1928
 message:
-- Illegal term-level use of the type constructor `Foo'
-- '  defined at test/fixtures/term-level-use-of-type-constructor/Foo.hs:2:1'
+- Illegal term-level use of the type constructor `CodeBlock'
+- '  imported from `Text.Markdown.Unlit'' at test/fixtures/term-level-use-of-type-constructor/Foo.hs:2:29-37'
 - |-
-  Perhaps use one of these:
-    variable `foo' (line 3), `Fooa' (line 2), `Fooi' (line 2)
+  Perhaps use `CodeBloc' (line 3)
+  Add `CodeBlock' to the import list in the import of
+  `Text.Markdown.Unlit'
+  (at test/fixtures/term-level-use-of-type-constructor/Foo.hs:2:1-38).
 - |-
-  In the expression: Foo
-  In an equation for `foo': foo = Foo
+  In the expression: CodeBlock
+  In an equation for `foo': foo = CodeBlock
 hints: []

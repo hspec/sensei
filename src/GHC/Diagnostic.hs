@@ -18,6 +18,7 @@ module GHC.Diagnostic (
 , extractIdentifiers
 , qualifiedName
 , analyzeAnnotation
+, takeGhcSourceSpan
 #endif
 ) where
 
@@ -66,6 +67,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
       ImportName module_ qualification name -> importStatement module_ qualification [name] <> faint package
         where
           package = " (" <> Builder.fromText module_.package.name <> ")"
+      AddToImportList module_ text _span -> "Add " <> Builder.fromText text <> " to import list of " <> Builder.fromText module_
 
     faint :: Builder -> Builder
     faint = Builder.withSGR [SetConsoleIntensity FaintIntensity]
@@ -96,10 +98,10 @@ annotate getAvailableImports diagnostic = getAvailableImports >>= \ case
         ++ maybe [] (analyzeAnnotation availableImports) annotation
 
 analyzeHints :: [Text] -> [Solution]
-analyzeHints = concat . mapMaybe analyzeHint
+analyzeHints = concatMap analyzeHint
 
-analyzeHint :: Text -> Maybe [Solution]
-analyzeHint hint = asum [
+analyzeHint :: Text -> [Solution]
+analyzeHint hint = (fromMaybe [] $ asum [
     prefix "Perhaps you intended to use " <&> takeExtensions
 
   , requiredFor GHC_910 $ prefix "Enable any of the following extensions: " <&>
@@ -108,7 +110,7 @@ analyzeHint hint = asum [
   , prefix "Perhaps use `" <&> return . takeIdentifier
   , prefix "Perhaps use variable `" <&> return . takeIdentifier
   , prefix "Perhaps use one of these:" <&> extractIdentifiers
-  ]
+  ]) <> maybeToList addToImportList
   where
     prefix :: Text -> Maybe Text
     prefix p = stripPrefix p hint
@@ -130,6 +132,37 @@ analyzeHint hint = asum [
 
     takeIdentifier :: Text -> Solution
     takeIdentifier = UseName . T.takeWhile (/= '\'')
+
+    addToImportList :: Maybe Solution
+    addToImportList = case T.splitOn "' to the import list in the import of `" $ T.unwords $ T.lines $ hint of
+      [T.takeWhileEnd (/= '`') -> name, T.splitOn "'" -> [module_, r]] -> AddToImportList module_ name <$> do
+          takeGhcSourceSpan r
+      _ -> Nothing
+
+takeGhcSourceSpan :: Text -> Maybe Span
+takeGhcSourceSpan input = stripPrefix " (at " input <&> T.splitOn ":" >>= \ case
+    file
+      : (int -> Just line)
+      : (T.splitOn "-" . (T.takeWhile (/= ')')) -> [int -> Just start, int -> Just end])
+      : _ ->
+      Just $ span file (line, start) (line, end)
+
+    file
+      : (T.splitOn "-" -> [foo -> Just start, (takeFoo >>> foo) -> Just end])
+      : _ ->
+      Just $ span file start end
+    _ -> Nothing
+  where
+    span :: Text -> (Int, Int) -> (Int, Int) -> Span
+    span file start end = Span (T.unpack file) (uncurry Location start) (uncurry Location end)
+
+    int :: Text -> Maybe Int
+    int = T.unpack >>> readMaybe
+
+    foo :: Text -> Maybe (Int, Int)
+    foo = T.unpack >>> readMaybe
+
+    takeFoo t = T.take ((T.length $ T.takeWhile (/= ')') t) + 1) t
 
 extractIdentifiers :: Text -> [Solution]
 extractIdentifiers input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ input of
@@ -324,6 +357,7 @@ edits annotated = case annotated.diagnostic.span of
         ReplaceImport old new -> ReplaceFirst span old new
         UseName name -> Replace span name
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
+        AddToImportList _ text loc -> Replace (Span loc.file loc.end loc.end) $ text <> "(..))" -- FIXME this is not correct and would need HIE lookup
 
       file :: FilePath
       file = span.file

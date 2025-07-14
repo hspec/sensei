@@ -307,13 +307,14 @@ spec = do
 
     test "term-level-use-of-type-constructor" [] [r|
       module Foo where
-      data Foo = Fooa | Fooi
-      foo = Foo
-      |] (Just $ TermLevelUseOfTypeConstructor Unqualified "Foo") [
-          UseName "foo"
-        , UseName "Fooa"
-        , UseName "Fooi"
-        ]
+      import Text.Markdown.Unlit (CodeBlock)
+      data Foo = CodeBloc
+      foo = CodeBlock
+      |] (Just $ TermLevelUseOfTypeConstructor Unqualified "CodeBlock") [
+        UseName "CodeBloc"
+      , AddToImportList "Text.Markdown.Unlit" "CodeBlock" (Span "test/fixtures/term-level-use-of-type-constructor/Foo.hs" (Location 2 1) (Location 2 38))
+      , importName (Module "markdown-unlit" "Text.Markdown.Unlit") "CodeBlock(..)"
+      ]
 
     test "found-hole" [] [r|
       module Foo where
@@ -458,7 +459,7 @@ spec = do
             requiredFor GHC_910 "Perhaps you intended to use BlockArguments"
           , requiredFor GHC_912 "Perhaps you intended to use the `BlockArguments' extension"
           ]
-      for_ inputs \ input -> analyzeHint input `shouldBe` Just [
+      for_ inputs \ input -> analyzeHint input `shouldBe` [
           EnableExtension "BlockArguments"
         ]
 
@@ -469,7 +470,7 @@ spec = do
             requiredFor GHC_910 "Enable any of the following extensions: TemplateHaskell, TemplateHaskellQuotes"
           , requiredFor GHC_912 "Perhaps you intended to use the `TemplateHaskellQuotes' extension (implied by `TemplateHaskell')"
           ]
-      for_ inputs \ input -> analyzeHint input `shouldBe` Just [
+      for_ inputs \ input -> analyzeHint input `shouldBe` [
           EnableExtension "TemplateHaskellQuotes"
         , EnableExtension "TemplateHaskell"
         ]
@@ -574,3 +575,12 @@ spec = do
             annotation = TypeNotInScope Unqualified "Option"
           analyzeAnnotation availableImports annotation `shouldBe` [
             ]
+
+  fdescribe "takeGhcSourceSpan" do
+    it "extracts single-line source spans" do
+      takeGhcSourceSpan " (at Foo.hs:2:1-38).:.:." `shouldBe`
+        Just (Span "Foo.hs" (Location 2 1) (Location 2 38))
+
+    it "extracts multi-line source spans" do
+      takeGhcSourceSpan " (at Foo.hs:(2,1)-(5,12)).:.:." `shouldBe`
+        Just (Span "Foo.hs" (Location 2 1) (Location 5 12))
