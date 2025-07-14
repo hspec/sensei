@@ -11,13 +11,16 @@ module GHC.Diagnostic.Type (
 , format
 ) where
 
-import           Imports hiding ((<>), empty, unlines)
+import Imports hiding ((<>), empty, unlines)
+import GHC.Generics (Generic)
 
-import           Data.Text qualified as T
-import           Data.Yaml (decodeThrow)
-import           Text.Printf (printf)
-import           Text.PrettyPrint
-import           System.Console.ANSI.Codes
+import Data.Text qualified as T
+import Data.Aeson (FromJSON(..))
+import Data.Aeson (ToJSON(..))
+import Data.Yaml (decodeThrow)
+import Text.Printf (printf)
+import Text.PrettyPrint
+import System.Console.ANSI.Codes
 
 data Diagnostic = Diagnostic {
   version :: String

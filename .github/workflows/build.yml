@@ -41,6 +41,7 @@ jobs:
       - run: 'echo "  ghc-options: -fwrite-ide-info" >> `cabal path --config-file -v0`'
 
       - run: bash <(curl -fsSL https://raw.githubusercontent.com/sol/ghc-hie-files/main/get.sh)
+      - run: bash <(curl -fsSL https://raw.githubusercontent.com/sol/ghc-hie-files/main/get.sh) 9.12.2
 
       - uses: sol/run-haskell-tests@v2
         with:

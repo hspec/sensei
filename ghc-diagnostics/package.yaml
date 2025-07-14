@@ -1,0 +1,67 @@
+spec-version: 0.36.0
+name: ghc-diagnostics
+version: 0.0.0
+author: Simon Hengel <sol@typeful.net>
+github: hspec/sensei
+category: Development
+
+language: GHC2021
+default-extensions:
+  - NoImplicitPrelude
+  - DuplicateRecordFields
+  - LambdaCase
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedStrings
+  - RecordWildCards
+  - ViewPatterns
+  - BlockArguments
+  - PackageImports
+  - DerivingVia
+
+dependencies:
+  - aeson
+  - ansi-terminal
+  - base >= 4.18 && < 5
+  - bytestring >= 0.11
+  - containers
+  - filepath
+  - pretty
+  - text >= 2.1
+  - yaml
+
+ghc-options: -Wall -threaded -Wunused-packages
+
+source-dirs:
+  - src
+
+library:
+  exposed-modules:
+    - GHC.Diagnostic
+    - GHC.Diagnostic.Type
+    - GHC.Diagnostic.Annotated
+
+tests:
+  spec:
+    main: Spec.hs
+    source-dirs:
+      - test
+    dependencies:
+      - hspec >= 2.9.0
+      - hspec-contrib >= 0.5.2
+      - hspec-expectations >= 0.5.2
+      - mockery
+      - raw-strings-qq
+      - template-haskell
+      - directory
+      - ghc
+      - ghc-hie >= 0.0.2
+      - temporary
+      - strip-ansi
+      - process
+
+    cpp-options: -DTEST
+    build-tools: hspec-discover
+    when:
+      condition: impl(ghc < 9.10)
+      buildable: False

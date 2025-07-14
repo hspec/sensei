@@ -46,7 +46,7 @@ spec = do
       withAppWithFailure name = around \ item -> withTempDirectory \ dir -> do
         let
           testCaseDir :: FilePath
-          testCaseDir = "test/fixtures" </> name
+          testCaseDir = "ghc-diagnostics/test/fixtures" </> name
 
           copySource :: IO ()
           copySource = readFile (testCaseDir </> file) >>= writeFile (dir </> file)

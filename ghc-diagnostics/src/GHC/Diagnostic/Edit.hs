@@ -7,7 +7,7 @@ import Data.Text.Array (Array)
 import Imports
 
 import Data.Text qualified as T
-import Data.Text.Internal (Text(..))
+import Data.Text.Internal (Text(..), text)
 import Data.Text.Internal.Search qualified as Search
 
 import GHC.Diagnostic.Type (Location(..))
@@ -68,7 +68,7 @@ replaceFirst old@(Text _ _ needleLen) new input@(Text arr startOfInput len)
     endOfInput = startOfInput + len
 
 sliceArray :: Array -> Int -> Int -> Text
-sliceArray arr start end = Text arr start (end - start)
+sliceArray arr start end = text arr start (end - start)
 
 indices :: Text -> Text -> [Int]
 indices needle haystack@(Text _ startOfInput _) = map (+ startOfInput) $ Search.indices needle haystack

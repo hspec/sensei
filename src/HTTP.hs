@@ -20,7 +20,6 @@ import           Network.HTTP.Media
 import           Network.Wai.Handler.Warp (runSettingsSocket, defaultSettings)
 import           Network.Socket
 
-import           Util
 import qualified Trigger
 import qualified Config.DeepSeek as Config
 import qualified DeepSeek

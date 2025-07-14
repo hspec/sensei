@@ -4,6 +4,7 @@ import Helper
 
 import Data.Text qualified as T
 
+import GHC.Diagnostic.Type (Location(..))
 import GHC.Diagnostic.Edit
 
 spec :: Spec

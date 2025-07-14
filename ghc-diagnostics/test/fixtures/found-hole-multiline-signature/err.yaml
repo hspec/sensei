@@ -53,5 +53,5 @@ message:
                     -> String
                     -> String)
       (imported from `Prelude' at test/fixtures/found-hole-multiline-signature/Foo.hs:1:1
-       (and originally defined in `ghc-internal-9.1202.0:GHC.Internal.Base'))
+       (and originally defined in `GHC.Internal.Base'))
 hints: []

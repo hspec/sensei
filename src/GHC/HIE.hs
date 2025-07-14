@@ -1,0 +1,1 @@
+../../ghc-diagnostics/test/GHC/HIE.hs

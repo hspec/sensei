@@ -9,33 +9,22 @@ module HIE (
 
 import Imports
 
-import Data.Coerce
 import Data.Double.Conversion.Text qualified as Double
 import Data.Map qualified as Map
 import Control.Concurrent.Async (Async, withAsync)
-import System.Process
 import System.IO.Temp (withSystemTempDirectory)
 
-import GHC.Unit.Types qualified
-import GHC.Types.Avail
-import GHC.Types.Name hiding (Name)
-import GHC.Types.Name qualified as GHC
 import GHC.Types.Name.Cache
-import Language.Haskell.Syntax.Module.Name
 
-import Data.Text.Internal (text)
-import Data.ByteString.Short (ShortByteString)
-import Data.ByteString.Short qualified as ShortByteString
-import GHC.Data.FastString (FastString, fs_sbs)
-
-import "ghc-hie" GHC.Iface.Ext.Types as HIE
 import "ghc-hie" GHC.Iface.Ext.Binary as HIE
 
 import Util
 import GHC.Info as GHC (Info(..))
 import GHC.EnvironmentFile
-import GHC.Diagnostic (Name(..), NameSpace(..), AvailableImports, ProvidedBy(..))
+import GHC.Diagnostic (Name(..), AvailableImports, ProvidedBy(..))
 import GHC.Diagnostic.Annotated
+
+import GHC.HIE
 
 type PutStr = Text -> IO ()
 
@@ -140,38 +129,5 @@ readExports nameCache updateAvailableImports file = do
 
   updateAvailableImports insertAll
 
-hieExports :: Package -> HieFile -> [(Name, ProvidedBy)]
-hieExports package hieFile = concatMap allNames hieFile.hie_exports
-  where
-    module_ :: Module
-    module_ = fromModuleName hieFile.hie_module.moduleName
-
-    fromName :: GHC.Name -> Name
-    fromName name
-      | nameNameSpace name == tcClsName = Name TypeName (ghcNameAsText name)
-      | otherwise = Name VariableName (ghcNameAsText name)
-
-    ghcNameAsText :: GHC.Name -> Text
-    ghcNameAsText = unpackFS . occNameFS . nameOccName
-
-    fromModuleName :: ModuleName -> Module
-    fromModuleName = Module package . unpackFS . coerce
-
-    available :: Maybe Type -> GHC.Name -> (Name, ProvidedBy)
-    available type_ name = (fromName name, ProvidedBy module_ type_)
-
-    allNames :: AvailInfo -> [(Name, ProvidedBy)]
-    allNames = \ case
-      Avail name -> [available Nothing name]
-      AvailTC type_ names -> map (available (Just t)) names
-        where
-          t = Type (ghcNameAsText type_)
-
-unpackFS :: FastString -> Text
-unpackFS = unsafeShortByteStringAsText . fs_sbs
-
-unsafeShortByteStringAsText :: ShortByteString -> Text
-unsafeShortByteStringAsText bs = text bs.unShortByteString 0 (ShortByteString.length bs)
-
 findHieFiles :: FilePath -> IO [HieFilePath]
-findHieFiles dir = map (HieFilePath (Package CurrentPackage "main")) . lines <$> readCreateProcess (shell $ "find " <> dir <> " -name '*.hie'") ""
+findHieFiles dir = map (HieFilePath (Package CurrentPackage "main")) <$> listHieFiles dir
