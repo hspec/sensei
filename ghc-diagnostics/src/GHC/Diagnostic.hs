@@ -66,6 +66,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
       ImportName module_ qualification name -> importStatement module_ qualification [name] <> faint package
         where
           package = " (" <> Builder.fromText module_.package.name <> ")"
+      AddArgument expression -> "Replace with: " <> Builder.fromText expression <> " _"
 
     faint :: Builder -> Builder
     faint = Builder.withSGR [SetConsoleIntensity FaintIntensity]
@@ -92,8 +93,18 @@ annotate getAvailableImports diagnostic = getAvailableImports >>= \ case
       solutions :: [Solution]
       solutions =
            analyzeHints diagnostic.message
+        ++ analyzeMessageContext
         ++ analyzeHints diagnostic.hints
         ++ maybe [] (analyzeAnnotation availableImports) annotation
+
+      analyzeMessageContext :: [Solution]
+      analyzeMessageContext = mapMaybe addArgument messageLines
+        where
+          messageLines :: [Text]
+          messageLines = concatMap T.lines diagnostic.message
+
+          addArgument :: Text -> Maybe Solution
+          addArgument = fmap AddArgument . (stripPrefix "Probable cause: `" >=> stripSuffix "' is applied to too few arguments")
 
 analyzeHints :: [Text] -> [Solution]
 analyzeHints = concat . mapMaybe analyzeHint
@@ -324,6 +335,7 @@ edits annotated = case annotated.diagnostic.span of
         ReplaceImport old new -> ReplaceFirst span old new
         UseName name -> Replace span name
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
+        AddArgument _ -> Replace (Span span.file span.end span.end) " _"
 
       file :: FilePath
       file = span.file
