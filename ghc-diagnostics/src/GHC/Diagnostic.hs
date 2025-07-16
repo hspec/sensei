@@ -192,10 +192,15 @@ parseAnnotation diagnostic = case diagnostic.code of
       , termLevelUseOfTypeConstructor
       , typeConstructorNotInScope
       , foundHole
+      , foundTypeHole
       ]
       where
         foundHole :: Maybe Annotation
         foundHole = FoundHole <$> (prefix "Found hole: _" >>= takeTypeSignature) <*> analyzeHoleFits
+
+        foundTypeHole :: Maybe Annotation
+        foundTypeHole = prefix "Found type wildcard `" <&> breakOn "'" >>= \ case
+          (name, type_) -> stripPrefix " standing for `" type_ >>= stripSuffix "'" <&> FoundTypeHole name
 
         prefix :: Text -> Maybe Text
         prefix p = stripPrefix p input
@@ -291,6 +296,7 @@ analyzeAnnotation availableImports = \ case
   TermLevelUseOfTypeConstructor qualification name -> importName qualification (Name VariableName name)
   TypeNotInScope qualification name -> importName qualification (Name TypeName name)
   FoundHole _ fits -> map (UseName . (.name)) fits
+  FoundTypeHole _ type_ -> [UseName type_, EnableExtension "PartialTypeSignatures"]
   where
     ignore :: Module -> Bool
     ignore module_ = module_.name == "Test.Hspec.Discover"

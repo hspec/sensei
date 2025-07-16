@@ -26,6 +26,7 @@ data Annotation =
   | TermLevelUseOfTypeConstructor Qualification Text
   | TypeNotInScope Qualification Text
   | FoundHole Type [HoleFit]
+  | FoundTypeHole Text Text
   deriving (Eq, Show)
 
 data RequiredVariable = RequiredVariable {

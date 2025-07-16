@@ -388,6 +388,24 @@ spec = do
       , UseName "mempty"
       ]
 
+    test "found-type-hole" [] [r|
+      module Foo where
+      foo :: FilePath -> IO _
+      foo = readFile
+      |] (Just $ FoundTypeHole "_" "String") [
+        UseName "String"
+      , EnableExtension "PartialTypeSignatures"
+      ]
+
+    test "found-type-hole-named" [] [r|
+      module Foo where
+      foo :: FilePath -> IO _foo
+      foo = readFile
+      |] (Just $ FoundTypeHole "_foo" "String") [
+        UseName "String"
+      , EnableExtension "PartialTypeSignatures"
+      ]
+
     test "too-few-arguments" [] [r|
       module Foo where
       foo :: Maybe Int
