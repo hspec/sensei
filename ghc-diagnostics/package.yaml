@@ -57,7 +57,7 @@ tests:
       - ghc
       - ghc-hie >= 0.0.2
       - temporary
-      - strip-ansi
+      - strip-ansi >= 0.0.1
       - process
 
     cpp-options: -DTEST

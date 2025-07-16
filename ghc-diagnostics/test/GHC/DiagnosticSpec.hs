@@ -112,7 +112,7 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
 
     ghc :: [String] -> IO String
     ghc args = do
-      cached "ghc" (["-XNoStarIsType", "-fno-code", "-fno-diagnostics-show-caret", "-fdiagnostics-color=always", "-fprint-error-index-links=never"] ++ args ++ extraArgs ++ [src])
+      cached "ghc" (["-XNoStarIsType", "-fno-code", "-fno-diagnostics-show-caret", "-fdiagnostics-color=always", "-fprint-error-index-links=always"] ++ args ++ extraArgs ++ [src])
 
     translate :: String -> String
     translate = map \ case
@@ -194,28 +194,6 @@ importName module_ = ImportName module_ Unqualified
 spec :: Spec
 spec = do
   describe "format" do
-    test "could-not-find-module" [] [r|
-      module Foo where
-      import Syste.IO
-      |] (Just $ UnknownImport "Syste.IO" [
-        "System.IO"
-      ]) [
-        ReplaceImport "Syste.IO" "System.IO"
-      ]
-
-    test "could-not-find-module-multiline" [] [r|
-      module Foo where
-      import Data.Binary.Gut
-      |] (Just $ UnknownImport "Data.Binary.Gut" [
-        "Data.Binary.Get"
-      , "Data.Binary.Put"
-      , "Data.Binary"
-      ]) [
-        ReplaceImport "Data.Binary.Gut" "Data.Binary.Get"
-      , ReplaceImport "Data.Binary.Gut" "Data.Binary.Put"
-      , ReplaceImport "Data.Binary.Gut" "Data.Binary"
-      ]
-
     test "not-in-scope" [] [r|
       module Foo where
       foo = catMaybes
@@ -457,6 +435,28 @@ spec = do
 
       foo = "foo" + 23
       |] Nothing []
+
+    test "could-not-find-module" [] [r|
+      module Foo where
+      import Syste.IO
+      |] (Just $ UnknownImport "Syste.IO" [
+        "System.IO"
+      ]) [
+        ReplaceImport "Syste.IO" "System.IO"
+      ]
+
+    test "could-not-find-module-multiline" [] [r|
+      module Foo where
+      import Data.Binary.Gut
+      |] (Just $ UnknownImport "Data.Binary.Gut" [
+        "Data.Binary.Get"
+      , "Data.Binary.Put"
+      , "Data.Binary"
+      ]) [
+        ReplaceImport "Data.Binary.Gut" "Data.Binary.Get"
+      , ReplaceImport "Data.Binary.Gut" "Data.Binary.Put"
+      , ReplaceImport "Data.Binary.Gut" "Data.Binary"
+      ]
 
   describe "analyzeHint" do
     it "detects missing extension" do
