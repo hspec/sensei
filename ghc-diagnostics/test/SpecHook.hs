@@ -1,6 +1,4 @@
-module SpecHook (
-  hook
-) where
+module SpecHook (hook) where
 
 import Imports
 

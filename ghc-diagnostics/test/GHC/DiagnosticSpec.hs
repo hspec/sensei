@@ -283,6 +283,12 @@ spec = do
         UseName "foo"
       ]
 
+    test "not-in-scope-data-perhaps-use" [] [r|
+      module Foo where
+      data SomeOption = SomeOption
+      foo = someOption
+      |] (notInScope "someOption") [UseName "SomeOption"]
+
     test "not-in-scope-pattern" [] [r|
       module Foo where
       foo = case undefined of
@@ -411,7 +417,7 @@ spec = do
       import Data.Maybe
       |] redundantImport [RemoveImport]
 
-    test "could-not-find-module" [] [r|
+    test "unknown-import" [] [r|
       module Foo where
       import Syste.IO
       |] (Just $ UnknownImport "Syste.IO" [
@@ -420,7 +426,7 @@ spec = do
         ReplaceImport "Syste.IO" "System.IO"
       ]
 
-    test "could-not-find-module-multiline" [] [r|
+    test "unknown-import-multiline" [] [r|
       module Foo where
       import Data.Binary.Gut
       |] (Just $ UnknownImport "Data.Binary.Gut" [
