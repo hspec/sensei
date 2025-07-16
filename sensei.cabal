@@ -32,6 +32,7 @@ library
       DeepSeek.Types
       EventQueue
       GHC.EnvironmentFile
+      GHC.GhcPkg
       GHC.HIE
       GHC.Info
       HIE
@@ -109,6 +110,7 @@ executable seito
       DeepSeek.Types
       EventQueue
       GHC.EnvironmentFile
+      GHC.GhcPkg
       GHC.HIE
       GHC.Info
       HIE
@@ -188,6 +190,7 @@ executable sensei
       DeepSeek.Types
       EventQueue
       GHC.EnvironmentFile
+      GHC.GhcPkg
       GHC.HIE
       GHC.Info
       HIE
@@ -268,6 +271,7 @@ test-suite spec
       DeepSeek.Types
       EventQueue
       GHC.EnvironmentFile
+      GHC.GhcPkg
       GHC.HIE
       GHC.Info
       HIE

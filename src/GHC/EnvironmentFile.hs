@@ -31,6 +31,7 @@ import Distribution.PackageDescription.Configuration
 import Distribution.InstalledPackageInfo
 
 import GHC.Info qualified as GHC (Info(..))
+import GHC.GhcPkg qualified as GhcPkg
 import GHC.Diagnostic.Annotated
 
 getCabalFiles :: FilePath -> IO [FilePath]
@@ -147,7 +148,10 @@ firstDir = liftIO . \ case
     False -> firstDir dirs
 
 listPackages :: GHC.Info -> IO [InstalledPackageInfo]
-listPackages info = listPackageConfigs info >>= traverse readPackageConfig
+listPackages info = getEnv "GHC_ENVIRONMENT" >>= \ case
+  Nothing -> GhcPkg.dump
+  Just "-" -> GhcPkg.dump
+  Just envFile -> listPackageConfigs envFile info >>= traverse readPackageConfig
 
 readPackageConfig :: FilePath -> IO InstalledPackageInfo
 readPackageConfig name = B.readFile name <&> parseInstalledPackageInfo >>= \ case
@@ -162,9 +166,9 @@ readPackageConfig name = B.readFile name <&> parseInstalledPackageInfo >>= \ cas
     expand :: FilePath -> FilePath
     expand = unpack . T.replace "${pkgroot}" (pack . takeDirectory $ takeDirectory name) . pack
 
-listPackageConfigs :: GHC.Info -> IO [FilePath]
-listPackageConfigs info = do
-  entries <- parseGhcEnvironment
+listPackageConfigs :: FilePath -> GHC.Info -> IO [FilePath]
+listPackageConfigs envFile info = do
+  entries <- parseEnvironmentFile envFile
 
   let
     dbs = info.globalPackageDb : [db | PackageDb db <- entries]
@@ -174,10 +178,8 @@ listPackageConfigs info = do
     Nothing -> die $ unwords ["missing package configuration", conf]
     Just file -> return file
 
-parseGhcEnvironment :: IO [Entry]
-parseGhcEnvironment = getEnv "GHC_ENVIRONMENT" >>= \ case
-  Nothing -> return []
-  Just name -> T.readFile name <&> parseEntries name >>= either die return
+parseEnvironmentFile :: FilePath -> IO [Entry]
+parseEnvironmentFile name = T.readFile name <&> parseEntries name >>= either die return
 
 data Entry =
     ClearPackageDb
