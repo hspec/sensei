@@ -382,6 +382,12 @@ spec = do
       , UseName "mempty"
       ]
 
+    test "too-few-arguments" [] [r|
+      module Foo where
+      foo :: Maybe Int
+      foo = Just
+      |] Nothing [AddArgument "Just"]
+
     test "use-BlockArguments" [] [r|
       {-# LANGUAGE NoBlockArguments #-}
       module Foo where
@@ -404,6 +410,28 @@ spec = do
       module Foo where
       import Data.Maybe
       |] redundantImport [RemoveImport]
+
+    test "could-not-find-module" [] [r|
+      module Foo where
+      import Syste.IO
+      |] (Just $ UnknownImport "Syste.IO" [
+        "System.IO"
+      ]) [
+        ReplaceImport "Syste.IO" "System.IO"
+      ]
+
+    test "could-not-find-module-multiline" [] [r|
+      module Foo where
+      import Data.Binary.Gut
+      |] (Just $ UnknownImport "Data.Binary.Gut" [
+        "Data.Binary.Get"
+      , "Data.Binary.Put"
+      , "Data.Binary"
+      ]) [
+        ReplaceImport "Data.Binary.Gut" "Data.Binary.Get"
+      , ReplaceImport "Data.Binary.Gut" "Data.Binary.Put"
+      , ReplaceImport "Data.Binary.Gut" "Data.Binary"
+      ]
 
     testWith "x-partial" GHC_912 [] [r|
       module Foo where
@@ -435,28 +463,6 @@ spec = do
 
       foo = "foo" + 23
       |] Nothing []
-
-    test "could-not-find-module" [] [r|
-      module Foo where
-      import Syste.IO
-      |] (Just $ UnknownImport "Syste.IO" [
-        "System.IO"
-      ]) [
-        ReplaceImport "Syste.IO" "System.IO"
-      ]
-
-    test "could-not-find-module-multiline" [] [r|
-      module Foo where
-      import Data.Binary.Gut
-      |] (Just $ UnknownImport "Data.Binary.Gut" [
-        "Data.Binary.Get"
-      , "Data.Binary.Put"
-      , "Data.Binary"
-      ]) [
-        ReplaceImport "Data.Binary.Gut" "Data.Binary.Get"
-      , ReplaceImport "Data.Binary.Gut" "Data.Binary.Put"
-      , ReplaceImport "Data.Binary.Gut" "Data.Binary"
-      ]
 
   describe "analyzeHint" do
     it "detects missing extension" do

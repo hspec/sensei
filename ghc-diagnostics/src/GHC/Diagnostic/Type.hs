@@ -216,6 +216,7 @@ dropErrorContext = filter \ m -> not $ or $ map ($ m) [
   , startsWith "In a stmt of a "
   , startsWith "In the expression: "
   , startsWith "In the Template Haskell quotation "
+  , startsWith "Probable cause: "
   ]
   where
     startsWith :: Text -> Text -> Bool

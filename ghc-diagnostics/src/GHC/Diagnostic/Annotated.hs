@@ -16,6 +16,7 @@ data Solution =
   | ReplaceImport Text Text
   | UseName Text
   | ImportName Module Qualification Text
+  | AddArgument Text
   deriving (Eq, Show)
 
 data Annotation =
