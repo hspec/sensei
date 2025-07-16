@@ -117,6 +117,7 @@ analyzeHint hint = asum [
       map EnableExtension . reverse . T.splitOn ", "
 
   , prefix "Perhaps use `" <&> return . takeIdentifier
+  , prefix "Perhaps use data constructor `" <&> return . takeIdentifier
   , prefix "Perhaps use variable `" <&> return . takeIdentifier
   , prefix "Perhaps use one of these:" <&> extractIdentifiers
   ]
