@@ -5,6 +5,8 @@ module GHC.Diagnostic.Type (
 , Location(..)
 , Severity(..)
 , Reason(..)
+, Flags(..)
+, Category(..)
 , parse
 
 , FormatConfig(..)

@@ -4,7 +4,7 @@ module GHC.EnvironmentFile (
 , HieFilePath(..)
 , listAllHieFiles
 #ifdef TEST
-, readDependencies
+, readCabalDependencies
 , readPackageConfig
 , Entry(..)
 , parseEntries
@@ -36,8 +36,8 @@ import GHC.Diagnostic.Annotated
 getCabalFiles :: FilePath -> IO [FilePath]
 getCabalFiles dir = filter (not . ("." `isPrefixOf`)) . filter (".cabal" `isSuffixOf`) <$> getDirectoryContents dir
 
-readDependencies :: FilePath -> IO (Set Text)
-readDependencies dir = getCabalFiles dir >>= \ case
+readCabalDependencies :: FilePath -> IO (Set Text)
+readCabalDependencies dir = getCabalFiles dir >>= \ case
   [file] -> B.readFile file <&> parseGenericPackageDescriptionMaybe >>= \ case
     Nothing -> mempty
     Just (flattenPackageDescription -> package) -> do
@@ -83,12 +83,12 @@ listAllHieFiles info = do
   home <- getHomeDirectory
   let fallback = home </> ".local" </> "state" </> "ghc-hie-files" </> "ghc-" <> info.ghcVersionString
   packages <- listPackages info
-  dependencies <- readDependencies "."
+  directDependencies <- readCabalDependencies "."
   swap <$> runWriterT do
-    concat <$> for packages (packageHieFiles dependencies fallback)
+    concat <$> for packages (packageHieFiles directDependencies fallback)
 
 packageHieFiles :: Set Text -> FilePath -> InstalledPackageInfo -> WarningM [HieFilePath ]
-packageHieFiles dependencies fallback package = do
+packageHieFiles directDependencies fallback package = do
   let
     libToHie :: FilePath -> FilePath
     libToHie lib = lib </> "extra-compilation-artifacts" </> "hie"
@@ -117,7 +117,7 @@ packageHieFiles dependencies fallback package = do
         name = pack packageName
 
         type_ :: PackageType
-        type_ = case name `Set.member` dependencies of
+        type_ = case name `Set.member` directDependencies of
           False -> TransitiveDependency
           True -> DirectDependency
 

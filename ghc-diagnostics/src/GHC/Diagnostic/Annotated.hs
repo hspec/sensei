@@ -12,6 +12,7 @@ data Annotated = Annotated {
 
 data Solution =
     EnableExtension Text
+  | IgnoreWarning Text
   | RemoveImport
   | ReplaceImport Text Text
   | UseName Text

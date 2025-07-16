@@ -51,9 +51,9 @@ spec = do
           , "Data/Binary/Put.hie"
           ]
 
-  describe_ 'readDependencies do
+  describe_ 'readCabalDependencies do
     it "reads dependencies from .cabal file" do
-      readDependencies "." `shouldReturn` Set.fromList [
+      readCabalDependencies "." `shouldReturn` Set.fromList [
           "Cabal-syntax"
         , "HUnit"
         , "QuickCheck"
@@ -99,7 +99,7 @@ spec = do
 
     context "without a .cabal file" do
       it "returns mempty" do
-        readDependencies "src" `shouldReturn` mempty
+        readCabalDependencies "src" `shouldReturn` mempty
 
   describe "readPackageConfig" do
     it "expands ${pkgroot}" do

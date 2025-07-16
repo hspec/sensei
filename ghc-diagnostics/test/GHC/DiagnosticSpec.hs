@@ -99,7 +99,8 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
         format FormatConfig { showErrorContext = False, color = True } annotated.diagnostic `shouldBe` errNoContext
 
       annotated.annotation `shouldBe` annotation
-      annotated.solutions `shouldBe` solutions
+      whenGhc requiredVersion do
+        annotated.solutions `shouldBe` solutions
   where
     separator :: String
     separator = replicate 30 '*' <> "\n"
@@ -428,12 +429,18 @@ spec = do
     testWith "redundant-import" GHC_912 ["-Wall"] [r|
       module Foo where
       import Data.Maybe
-      |] redundantImport [RemoveImport]
+      |] redundantImport [
+        RemoveImport
+      , IgnoreWarning "unused-imports"
+      ]
 
     testWith "redundant-import-error" GHC_912 ["-Wall", "-Werror"] [r|
       module Foo where
       import Data.Maybe
-      |] redundantImport [RemoveImport]
+      |] redundantImport [
+        RemoveImport
+      , IgnoreWarning "unused-imports"
+      ]
 
     test "unknown-import" [] [r|
       module Foo where
@@ -460,12 +467,12 @@ spec = do
     testWith "x-partial" GHC_912 [] [r|
       module Foo where
       foo = head
-      |] Nothing []
+      |] Nothing [IgnoreWarning "x-partial"]
 
     testWith "x-partial-error" GHC_912 ["-Werror"] [r|
       module Foo where
       foo = head
-      |] Nothing []
+      |] Nothing [IgnoreWarning "x-partial"]
 
     test "non-existing" [] [r|
       |] Nothing []
