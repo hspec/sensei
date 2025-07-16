@@ -60,13 +60,14 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
     formatSolution :: Solution -> Builder
     formatSolution = \ case
       EnableExtension name -> "Enable " <> Builder.fromText name
+      IgnoreWarning warning -> "Ignore warning: " <> Builder.fromText warning
       RemoveImport -> "Remove import"
       ReplaceImport _ new -> "Use " <> Builder.fromText new
       UseName name -> "Use " <> Builder.fromText name
       ImportName module_ qualification name -> importStatement module_ qualification [name] <> faint package
         where
           package = " (" <> Builder.fromText module_.package.name <> ")"
-      AddArgument expression -> "Replace with: " <> Builder.fromText expression <> " _"
+      AddArgument _ -> "Insert hole: _"
 
     faint :: Builder -> Builder
     faint = Builder.withSGR [SetConsoleIntensity FaintIntensity]
@@ -96,6 +97,7 @@ annotate getAvailableImports diagnostic = getAvailableImports >>= \ case
         ++ analyzeMessageContext
         ++ analyzeHints diagnostic.hints
         ++ maybe [] (analyzeAnnotation availableImports) annotation
+        ++ analyzeReason
 
       analyzeMessageContext :: [Solution]
       analyzeMessageContext = mapMaybe addArgument messageLines
@@ -105,6 +107,12 @@ annotate getAvailableImports diagnostic = getAvailableImports >>= \ case
 
           addArgument :: Text -> Maybe Solution
           addArgument = fmap AddArgument . (stripPrefix "Probable cause: `" >=> stripSuffix "' is applied to too few arguments")
+
+      analyzeReason :: [Solution]
+      analyzeReason = case diagnostic.reason of
+        Nothing -> []
+        Just (ReasonCategory (Category name)) -> [IgnoreWarning $ pack name]
+        Just (ReasonFlags (Flags names)) -> map (IgnoreWarning . pack) names
 
 analyzeHints :: [Text] -> [Solution]
 analyzeHints = concat . mapMaybe analyzeHint
@@ -325,6 +333,7 @@ analyzeAnnotation availableImports = \ case
 
 data Edit =
     AddExtension FilePath Text
+  | AddGhcOption FilePath Text
   | AddImport FilePath Module Qualification [Text]
   | Replace Span Text
   | ReplaceFirst Span Text Text
@@ -338,6 +347,7 @@ edits annotated = case annotated.diagnostic.span of
       toEdit :: Solution -> Edit
       toEdit = \ case
         EnableExtension name -> AddExtension file name
+        IgnoreWarning warning -> AddGhcOption file $ "-Wno-" <> warning
         RemoveImport -> removeLines
         ReplaceImport old new -> ReplaceFirst span old new
         UseName name -> Replace span name
@@ -368,6 +378,7 @@ apply dir choice = selectChoice >>> applyChoice
 relativeTo :: FilePath -> Edit -> Edit
 relativeTo dir = \ case
   AddExtension file name -> AddExtension (dir </> file) name
+  AddGhcOption file name -> AddGhcOption (dir </> file) name
   AddImport file module_ qualification names -> AddImport (dir </> file) module_ qualification names
   Replace span substitute -> Replace span { file = dir </> span.file } substitute
   ReplaceFirst span old new -> ReplaceFirst span { file = dir </> span.file } old new
@@ -376,6 +387,9 @@ applyEdit :: Edit -> IO ()
 applyEdit = \ case
   AddExtension file name -> do
     prependToFile file $ "{-# LANGUAGE " <> name <> " #-}\n"
+
+  AddGhcOption file flag -> do
+    prependToFile file $ "{-# OPTIONS_GHC " <> flag <> " #-}\n"
 
   AddImport file module_ qualification names -> do
     modifyFile file $ addImport (importStatement module_ qualification names)
