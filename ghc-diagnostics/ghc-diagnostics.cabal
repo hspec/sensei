@@ -110,7 +110,7 @@ test-suite spec
     , pretty
     , process
     , raw-strings-qq
-    , strip-ansi
+    , strip-ansi >=0.0.1
     , template-haskell
     , temporary
     , text >=2.1

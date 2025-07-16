@@ -99,7 +99,13 @@ format config diagnostic = render $ unlines [
     code :: Doc
     code = case diagnostic.code of
       Nothing -> empty
-      Just c -> brackets $ "GHC-" <> text (printf "%05d" c)
+      Just c -> brackets $ hyperlink url name
+        where
+          url :: String
+          url = "https://errors.haskell.org/messages/" ++ name
+
+          name :: String
+          name = "GHC-" ++ printf "%05d" c
 
     reason :: Doc
     reason = case diagnostic.reason of
@@ -175,6 +181,9 @@ format config diagnostic = render $ unlines [
 
     reset :: Doc
     reset = ansi (setSGRCode [Reset])
+
+    hyperlink :: String -> String -> Doc
+    hyperlink url name = ansi ("\ESC]8;;" ++ url ++ "\ESC\\") <> text name <> ansi "\ESC]8;;\ESC\\"
 
     ansi :: String -> Doc
     ansi
