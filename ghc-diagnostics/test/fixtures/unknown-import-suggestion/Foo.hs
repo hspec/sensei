@@ -1,2 +1,2 @@
 module Foo where
-import Bar
+import Syste.IO
