@@ -15,6 +15,7 @@ data Solution =
   | IgnoreWarning Text
   | RemoveImport
   | ReplaceImport Text Text
+  | CreateModule FilePath Text
   | UseName Text
   | ImportName Module Qualification Text
   | AddArgument Text

@@ -444,6 +444,13 @@ spec = do
 
     test "unknown-import" [] [r|
       module Foo where
+      import Bar
+      |] (Just $ UnknownImport "Bar" []) [
+        CreateModule "../Bar.hs" "Bar"
+      ]
+
+    test "unknown-import-suggestion" [] [r|
+      module Foo where
       import Syste.IO
       |] (Just $ UnknownImport "Syste.IO" [
         "System.IO"
@@ -451,7 +458,7 @@ spec = do
         ReplaceImport "Syste.IO" "System.IO"
       ]
 
-    test "unknown-import-multiline" [] [r|
+    test "unknown-import-multiline-suggestion" [] [r|
       module Foo where
       import Data.Binary.Gut
       |] (Just $ UnknownImport "Data.Binary.Gut" [
