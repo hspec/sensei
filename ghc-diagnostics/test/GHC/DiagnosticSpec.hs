@@ -444,14 +444,22 @@ spec = do
 
     test "unknown-import" [] [r|
       module Foo where
+      import Bar
+      |] (Just $ UnknownImport "Bar" []) [
+        CreateModule "test/fixtures/unknown-import/Bar.hs" "Bar"
+      ]
+
+    test "unknown-import-suggestion" [] [r|
+      module Foo where
       import Syste.IO
       |] (Just $ UnknownImport "Syste.IO" [
         "System.IO"
       ]) [
         ReplaceImport "Syste.IO" "System.IO"
+      , CreateModule "test/fixtures/unknown-import-suggestion/Syste/IO.hs" "Syste.IO"
       ]
 
-    test "unknown-import-multiline" [] [r|
+    test "unknown-import-multiline-suggestion" [] [r|
       module Foo where
       import Data.Binary.Gut
       |] (Just $ UnknownImport "Data.Binary.Gut" [
@@ -462,6 +470,7 @@ spec = do
         ReplaceImport "Data.Binary.Gut" "Data.Binary.Get"
       , ReplaceImport "Data.Binary.Gut" "Data.Binary.Put"
       , ReplaceImport "Data.Binary.Gut" "Data.Binary"
+      , CreateModule "test/fixtures/unknown-import-multiline-suggestion/Data/Binary/Gut.hs" "Data.Binary.Gut"
       ]
 
     testWith "x-partial" GHC_912 [] [r|
@@ -575,7 +584,7 @@ spec = do
           let
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "getFileHash" NoTypeSignature)
-          analyzeAnnotation availableImports annotation `shouldBe` [
+          analyzeAnnotation availableImports undefined annotation `shouldBe` [
               ImportName "GHC.Fingerprint" Unqualified "getFileHash"
             ]
 
@@ -583,7 +592,7 @@ spec = do
           let
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "show" NoTypeSignature)
-          analyzeAnnotation availableImports annotation `shouldBe` [
+          analyzeAnnotation availableImports undefined annotation `shouldBe` [
               ImportName "Prelude" Unqualified "Show(..)"
             , ImportName "Text.Show" Unqualified "Show(..)"
             , ImportName "GHC.Show" Unqualified "Show(..)"
@@ -593,7 +602,7 @@ spec = do
           let
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "Option" NoTypeSignature)
-          analyzeAnnotation availableImports annotation `shouldBe` [
+          analyzeAnnotation availableImports undefined annotation `shouldBe` [
               ImportName "System.Console.GetOpt" Unqualified "OptDescr(..)"
             ]
 
@@ -601,7 +610,7 @@ spec = do
           let
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "OptDescr" NoTypeSignature)
-          analyzeAnnotation availableImports annotation `shouldBe` [
+          analyzeAnnotation availableImports undefined annotation `shouldBe` [
             ]
 
       context "with TypeNotInScope" do
@@ -609,7 +618,7 @@ spec = do
           let
             annotation :: Annotation
             annotation = TypeNotInScope Unqualified "OptDescr"
-          analyzeAnnotation availableImports annotation `shouldBe` [
+          analyzeAnnotation availableImports undefined annotation `shouldBe` [
               ImportName "System.Console.GetOpt" Unqualified "OptDescr"
             ]
 
@@ -617,5 +626,5 @@ spec = do
           let
             annotation :: Annotation
             annotation = TypeNotInScope Unqualified "Option"
-          analyzeAnnotation availableImports annotation `shouldBe` [
+          analyzeAnnotation availableImports undefined annotation `shouldBe` [
             ]

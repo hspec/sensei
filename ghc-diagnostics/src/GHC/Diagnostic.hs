@@ -27,6 +27,7 @@ import qualified Builder
 import           System.Console.ANSI.Types
 
 import           System.IO
+import           System.Directory (createDirectoryIfMissing)
 import qualified Data.List as List
 import           Data.Text (stripPrefix, stripSuffix)
 import qualified Data.Text as T hiding (stripPrefix, stripSuffix)
@@ -63,6 +64,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
       IgnoreWarning warning -> "Ignore warning: " <> Builder.fromText warning
       RemoveImport -> "Remove import"
       ReplaceImport _ new -> "Use " <> Builder.fromText new
+      CreateModule file _ -> "Create " <> Builder.fromString file
       UseName name -> "Use " <> Builder.fromText name
       ImportName module_ qualification name -> importStatement module_ qualification [name] <> faint package
         where
@@ -96,7 +98,7 @@ annotate getAvailableImports diagnostic = getAvailableImports >>= \ case
            analyzeHints diagnostic.message
         ++ analyzeMessageContext
         ++ analyzeHints diagnostic.hints
-        ++ maybe [] (analyzeAnnotation availableImports) annotation
+        ++ maybe [] (analyzeAnnotation availableImports diagnostic.span) annotation
         ++ analyzeReason
 
       analyzeMessageContext :: [Solution]
@@ -161,6 +163,7 @@ parseAnnotation :: Diagnostic -> Maybe Annotation
 parseAnnotation diagnostic = case diagnostic.code of
   Just 66111 -> Just RedundantImport
   Just 61948 -> parseUnknownImport
+  Just 87110 -> parseUnknownImport
   _ -> analyzeMessage
   where
     parseUnknownImport :: Maybe Annotation
@@ -296,16 +299,23 @@ breakOn sep = second (T.drop $ T.length sep) . T.breakOn sep
 breakOnEnd :: Text -> Text -> (Text, Text)
 breakOnEnd sep = first (T.dropEnd $ T.length sep) . T.breakOnEnd sep
 
-analyzeAnnotation :: AvailableImports -> Annotation -> [Solution]
-analyzeAnnotation availableImports = \ case
+analyzeAnnotation :: AvailableImports -> Maybe Span -> Annotation -> [Solution]
+analyzeAnnotation availableImports span = \ case
   RedundantImport -> [RemoveImport]
-  UnknownImport name suggestions -> map (ReplaceImport name) suggestions
+  UnknownImport name suggestions -> map (ReplaceImport name) suggestions ++ createModule name
   VariableNotInScope variable -> importName variable.qualification (Name VariableName variable.name)
   TermLevelUseOfTypeConstructor qualification name -> importName qualification (Name VariableName name)
   TypeNotInScope qualification name -> importName qualification (Name TypeName name)
   FoundHole _ fits -> map (UseName . (.name)) fits
   FoundTypeHole _ type_ -> [UseName type_, EnableExtension "PartialTypeSignatures"]
   where
+    createModule :: Text -> [Solution]
+    createModule name = case span <&> (.file) <&> List.takeWhile (not . isUpper) of
+      Nothing -> []
+      Just dir -> [CreateModule file name]
+        where
+          file = dir </> unpack (T.replace "." "/" name) <> ".hs"
+
     ignore :: Module -> Bool
     ignore module_ = module_.name == "Test.Hspec.Discover"
 
@@ -337,6 +347,7 @@ data Edit =
   | AddImport FilePath Module Qualification [Text]
   | Replace Span Text
   | ReplaceFirst Span Text Text
+  | CreateFile FilePath Text
   deriving (Eq, Show)
 
 edits :: Annotated -> [Edit]
@@ -350,9 +361,10 @@ edits annotated = case annotated.diagnostic.span of
         IgnoreWarning warning -> AddGhcOption file $ "-Wno-" <> warning
         RemoveImport -> removeLines
         ReplaceImport old new -> ReplaceFirst span old new
+        CreateModule dst name -> CreateFile dst $ T.concat ["module ", name, " where\n"]
         UseName name -> Replace span name
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
-        AddArgument _ -> Replace (Span span.file span.end span.end) " _"
+        AddArgument _ -> Replace (Span file span.end span.end) " _"
 
       file :: FilePath
       file = span.file
@@ -382,6 +394,7 @@ relativeTo dir = \ case
   AddImport file module_ qualification names -> AddImport (dir </> file) module_ qualification names
   Replace span substitute -> Replace span { file = dir </> span.file } substitute
   ReplaceFirst span old new -> ReplaceFirst span { file = dir </> span.file } old new
+  CreateFile file content -> CreateFile (dir </> file) content
 
 applyEdit :: Edit -> IO ()
 applyEdit = \ case
@@ -399,6 +412,10 @@ applyEdit = \ case
 
   ReplaceFirst span old new -> do
     modifyFile span.file $ applyReplaceFirst span.start span.end old new
+
+  CreateFile file content -> do
+    createDirectoryIfMissing True (takeDirectory file)
+    Utf8.writeFile file content
 
 addImport :: Builder -> Text -> Text
 addImport statement input = case break (T.isPrefixOf "import ") $ T.lines input of
