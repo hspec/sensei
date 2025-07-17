@@ -50,6 +50,7 @@ library
     , base >=4.18 && <5
     , bytestring >=0.11
     , containers
+    , directory
     , filepath
     , pretty
     , text >=2.1
