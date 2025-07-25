@@ -1,10 +1,12 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 module GHC.DiagnosticSpec (spec) where
 
 import Helper
 
 import System.IO
+import System.IO.Temp (withSystemTempDirectory)
 import Data.Ord (comparing)
 import GHC.Fingerprint
 import Test.Hspec.Expectations.Contrib qualified as Hspec
@@ -18,6 +20,7 @@ import System.Process
 import System.Directory
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
+import Data.Text.IO.Utf8 qualified as Utf8
 import Data.ByteString qualified as B
 import Data.Map.Strict qualified as Map
 import Data.String.ANSI.Strip (stripAnsi)
@@ -26,7 +29,8 @@ import "ghc-hie" GHC.Iface.Ext.Binary
 import GHC.Types.Name.Cache (initNameCache)
 
 import GHC.HIE
-import GHC.Diagnostic
+import GHC.Diagnostic hiding (edits)
+import GHC.Diagnostic qualified as Diagnostic
 import GHC.Diagnostic.Annotated
 
 shouldAnnotate :: Bool
@@ -35,9 +39,9 @@ shouldAnnotate = True
 addAnnotation :: String -> IO a -> IO a
 addAnnotation m = if shouldAnnotate then Hspec.annotate m else id
 
-test, ftest, xtest :: HasCallStack => FilePath -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
+test, ftest, xtest :: HasCallStack => String -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
 
-test name = testWith name minBound
+test name args code = testWith name ANY args code
 
 ftest name args code annotation = focus . test name args code annotation
 
@@ -77,10 +81,15 @@ fieldOrder = flip zip [1..] [
   , "column"
   ]
 
-testWith :: HasCallStack => FilePath -> GHC -> [String] -> String -> Maybe Annotation -> [Solution] -> Spec
-testWith name requiredVersion extraArgs (unindent -> code) annotation solutions = it name do
-  unless (T.null code) do
-    ensureFile src $ T.encodeUtf8 code
+data ExpectedSolution = ExpectedSolution {
+  solution :: Solution
+, withAppliedSolution :: FilePath -> Expectation
+}
+
+testWith :: HasCallStack => String -> GHC -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
+testWith name requiredVersion extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions = it name do
+  unless (B.null code) do
+    ensureFile src code
 
   err <- translate <$> ghc []
   errNoContext <- translate <$> ghc ["-fno-show-error-context"]
@@ -100,7 +109,24 @@ testWith name requiredVersion extraArgs (unindent -> code) annotation solutions 
 
       annotated.annotation `shouldBe` annotation
       whenGhc requiredVersion do
-        annotated.solutions `shouldBe` solutions
+        annotated.solutions `shouldBe` map (.solution) solutions
+        let
+          edits :: [Edit]
+          edits = Diagnostic.edits annotated
+
+          enumerate :: [a] -> [(Int, a)]
+          enumerate = zip [1..]
+
+
+        for_ (enumerate solutions) \ (n, solution) -> do
+          withSystemTempDirectory "hspec" \ tmp -> do
+            let
+              dst :: FilePath
+              dst = tmp </> src
+            ensureFile dst code
+            void $ tryJust (guard . isDoesNotExistError) do
+              apply tmp (Just n) edits
+            solution.withAppliedSolution dst
   where
     separator :: String
     separator = replicate 30 '*' <> "\n"
@@ -186,11 +212,63 @@ redundantImport = Just RedundantImport
 notInScope :: RequiredVariable -> Maybe Annotation
 notInScope = Just . VariableNotInScope
 
-foundHole :: Type -> [HoleFit] -> Maybe Annotation
-foundHole type_ = Just . FoundHole type_
+foundHole :: Text -> Type -> [HoleFit] -> Maybe Annotation
+foundHole name type_ = Just . FoundHole name type_
 
-importName :: Module -> Text -> Solution
-importName module_ = ImportName module_ Unqualified
+expectFileContent :: HasCallStack => String -> FilePath -> Expectation
+expectFileContent expected file = Utf8.readFile file `shouldReturn` unindent expected
+
+enableExtension :: HasCallStack => Text -> String -> ExpectedSolution
+enableExtension name = ExpectedSolution (EnableExtension name) . expectFileContent
+
+enableExtension_ :: Text -> ExpectedSolution
+enableExtension_ name = ExpectedSolution (EnableExtension name) mempty
+
+ignoreWarning :: HasCallStack => Text -> String -> ExpectedSolution
+ignoreWarning name = ExpectedSolution (IgnoreWarning name) . expectFileContent
+
+ignoreWarning_ :: Text -> ExpectedSolution
+ignoreWarning_ name = ExpectedSolution (IgnoreWarning name) mempty
+
+removeImport :: HasCallStack => String -> ExpectedSolution
+removeImport = ExpectedSolution RemoveImport . expectFileContent
+
+removeImport_ :: ExpectedSolution
+removeImport_ = ExpectedSolution RemoveImport mempty
+
+replaceImport :: HasCallStack => Text -> Text -> String -> ExpectedSolution
+replaceImport old new = ExpectedSolution (ReplaceImport old new) . expectFileContent
+
+replaceImport_ :: Text -> Text -> ExpectedSolution
+replaceImport_ old new = ExpectedSolution (ReplaceImport old new) mempty
+
+createModule :: HasCallStack => String -> FilePath -> Text -> String -> ExpectedSolution
+createModule name path module_ expected = ExpectedSolution (CreateModule modulePath module_) \ file -> do
+  Utf8.readFile (takeDirectory file </> path) `shouldReturn` unindent expected
+  where
+    modulePath :: FilePath
+    modulePath = "test" </> "fixtures" </> name </> path
+
+createModule_ :: String -> FilePath -> Text -> ExpectedSolution
+createModule_ name path module_ = ExpectedSolution (CreateModule modulePath module_) mempty
+  where
+    modulePath :: FilePath
+    modulePath = "test" </> "fixtures" </> name </> path
+
+replaceName :: HasCallStack => Text -> Text -> String -> ExpectedSolution
+replaceName old new = ExpectedSolution (ReplaceName old new) . expectFileContent
+
+replaceName_ :: Text -> Text -> ExpectedSolution
+replaceName_ old new = ExpectedSolution (ReplaceName old new) mempty
+
+importName :: HasCallStack => Module -> Qualification -> Text -> String -> ExpectedSolution
+importName module_ qualification name = ExpectedSolution (ImportName module_ qualification name) . expectFileContent
+
+importName_ :: Module -> Text -> ExpectedSolution
+importName_ module_ name = ExpectedSolution (ImportName module_ Unqualified name) mempty
+
+addArgument :: HasCallStack => Text -> String -> ExpectedSolution
+addArgument expression = ExpectedSolution (AddArgument expression) . expectFileContent
 
 spec :: Spec
 spec = do
@@ -198,33 +276,53 @@ spec = do
     test "not-in-scope" [] [r|
       module Foo where
       foo = catMaybes
-      |] (notInScope "catMaybes") [importName "Data.Maybe" "catMaybes"]
+      |] (notInScope "catMaybes") [
+        importName "Data.Maybe" Unqualified "catMaybes" [r|
+      module Foo where
+      import Data.Maybe (catMaybes)
+      foo = catMaybes
+      |]
+      ]
 
     test "not-in-scope-qualified" [] [r|
       module Foo where
       foo = M.catMaybes
       |] (notInScope (RequiredVariable "M" "catMaybes" NoTypeSignature)) [
-        ImportName "Data.Maybe" "M" "catMaybes"
+        importName "Data.Maybe" "M" "catMaybes" [r|
+      module Foo where
+      import Data.Maybe qualified as M
+      foo = M.catMaybes
+      |]
       ]
 
     test "not-in-scope-with-type" [] [r|
       module Foo where
       foo :: Int
       foo = bar "baz"
-      |] (notInScope (RequiredVariable Unqualified "bar" "String -> Int")) []
+      |] (notInScope (RequiredVariable Unqualified "bar" "String -> Int")) [
+      ]
 
     test "not-in-scope-perhaps-use" [] [r|
       module Foo where
       foo = filter_
-      |] (notInScope "filter_") [UseName "filter"]
+      |] (notInScope "filter_") [
+        replaceName "filter_" "filter" [r|
+      module Foo where
+      foo = filter
+      |]
+      ]
 
     test "not-in-scope-perhaps-use-one-of-these" [] [r|
       module Foo where
       foo = fold
       |] (notInScope "fold") [
-        UseName "foldl"
-      , UseName "foldr"
-      , importName "Data.Foldable" "Foldable(..)"
+        replaceName_ "fold" "foldl"
+      , replaceName_ "fold" "foldr"
+      , importName "Data.Foldable" Unqualified "Foldable(..)" [r|
+      module Foo where
+      import Data.Foldable (Foldable(..))
+      foo = fold
+      |]
       ]
 
     test "not-in-scope-perhaps-use-multiline" [] [r|
@@ -232,19 +330,26 @@ spec = do
       import Data.List
       foo = fold
       |] (notInScope "fold") [
-        UseName "foldl"
-      , UseName "foldr"
-      , importName "Data.Foldable" "Foldable(..)"
+        replaceName_ "fold" "foldl"
+      , replaceName_ "fold" "foldr"
+      , importName_ "Data.Foldable" "Foldable(..)"
       ]
 
     test "not-in-scope-operator" [] [r|
       module Foo where
       foo = (<&>)
       |] (notInScope (RequiredVariable Unqualified "<&>" NoTypeSignature)) [
-        UseName "<>"
-      , UseName "<$>"
-      , UseName "<*>"
-      , importName "Data.Functor" "<&>"
+        replaceName "<&>" "<>" [r|
+      module Foo where
+      foo = (<>)
+      |]
+      , replaceName_ "<&>" "<$>"
+      , replaceName_ "<&>" "<*>"
+      , importName "Data.Functor" Unqualified "<&>" [r|
+      module Foo where
+      import Data.Functor ((<&>))
+      foo = (<&>)
+      |]
       ]
 
     test "not-in-scope-operator-infix" [] [r|
@@ -252,8 +357,12 @@ spec = do
       foo :: [a] -> (Int, [a])
       foo = length &&& id
       |] (notInScope (RequiredVariable Unqualified "&&&" "(t0 a0 -> Int) -> (a1 -> a1) -> [a] -> (Int, [a])")) [
-        UseName "&&"
-      , importName "Control.Arrow" "Arrow(..)"
+        replaceName "&&&" "&&" [r|
+      module Foo where
+      foo :: [a] -> (Int, [a])
+      foo = length && id
+      |]
+      , importName_ "Control.Arrow" "Arrow(..)"
       ]
 
     test "not-in-scope-type" [] [r|
@@ -272,7 +381,7 @@ spec = do
       module Foo where
       foo = NoArg
       |] (notInScope "NoArg") [
-        importName "System.Console.GetOpt" "ArgDescr(..)"
+        importName_ "System.Console.GetOpt" "ArgDescr(..)"
       ]
 
     test "not-in-scope-data-with-type" [] [r|
@@ -281,32 +390,34 @@ spec = do
       foo :: Maybe Int
       foo = Foo (23 :: Int)
       |] (notInScope (RequiredVariable Unqualified "Foo" "Int -> Maybe Int")) [
-        UseName "foo"
+        replaceName_ "Foo" "foo"
       ]
 
     test "not-in-scope-data-perhaps-use" [] [r|
       module Foo where
       data SomeOption = SomeOption
       foo = someOption
-      |] (notInScope "someOption") [UseName "SomeOption"]
+      |] (notInScope "someOption") [
+        replaceName_ "someOption" "SomeOption"
+      ]
 
     test "not-in-scope-pattern" [] [r|
       module Foo where
       foo = case undefined of
         NoArg -> undefined
       |] (notInScope "NoArg") [
-        importName "System.Console.GetOpt" "ArgDescr(..)"
+        importName_ "System.Console.GetOpt" "ArgDescr(..)"
       ]
 
     test "term-level-use-of-type-constructor" [] [r|
       module Foo where
       data Foo = Fooa | Fooi
       foo = Foo
-      |] (Just $ TermLevelUseOfTypeConstructor Unqualified "Foo") [
-          UseName "foo"
-        , UseName "Fooa"
-        , UseName "Fooi"
-        ]
+      |] (Just $ TermLevelUseOfTypeConstructor "Foo") [
+        replaceName_ "Foo" "foo"
+      , replaceName_ "Foo" "Fooa"
+      , replaceName_ "Foo" "Fooi"
+      ]
 
     test "found-hole" [] [r|
       module Foo where
@@ -314,7 +425,7 @@ spec = do
       foo name = do
         r <- _ name
         return r
-      |] (foundHole "FilePath -> IO String" [
+      |] (foundHole "_" "FilePath -> IO String" [
         HoleFit "foo" "FilePath -> IO String"
       , HoleFit "readFile" "FilePath -> IO String"
       , HoleFit "readIO" "forall a. Read a => String -> IO a"
@@ -323,12 +434,12 @@ spec = do
       , HoleFit "pure" "forall (f :: Type -> Type) a. Applicative f => a -> f a"
       ]
       ) [
-        UseName "foo"
-      , UseName "readFile"
-      , UseName "readIO"
-      , UseName "return"
-      , UseName "fail"
-      , UseName "pure"
+        replaceName_ "_" "foo"
+      , replaceName_ "_" "readFile"
+      , replaceName_ "_" "readIO"
+      , replaceName_ "_" "return"
+      , replaceName_ "_" "fail"
+      , replaceName_ "_" "pure"
       ]
 
     test "found-hole-no-type" ["-fno-show-type-of-hole-fits"] [r|
@@ -337,7 +448,7 @@ spec = do
       foo name = do
         r <- _ name
         return r
-      |] (foundHole "FilePath -> IO String" [
+      |] (foundHole "_" "FilePath -> IO String" [
         HoleFit "foo" NoTypeSignature
       , HoleFit "readFile" NoTypeSignature
       , HoleFit "readIO" NoTypeSignature
@@ -346,12 +457,12 @@ spec = do
       , HoleFit "pure" NoTypeSignature
       ]
       ) [
-        UseName "foo"
-      , UseName "readFile"
-      , UseName "readIO"
-      , UseName "return"
-      , UseName "fail"
-      , UseName "pure"
+        replaceName_ "_" "foo"
+      , replaceName_ "_" "readFile"
+      , replaceName_ "_" "readIO"
+      , replaceName_ "_" "return"
+      , replaceName_ "_" "fail"
+      , replaceName_ "_" "pure"
       ]
 
     test "found-hole-single-line" [] [r|
@@ -359,34 +470,34 @@ spec = do
       data A
       a :: A
       a = _
-      |] (foundHole "A" [
+      |] (foundHole "_" "A" [
         HoleFit "a" "A"
       ]
       ) [
-        UseName "a"
+        replaceName_ "_" "a"
       ]
 
     test "found-hole-named" [] [r|
       data A
       a :: A
       a = _foo
-      |] (foundHole "A" [
+      |] (foundHole "_foo" "A" [
         HoleFit "a" "A"
       ]
       ) [
-        UseName "a"
+        replaceName_ "_foo" "a"
       ]
 
     test "found-hole-multiline-signature" [] [r|
       a :: String -> String -> String -> String -> String -> String -> String -> String
       a = _
-      |] (foundHole "String -> String -> String -> String -> String -> String -> String -> String" [
+      |] (foundHole "_" "String -> String -> String -> String -> String -> String -> String -> String" [
         HoleFit "a" "String -> String -> String -> String -> String -> String -> String -> String"
       , HoleFit "mempty" "forall a. Monoid a => a"
       ]
       ) [
-        UseName "a"
-      , UseName "mempty"
+        replaceName_ "_" "a"
+      , replaceName_ "_" "mempty"
       ]
 
     test "found-type-hole" [] [r|
@@ -394,8 +505,8 @@ spec = do
       foo :: FilePath -> IO _
       foo = readFile
       |] (Just $ FoundTypeHole "_" "String") [
-        UseName "String"
-      , EnableExtension "PartialTypeSignatures"
+        replaceName_ "_" "String"
+      , enableExtension_ "PartialTypeSignatures"
       ]
 
     test "found-type-hole-named" [] [r|
@@ -403,15 +514,21 @@ spec = do
       foo :: FilePath -> IO _foo
       foo = readFile
       |] (Just $ FoundTypeHole "_foo" "String") [
-        UseName "String"
-      , EnableExtension "PartialTypeSignatures"
+        replaceName_ "_foo" "String"
+      , enableExtension_ "PartialTypeSignatures"
       ]
 
     test "too-few-arguments" [] [r|
       module Foo where
       foo :: Maybe Int
       foo = Just
-      |] Nothing [AddArgument "Just"]
+      |] Nothing [
+        addArgument "Just" [r|
+      module Foo where
+      foo :: Maybe Int
+      foo = Just _
+      |]
+      ]
 
     test "use-BlockArguments" [] [r|
       {-# LANGUAGE NoBlockArguments #-}
@@ -419,34 +536,45 @@ spec = do
 
       foo :: IO ()
       foo = id do return ()
-      |] Nothing [EnableExtension "BlockArguments"]
+      |] Nothing [
+        enableExtension_ "BlockArguments"
+      ]
 
     test "use-TemplateHaskellQuotes" [] [rQ|
       module Foo where
       foo = [|23|~]
-      |] Nothing [EnableExtension "TemplateHaskellQuotes", EnableExtension "TemplateHaskell"]
+      |] Nothing [
+        enableExtension "TemplateHaskellQuotes" [rQ|
+      {-# LANGUAGE TemplateHaskellQuotes #-}
+      module Foo where
+      foo = [|23|~]
+      |]
+      , enableExtension_ "TemplateHaskell"
+      ]
 
     testWith "redundant-import" GHC_912 ["-Wall"] [r|
       module Foo where
       import Data.Maybe
       |] redundantImport [
-        RemoveImport
-      , IgnoreWarning "unused-imports"
+        removeImport [r|
+      module Foo where
+      |]
+      , ignoreWarning_ "unused-imports"
       ]
 
     testWith "redundant-import-error" GHC_912 ["-Wall", "-Werror"] [r|
       module Foo where
       import Data.Maybe
       |] redundantImport [
-        RemoveImport
-      , IgnoreWarning "unused-imports"
+        removeImport_
+      , ignoreWarning_ "unused-imports"
       ]
 
     test "unknown-import" [] [r|
       module Foo where
       import Bar
       |] (Just $ UnknownImport "Bar" []) [
-        CreateModule "test/fixtures/unknown-import/Bar.hs" "Bar"
+        createModule_ "unknown-import" "Bar.hs" "Bar"
       ]
 
     test "unknown-import-suggestion" [] [r|
@@ -455,8 +583,11 @@ spec = do
       |] (Just $ UnknownImport "Syste.IO" [
         "System.IO"
       ]) [
-        ReplaceImport "Syste.IO" "System.IO"
-      , CreateModule "test/fixtures/unknown-import-suggestion/Syste/IO.hs" "Syste.IO"
+        replaceImport "Syste.IO" "System.IO" [r|
+      module Foo where
+      import System.IO
+      |]
+      , createModule_ "unknown-import-suggestion" "Syste/IO.hs" "Syste.IO"
       ]
 
     test "unknown-import-multiline-suggestion" [] [r|
@@ -467,21 +598,31 @@ spec = do
       , "Data.Binary.Put"
       , "Data.Binary"
       ]) [
-        ReplaceImport "Data.Binary.Gut" "Data.Binary.Get"
-      , ReplaceImport "Data.Binary.Gut" "Data.Binary.Put"
-      , ReplaceImport "Data.Binary.Gut" "Data.Binary"
-      , CreateModule "test/fixtures/unknown-import-multiline-suggestion/Data/Binary/Gut.hs" "Data.Binary.Gut"
+        replaceImport_ "Data.Binary.Gut" "Data.Binary.Get"
+      , replaceImport_ "Data.Binary.Gut" "Data.Binary.Put"
+      , replaceImport_ "Data.Binary.Gut" "Data.Binary"
+      , createModule "unknown-import-multiline-suggestion" "Data/Binary/Gut.hs" "Data.Binary.Gut" [r|
+      module Data.Binary.Gut where
+      |]
       ]
 
     testWith "x-partial" GHC_912 [] [r|
       module Foo where
       foo = head
-      |] Nothing [IgnoreWarning "x-partial"]
+      |] Nothing [
+        ignoreWarning "x-partial" [r|
+      {-# OPTIONS_GHC -Wno-x-partial #-}
+      module Foo where
+      foo = head
+      |]
+      ]
 
     testWith "x-partial-error" GHC_912 ["-Werror"] [r|
       module Foo where
       foo = head
-      |] Nothing [IgnoreWarning "x-partial"]
+      |] Nothing [
+        ignoreWarning_ "x-partial"
+      ]
 
     test "non-existing" [] [r|
       |] Nothing []
@@ -530,7 +671,7 @@ spec = do
 
   describe "extractIdentifiers" do
     it "extracts identifiers" do
-      extractIdentifiers ".. `foldl' ..., `foldr' .." `shouldBe` [UseName "foldl", UseName "foldr"]
+      extractIdentifiers "foo" ".. `foldl' ..., `foldr' .." `shouldBe` [ReplaceName "foo" "foldl", ReplaceName "foo" "foldr"]
 
   describe "qualifiedName" do
     it "parses an unqualified name" do
@@ -578,13 +719,26 @@ spec = do
         ])
 
   describe "analyzeAnnotation" do
+    let
+      diagnostic :: Diagnostic
+      diagnostic = Diagnostic {
+        version = "1.0"
+      , ghcVersion = "ghc-9.10.0"
+      , span = Nothing
+      , severity = Error
+      , code = Nothing
+      , message = []
+      , hints = []
+      , reason = Nothing
+      }
+
     beforeAll getAvailableImports do
       context "with VariableNotInScope" do
         it "suggests functions" \ availableImports -> do
           let
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "getFileHash" NoTypeSignature)
-          analyzeAnnotation availableImports undefined annotation `shouldBe` [
+          analyzeAnnotation availableImports diagnostic annotation `shouldBe` [
               ImportName "GHC.Fingerprint" Unqualified "getFileHash"
             ]
 
@@ -592,7 +746,7 @@ spec = do
           let
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "show" NoTypeSignature)
-          analyzeAnnotation availableImports undefined annotation `shouldBe` [
+          analyzeAnnotation availableImports diagnostic annotation `shouldBe` [
               ImportName "Prelude" Unqualified "Show(..)"
             , ImportName "Text.Show" Unqualified "Show(..)"
             , ImportName "GHC.Show" Unqualified "Show(..)"
@@ -602,7 +756,7 @@ spec = do
           let
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "Option" NoTypeSignature)
-          analyzeAnnotation availableImports undefined annotation `shouldBe` [
+          analyzeAnnotation availableImports diagnostic annotation `shouldBe` [
               ImportName "System.Console.GetOpt" Unqualified "OptDescr(..)"
             ]
 
@@ -610,7 +764,7 @@ spec = do
           let
             annotation :: Annotation
             annotation = VariableNotInScope (RequiredVariable Unqualified "OptDescr" NoTypeSignature)
-          analyzeAnnotation availableImports undefined annotation `shouldBe` [
+          analyzeAnnotation availableImports diagnostic annotation `shouldBe` [
             ]
 
       context "with TypeNotInScope" do
@@ -618,7 +772,7 @@ spec = do
           let
             annotation :: Annotation
             annotation = TypeNotInScope Unqualified "OptDescr"
-          analyzeAnnotation availableImports undefined annotation `shouldBe` [
+          analyzeAnnotation availableImports diagnostic annotation `shouldBe` [
               ImportName "System.Console.GetOpt" Unqualified "OptDescr"
             ]
 
@@ -626,5 +780,44 @@ spec = do
           let
             annotation :: Annotation
             annotation = TypeNotInScope Unqualified "Option"
-          analyzeAnnotation availableImports undefined annotation `shouldBe` [
+          analyzeAnnotation availableImports diagnostic annotation `shouldBe` [
             ]
+
+  describe_ 'addImport do
+    it "adds the import before the first import statement" do
+      addImport "import Data.Text" (unindent [r|
+      module Foo where
+
+      -- some comment
+
+      import Data.ByteString
+      |]) `shouldBe` (unindent [r|
+      module Foo where
+
+      -- some comment
+
+      import Data.Text
+      import Data.ByteString
+      |])
+
+    context "without any import statement" do
+      it "adds the import after the module header" do
+        addImport "import Data.Text" (unindent [r|
+        module Foo where
+
+        -- some comment
+        |]) `shouldBe` (unindent [r|
+        module Foo where
+        import Data.Text
+
+        -- some comment
+        |])
+
+      context "without any module header" do
+        it "adds the import at the start of the file" do
+          addImport "import Data.Text" (unindent [r|
+          -- some comment
+          |]) `shouldBe` (unindent [r|
+          import Data.Text
+          -- some comment
+          |])

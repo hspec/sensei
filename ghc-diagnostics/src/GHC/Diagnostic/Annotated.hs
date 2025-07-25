@@ -16,7 +16,7 @@ data Solution =
   | RemoveImport
   | ReplaceImport Text Text
   | CreateModule FilePath Text
-  | UseName Text
+  | ReplaceName Text Text
   | ImportName Module Qualification Text
   | AddArgument Text
   deriving (Eq, Show)
@@ -25,9 +25,9 @@ data Annotation =
     RedundantImport
   | UnknownImport Text [Text]
   | VariableNotInScope RequiredVariable
-  | TermLevelUseOfTypeConstructor Qualification Text
+  | TermLevelUseOfTypeConstructor RequiredVariable
   | TypeNotInScope Qualification Text
-  | FoundHole Type [HoleFit]
+  | FoundHole Text Type [HoleFit]
   | FoundTypeHole Text Text
   deriving (Eq, Show)
 
