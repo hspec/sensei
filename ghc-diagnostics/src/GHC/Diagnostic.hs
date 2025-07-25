@@ -18,6 +18,7 @@ module GHC.Diagnostic (
 , extractIdentifiers
 , qualifiedName
 , analyzeAnnotation
+, addImport
 #endif
 ) where
 
@@ -65,7 +66,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
       RemoveImport -> "Remove import"
       ReplaceImport _ new -> "Use " <> Builder.fromText new
       CreateModule file _ -> "Create " <> Builder.fromString file
-      UseName name -> "Use " <> Builder.fromText name
+      ReplaceName _ name -> "Use " <> Builder.fromText name
       ImportName module_ qualification name -> importStatement module_ qualification [name] <> faint package
         where
           package = " (" <> Builder.fromText module_.package.name <> ")"
@@ -88,17 +89,16 @@ parseAnnotated getAvailableImports input = case parse input of
 
 annotate :: IO AvailableImports -> Diagnostic -> IO Annotated
 annotate getAvailableImports diagnostic = getAvailableImports >>= \ case
-  availableImports -> return $ Annotated { diagnostic, annotation, solutions }
+  availableImports -> return Annotated { diagnostic, annotation, solutions }
     where
       annotation :: Maybe Annotation
       annotation = parseAnnotation diagnostic
 
       solutions :: [Solution]
       solutions =
-           analyzeHints diagnostic.message
-        ++ analyzeMessageContext
+           analyzeMessageContext
         ++ analyzeHints diagnostic.hints
-        ++ maybe [] (analyzeAnnotation availableImports diagnostic.span) annotation
+        ++ maybe [] (analyzeAnnotation availableImports diagnostic) annotation
         ++ analyzeReason
 
       analyzeMessageContext :: [Solution]
@@ -125,11 +125,6 @@ analyzeHint hint = asum [
 
   , requiredFor GHC_910 $ prefix "Enable any of the following extensions: " <&>
       map EnableExtension . reverse . T.splitOn ", "
-
-  , prefix "Perhaps use `" <&> return . takeIdentifier
-  , prefix "Perhaps use data constructor `" <&> return . takeIdentifier
-  , prefix "Perhaps use variable `" <&> return . takeIdentifier
-  , prefix "Perhaps use one of these:" <&> extractIdentifiers
   ]
   where
     prefix :: Text -> Maybe Text
@@ -150,14 +145,28 @@ analyzeHint hint = asum [
           where
             impliedBy = stripPrefix "' extension (implied by `" >=> stripSuffix "')"
 
-    takeIdentifier :: Text -> Solution
-    takeIdentifier = UseName . T.takeWhile (/= '\'')
+analyzePerhapsUseHints :: Text -> [Text] -> [Solution]
+analyzePerhapsUseHints old = concat . mapMaybe (analyzePerhapsUseHint old)
 
-extractIdentifiers :: Text -> [Solution]
-extractIdentifiers input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ input of
+analyzePerhapsUseHint :: Text -> Text -> Maybe [Solution]
+analyzePerhapsUseHint old hint = asum [
+    prefix "Perhaps use `" <&> return . takeIdentifier
+  , prefix "Perhaps use data constructor `" <&> return . takeIdentifier
+  , prefix "Perhaps use variable `" <&> return . takeIdentifier
+  , prefix "Perhaps use one of these:" <&> extractIdentifiers old
+  ]
+  where
+    prefix :: Text -> Maybe Text
+    prefix p = stripPrefix p hint
+
+    takeIdentifier :: Text -> Solution
+    takeIdentifier = ReplaceName old . T.takeWhile (/= '\'')
+
+extractIdentifiers :: Text -> Text -> [Solution]
+extractIdentifiers old input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ input of
   (T.drop 1 -> identifier, rest)
     | T.null rest -> []
-    | otherwise -> UseName identifier : extractIdentifiers rest
+    | otherwise -> ReplaceName old identifier : extractIdentifiers old rest
 
 parseAnnotation :: Diagnostic -> Maybe Annotation
 parseAnnotation diagnostic = case diagnostic.code of
@@ -200,14 +209,16 @@ parseAnnotation diagnostic = case diagnostic.code of
       , VariableNotInScope <$> qualifiedNameNotInScope
       , VariableNotInScope <$> dataConstructorNotInScope
       , VariableNotInScope <$> dataConstructorNotInScopeInPattern
-      , termLevelUseOfTypeConstructor
+      , TermLevelUseOfTypeConstructor <$> termLevelUseOfTypeConstructor
       , typeConstructorNotInScope
       , foundHole
       , foundTypeHole
       ]
       where
         foundHole :: Maybe Annotation
-        foundHole = FoundHole <$> (prefix "Found hole: _" >>= takeTypeSignature) <*> analyzeHoleFits
+        foundHole = do
+          (name, signature) <- prefix "Found hole: " <&> T.span (not . isSpace)
+          FoundHole name <$> takeTypeSignature signature <*> analyzeHoleFits
 
         foundTypeHole :: Maybe Annotation
         foundTypeHole = prefix "Found type wildcard `" <&> breakOn "'" >>= \ case
@@ -231,9 +242,9 @@ parseAnnotation diagnostic = case diagnostic.code of
         dataConstructorNotInScopeInPattern :: Maybe RequiredVariable
         dataConstructorNotInScopeInPattern = match "Not in scope: data constructor" <&> qualifiedName
 
-        termLevelUseOfTypeConstructor :: Maybe Annotation
+        termLevelUseOfTypeConstructor :: Maybe RequiredVariable
         termLevelUseOfTypeConstructor = match "Illegal term-level use of the type constructor"
-          <&> qualified TermLevelUseOfTypeConstructor
+          <&> qualifiedName
 
         typeConstructorNotInScope :: Maybe Annotation
         typeConstructorNotInScope = match "Not in scope: type constructor or class" <&> qualified TypeNotInScope
@@ -299,18 +310,18 @@ breakOn sep = second (T.drop $ T.length sep) . T.breakOn sep
 breakOnEnd :: Text -> Text -> (Text, Text)
 breakOnEnd sep = first (T.dropEnd $ T.length sep) . T.breakOnEnd sep
 
-analyzeAnnotation :: AvailableImports -> Maybe Span -> Annotation -> [Solution]
-analyzeAnnotation availableImports span = \ case
+analyzeAnnotation :: AvailableImports -> Diagnostic -> Annotation -> [Solution]
+analyzeAnnotation availableImports diagnostic = \ case
   RedundantImport -> [RemoveImport]
   UnknownImport name suggestions -> map (ReplaceImport name) suggestions ++ createModule name
-  VariableNotInScope variable -> importName variable.qualification (Name VariableName variable.name)
-  TermLevelUseOfTypeConstructor qualification name -> importName qualification (Name VariableName name)
+  VariableNotInScope variable -> variableNotInScope variable diagnostic.hints
+  TermLevelUseOfTypeConstructor variable -> variableNotInScope variable diagnostic.message
   TypeNotInScope qualification name -> importName qualification (Name TypeName name)
-  FoundHole _ fits -> map (UseName . (.name)) fits
-  FoundTypeHole _ type_ -> [UseName type_, EnableExtension "PartialTypeSignatures"]
+  FoundHole name _ fits -> map (ReplaceName name . (.name)) fits
+  FoundTypeHole name type_ -> [ReplaceName name type_, EnableExtension "PartialTypeSignatures"]
   where
     createModule :: Text -> [Solution]
-    createModule name = case span <&> (.file) <&> List.takeWhile (not . isUpper) of
+    createModule name = case diagnostic.span <&> (.file) <&> List.takeWhile (not . isUpper) of
       Nothing -> []
       Just dir -> [CreateModule file name]
         where
@@ -324,6 +335,17 @@ analyzeAnnotation availableImports span = \ case
 
     providedByModule :: ProvidedBy -> Module
     providedByModule (ProvidedBy module_ _) = module_
+
+    variableNotInScope :: RequiredVariable -> [Text] -> [Solution]
+    variableNotInScope variable hints = useSuggestedNames variable hints ++ importVariable variable
+
+    useSuggestedNames :: RequiredVariable -> [Text] -> [Solution]
+    useSuggestedNames variable = analyzePerhapsUseHints case variable.qualification of
+      Unqualified -> variable.name
+      Qualified qualification -> T.concat [qualification, ".", variable.name]
+
+    importVariable :: RequiredVariable -> [Solution]
+    importVariable variable = importName variable.qualification (Name VariableName variable.name)
 
     importName :: Qualification -> Name -> [Solution]
     importName qualification required = map solution . sortByModule $ discardIgnored providedBy
@@ -362,7 +384,7 @@ edits annotated = case annotated.diagnostic.span of
         RemoveImport -> removeLines
         ReplaceImport old new -> ReplaceFirst span old new
         CreateModule dst name -> CreateFile dst $ T.concat ["module ", name, " where\n"]
-        UseName name -> Replace span name
+        ReplaceName old new -> ReplaceFirst span old new
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
         AddArgument _ -> Replace (Span file span.end span.end) " _"
 
@@ -405,7 +427,7 @@ applyEdit = \ case
     prependToFile file $ "{-# OPTIONS_GHC " <> flag <> " #-}\n"
 
   AddImport file module_ qualification names -> do
-    modifyFile file $ addImport (importStatement module_ qualification names)
+    modifyFile file $ addImport (Builder.toText $ importStatement module_ qualification names)
 
   Replace span substitute -> do
     modifyFile span.file $ applyReplace span.start span.end substitute
@@ -417,9 +439,12 @@ applyEdit = \ case
     createDirectoryIfMissing True (takeDirectory file)
     Utf8.writeFile file content
 
-addImport :: Builder -> Text -> Text
-addImport statement input = case break (T.isPrefixOf "import ") $ T.lines input of
-  (xs, ys) -> T.unlines $ xs ++ Builder.toText statement : ys
+addImport :: Text -> Text -> Text
+addImport statement (T.lines -> input) = T.unlines case break (T.isPrefixOf "import ") input of
+  (_, []) -> case break (T.isSuffixOf " where") input of
+    (body, []) -> statement : body
+    (header, where_ : body) -> header ++ where_ : statement : body
+  (header, body) -> header ++ statement : body
 
 importStatement :: Module -> Qualification -> [Text] -> Builder
 importStatement (Module _ (Builder.fromText -> module_)) qualification names = case qualification of
