@@ -1,0 +1,21 @@
+version: '1.1'
+ghcVersion: ghc-9.10.0
+span:
+  file: test/fixtures/non-exhaustive-pattern/Foo.hs
+  start:
+    line: 3
+    column: 9
+  end:
+    line: 4
+    column: 14
+severity: Error
+code: 62161
+message:
+- |-
+  Pattern match(es) are non-exhaustive
+  In a case alternative:
+      Patterns of type `Maybe Int' not matched: Nothing
+hints: []
+reason:
+  flags:
+  - incomplete-patterns

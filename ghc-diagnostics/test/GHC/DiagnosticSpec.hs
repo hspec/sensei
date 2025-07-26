@@ -684,6 +684,22 @@ spec = do
         , EnableExtension "TemplateHaskell"
         ]
 
+    test "non-exhaustive-pattern" ["-Wall", "-Werror"] [r|
+      module Foo where
+      foo :: Maybe Int -> Int
+      foo x = case x of
+        Just n -> n
+      |] (Just $ NonExhaustivePatternMatch "Maybe Int" ["Nothing"]) [
+        addPatterns ["Nothing"]  [r|
+      module Foo where
+      foo :: Maybe Int -> Int
+      foo x = case x of
+        Just n -> n
+        Nothing
+      |]
+      , ignoreWarning_ "incomplete-patterns"
+      ]
+
     test "non-exhaustive-patterns" ["-Wall", "-Werror"] [r|
       module Foo where
       data Foo = Foo | Bar String | Baz Int String

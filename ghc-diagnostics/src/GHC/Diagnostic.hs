@@ -178,7 +178,7 @@ parseAnnotation diagnostic = case diagnostic.code of
   _ -> analyzeMessage
   where
     parseNonExhaustivePatternMatch :: Maybe Annotation
-    parseNonExhaustivePatternMatch = head diagnostic.message >>= (T.lines >>>) \ case
+    parseNonExhaustivePatternMatch = head diagnostic.message <&> T.lines >>= \ case
       "Pattern match(es) are non-exhaustive" : xs -> case xs of
         "In a \\case alternative:" : type_ : patterns -> nonExhaustivePatternMatch type_ patterns
         "In a case alternative:" : type_ : patterns -> nonExhaustivePatternMatch type_ patterns
@@ -186,9 +186,13 @@ parseAnnotation diagnostic = case diagnostic.code of
       _ -> Nothing
 
     nonExhaustivePatternMatch :: Text -> [Text] -> Maybe Annotation
-    nonExhaustivePatternMatch type_ patterns = do
-      name <- stripPrefix "    Patterns of type `" type_ >>= stripSuffix "' not matched:"
-      return $ NonExhaustivePatternMatch name $ mapMaybe (stripPrefix "        ") patterns
+    nonExhaustivePatternMatch type_ patterns = case mapMaybe (stripPrefix "        ") patterns of
+      [] -> do
+        (name, pattern_) <- stripPrefix "    Patterns of type `" type_ <&> breakOn "' not matched: "
+        return $ NonExhaustivePatternMatch name [pattern_]
+      ps -> do
+        name <- stripPrefix "    Patterns of type `" type_ >>= stripSuffix "' not matched:"
+        return $ NonExhaustivePatternMatch name ps
 
     parseUnknownImport :: Maybe Annotation
     parseUnknownImport = case diagnostic.message of
