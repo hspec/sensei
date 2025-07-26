@@ -19,6 +19,7 @@ data Solution =
   | ReplaceName Text Text
   | ImportName Module Qualification Text
   | AddArgument Text
+  | AddPatterns [Text]
   deriving (Eq, Show)
 
 data Annotation =
@@ -29,6 +30,7 @@ data Annotation =
   | TypeNotInScope Qualification Text
   | FoundHole Text Type [HoleFit]
   | FoundTypeHole Text Text
+  | NonExhaustivePatternMatch Text [Text]
   deriving (Eq, Show)
 
 data RequiredVariable = RequiredVariable {

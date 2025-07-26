@@ -71,6 +71,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
         where
           package = " (" <> Builder.fromText module_.package.name <> ")"
       AddArgument _ -> "Insert hole: _"
+      AddPatterns _ -> "Add missing patterns"
 
     faint :: Builder -> Builder
     faint = Builder.withSGR [SetConsoleIntensity FaintIntensity]
@@ -173,8 +174,22 @@ parseAnnotation diagnostic = case diagnostic.code of
   Just 66111 -> Just RedundantImport
   Just 61948 -> parseUnknownImport
   Just 87110 -> parseUnknownImport
+  Just 62161 -> parseNonExhaustivePatternMatch
   _ -> analyzeMessage
   where
+    parseNonExhaustivePatternMatch :: Maybe Annotation
+    parseNonExhaustivePatternMatch = head diagnostic.message >>= (T.lines >>>) \ case
+      "Pattern match(es) are non-exhaustive" : xs -> case xs of
+        "In a \\case alternative:" : type_ : patterns -> nonExhaustivePatternMatch type_ patterns
+        "In a case alternative:" : type_ : patterns -> nonExhaustivePatternMatch type_ patterns
+        _ -> Nothing
+      _ -> Nothing
+
+    nonExhaustivePatternMatch :: Text -> [Text] -> Maybe Annotation
+    nonExhaustivePatternMatch type_ patterns = do
+      name <- stripPrefix "    Patterns of type `" type_ >>= stripSuffix "' not matched:"
+      return $ NonExhaustivePatternMatch name $ mapMaybe (stripPrefix "        ") patterns
+
     parseUnknownImport :: Maybe Annotation
     parseUnknownImport = case diagnostic.message of
       [] -> Nothing
@@ -319,6 +334,7 @@ analyzeAnnotation availableImports diagnostic = \ case
   TypeNotInScope qualification name -> importName qualification (Name TypeName name)
   FoundHole name _ fits -> map (ReplaceName name . (.name)) fits
   FoundTypeHole name type_ -> [ReplaceName name type_, EnableExtension "PartialTypeSignatures"]
+  NonExhaustivePatternMatch _name patterns -> [AddPatterns patterns]
   where
     createModule :: Text -> [Solution]
     createModule name = case diagnostic.span <&> (.file) <&> List.takeWhile (not . isUpper) of
@@ -386,10 +402,14 @@ edits annotated = case annotated.diagnostic.span of
         CreateModule dst name -> CreateFile dst $ T.concat ["module ", name, " where\n"]
         ReplaceName old new -> ReplaceFirst span old new
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
-        AddArgument _ -> Replace (Span file span.end span.end) " _"
+        AddArgument _ -> insertEnd " _"
+        AddPatterns patterns -> insertEnd (T.intercalate "\n" $ "" : map ("  " <>) patterns)
 
       file :: FilePath
       file = span.file
+
+      insertEnd :: Text -> Edit
+      insertEnd = Replace (Span file span.end span.end)
 
       removeLines :: Edit
       removeLines = Replace diagnosticLines ""
