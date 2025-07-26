@@ -270,6 +270,9 @@ importName_ module_ name = ExpectedSolution (ImportName module_ Unqualified name
 addArgument :: HasCallStack => Text -> String -> ExpectedSolution
 addArgument expression = ExpectedSolution (AddArgument expression) . expectFileContent
 
+addPatterns :: HasCallStack => [Text] -> String -> ExpectedSolution
+addPatterns patterns = ExpectedSolution (AddPatterns patterns) . expectFileContent
+
 spec :: Spec
 spec = do
   describe "format" do
@@ -668,6 +671,46 @@ spec = do
           EnableExtension "TemplateHaskellQuotes"
         , EnableExtension "TemplateHaskell"
         ]
+
+    test "non-exhaustive-pattern" ["-Wall", "-Werror"] [r|
+      module Foo where
+      data Foo = Foo | Bar String | Baz Int String
+
+      foo :: Foo -> Int
+      foo x = case x of
+      |] (Just $ NonExhaustivePattern "Foo" ["Foo", "Bar _", "Baz _ _"]) [
+        addPatterns ["Foo", "Bar _", "Baz _ _"]  [r|
+      module Foo where
+      data Foo = Foo | Bar String | Baz Int String
+
+      foo :: Foo -> Int
+      foo x = case x of
+        Foo
+        Bar _
+        Baz _ _
+      |]
+      , ignoreWarning_ "incomplete-patterns"
+      ]
+
+    test "non-exhaustive-lambda-pattern" ["-XLambdaCase", "-Wall", "-Werror"] [r|
+      module Foo where
+      data Foo = Foo | Bar String | Baz Int String
+
+      foo :: Foo -> Int
+      foo = \ case
+      |] (Just $ NonExhaustivePattern "Foo" ["Foo", "Bar _", "Baz _ _"]) [
+        addPatterns ["Foo", "Bar _", "Baz _ _"]  [r|
+      module Foo where
+      data Foo = Foo | Bar String | Baz Int String
+
+      foo :: Foo -> Int
+      foo = \ case
+        Foo
+        Bar _
+        Baz _ _
+      |]
+      , ignoreWarning_ "incomplete-patterns"
+      ]
 
   describe "extractIdentifiers" do
     it "extracts identifiers" do
