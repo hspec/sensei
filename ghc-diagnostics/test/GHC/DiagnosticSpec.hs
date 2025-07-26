@@ -39,9 +39,7 @@ shouldAnnotate = True
 addAnnotation :: String -> IO a -> IO a
 addAnnotation m = if shouldAnnotate then Hspec.annotate m else id
 
-test, ftest, xtest :: HasCallStack => String -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
-
-test name args code = testWith name ANY args code
+ftest, xtest :: HasCallStack => String -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
 
 ftest name args code annotation = focus . test name args code annotation
 
@@ -86,8 +84,8 @@ data ExpectedSolution = ExpectedSolution {
 , withAppliedSolution :: FilePath -> Expectation
 }
 
-testWith :: HasCallStack => String -> GHC -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
-testWith name requiredVersion extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions = it name do
+test :: HasCallStack => String -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
+test name extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions_ = it name do
   unless (B.null code) do
     ensureFile src code
 
@@ -101,33 +99,47 @@ testWith name requiredVersion extraArgs (T.encodeUtf8 . unindent -> code) annota
     Nothing -> do
       expectationFailure $ "Parsing JSON failed:\n\n" <> json
     Just annotated -> addAnnotation (separator <> json <> separator <> err <> separator) do
-      whenGhc requiredVersion do
+#if __GLASGOW_HASKELL__ >= 912
+      do
+#else
+      unless ("] [-W" `isInfixOf` stripAnsi err) do
+#endif
         format FormatConfig { showErrorContext = True, color = False } annotated.diagnostic `shouldBe` stripAnsi err
         format FormatConfig { showErrorContext = False, color = False } annotated.diagnostic `shouldBe` stripAnsi errNoContext
         format FormatConfig { showErrorContext = True, color = True } annotated.diagnostic `shouldBe` err
         format FormatConfig { showErrorContext = False, color = True } annotated.diagnostic `shouldBe` errNoContext
 
       annotated.annotation `shouldBe` annotation
-      whenGhc requiredVersion do
-        annotated.solutions `shouldBe` map (.solution) solutions
-        let
-          edits :: [Edit]
-          edits = Diagnostic.edits annotated
+      annotated.solutions `shouldBe` map (.solution) solutions
+      let
+        edits :: [Edit]
+        edits = Diagnostic.edits annotated
 
-          enumerate :: [a] -> [(Int, a)]
-          enumerate = zip [1..]
+        enumerate :: [a] -> [(Int, a)]
+        enumerate = zip [1..]
 
-
-        for_ (enumerate solutions) \ (n, solution) -> do
-          withSystemTempDirectory "hspec" \ tmp -> do
-            let
-              dst :: FilePath
-              dst = tmp </> src
-            ensureFile dst code
-            void $ tryJust (guard . isDoesNotExistError) do
-              apply tmp (Just n) edits
-            solution.withAppliedSolution dst
+      for_ (enumerate solutions) \ (n, solution) -> do
+        withSystemTempDirectory "hspec" \ tmp -> do
+          let
+            dst :: FilePath
+            dst = tmp </> src
+          ensureFile dst code
+          void $ tryJust (guard . isDoesNotExistError) do
+            apply tmp (Just n) edits
+          solution.withAppliedSolution dst
   where
+    solutions :: [ExpectedSolution]
+#if __GLASGOW_HASKELL__ >= 912
+    solutions = solutions_
+#else
+    solutions = filter supportedByGhc910 solutions_
+      where
+        supportedByGhc910 :: ExpectedSolution -> Bool
+        supportedByGhc910 = \ case
+          ExpectedSolution IgnoreWarning {} _ -> False
+          _ -> True
+#endif
+
     separator :: String
     separator = replicate 30 '*' <> "\n"
 
@@ -269,6 +281,9 @@ importName_ module_ name = ExpectedSolution (ImportName module_ Unqualified name
 
 addArgument :: HasCallStack => Text -> String -> ExpectedSolution
 addArgument expression = ExpectedSolution (AddArgument expression) . expectFileContent
+
+addPatterns :: HasCallStack => [Text] -> String -> ExpectedSolution
+addPatterns patterns = ExpectedSolution (AddPatterns patterns) . expectFileContent
 
 spec :: Spec
 spec = do
@@ -552,7 +567,7 @@ spec = do
       , enableExtension_ "TemplateHaskell"
       ]
 
-    testWith "redundant-import" GHC_912 ["-Wall"] [r|
+    test "redundant-import" ["-Wall"] [r|
       module Foo where
       import Data.Maybe
       |] redundantImport [
@@ -562,7 +577,7 @@ spec = do
       , ignoreWarning_ "unused-imports"
       ]
 
-    testWith "redundant-import-error" GHC_912 ["-Wall", "-Werror"] [r|
+    test "redundant-import-error" ["-Wall", "-Werror"] [r|
       module Foo where
       import Data.Maybe
       |] redundantImport [
@@ -606,7 +621,7 @@ spec = do
       |]
       ]
 
-    testWith "x-partial" GHC_912 [] [r|
+    test "x-partial" [] [r|
       module Foo where
       foo = head
       |] Nothing [
@@ -617,7 +632,7 @@ spec = do
       |]
       ]
 
-    testWith "x-partial-error" GHC_912 ["-Werror"] [r|
+    test "x-partial-error" ["-Werror"] [r|
       module Foo where
       foo = head
       |] Nothing [
@@ -668,6 +683,46 @@ spec = do
           EnableExtension "TemplateHaskellQuotes"
         , EnableExtension "TemplateHaskell"
         ]
+
+    test "non-exhaustive-patterns" ["-Wall", "-Werror"] [r|
+      module Foo where
+      data Foo = Foo | Bar String | Baz Int String
+
+      foo :: Foo -> Int
+      foo x = case x of
+      |] (Just $ NonExhaustivePatternMatch "Foo" ["Foo", "Bar _", "Baz _ _"]) [
+        addPatterns ["Foo", "Bar _", "Baz _ _"]  [r|
+      module Foo where
+      data Foo = Foo | Bar String | Baz Int String
+
+      foo :: Foo -> Int
+      foo x = case x of
+        Foo
+        Bar _
+        Baz _ _
+      |]
+      , ignoreWarning_ "incomplete-patterns"
+      ]
+
+    test "non-exhaustive-lambda-patterns" ["-XLambdaCase", "-Wall", "-Werror"] [r|
+      module Foo where
+      data Foo = Foo | Bar String | Baz Int String
+
+      foo :: Foo -> Int
+      foo = \ case
+      |] (Just $ NonExhaustivePatternMatch "Foo" ["Foo", "Bar _", "Baz _ _"]) [
+        addPatterns ["Foo", "Bar _", "Baz _ _"]  [r|
+      module Foo where
+      data Foo = Foo | Bar String | Baz Int String
+
+      foo :: Foo -> Int
+      foo = \ case
+        Foo
+        Bar _
+        Baz _ _
+      |]
+      , ignoreWarning_ "incomplete-patterns"
+      ]
 
   describe "extractIdentifiers" do
     it "extracts identifiers" do
