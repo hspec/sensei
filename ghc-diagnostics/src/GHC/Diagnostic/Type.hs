@@ -212,16 +212,21 @@ removeGhciSpecificHints diagnostic = diagnostic {
       _ -> input
 
 dropErrorContext :: [Text] -> [Text]
-dropErrorContext = filter \ m -> not $ or $ map ($ m) [
+dropErrorContext = filter (not . isErrorContext)
+
+isErrorContext :: Text -> Bool
+isErrorContext m = or [
     startsWith "  defined at "
   , startsWith "In an equation for "
   , startsWith "In a stmt of a "
   , startsWith "In the expression: "
   , startsWith "In the Template Haskell quotation "
   , startsWith "Probable cause: "
-  , startsWith "In the first argument of "
   , startsWith "In the type signature: "
+  , case T.words m of
+      "In" : "the" : _ : "argument" : "of" : _ -> True
+      _ -> False
   ]
   where
-    startsWith :: Text -> Text -> Bool
-    startsWith = T.isPrefixOf
+    startsWith :: Text -> Bool
+    startsWith prefix = T.isPrefixOf prefix m
