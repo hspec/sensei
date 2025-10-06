@@ -95,6 +95,11 @@ app config@AppConfig { putStrLn, dir, getLastResult } request respond = case pat
       apply dir quickFixRequest.choice edits
       noContent
 
+  ["quick-fix-all"] -> requireMethod "POST" $ do
+    edits <- concatMap Diagnostic.edits <$> getDiagnostics
+    applyAll dir edits
+    noContent
+
   ["deep-fix"] -> requireMethod "POST" $ do
     withJsonBody @DeepFixRequest \ deepFixRequest -> do
       diagnostics <- map (.diagnostic) <$> getDiagnostics

@@ -12,6 +12,7 @@ module GHC.Diagnostic (
 , Edit
 , edits
 , apply
+, applyAll
 
 #ifdef TEST
 , analyzeHint
@@ -432,6 +433,9 @@ apply dir choice = selectChoice >>> applyChoice
 
     applyChoice :: Maybe Edit -> IO ()
     applyChoice = maybe pass (relativeTo dir >>> applyEdit)
+
+applyAll :: FilePath -> [Edit] -> IO ()
+applyAll dir = mapM_ (relativeTo dir >>> applyEdit) . nub
 
 relativeTo :: FilePath -> Edit -> Edit
 relativeTo dir = \ case

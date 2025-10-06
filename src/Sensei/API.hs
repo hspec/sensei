@@ -6,6 +6,7 @@ module Sensei.API (
 , config
 , trigger
 , quickFix
+, quickFixAll
 , deepFix
 
 , Modules(..)
@@ -55,6 +56,9 @@ data QuickFixRequest = QuickFixRequest {
 
 quickFix :: FilePath -> QuickFixRequest -> IO (Bool, LazyByteString)
 quickFix = post "/quick-fix"
+
+quickFixAll :: FilePath -> IO (Bool, LazyByteString)
+quickFixAll dir = post "/quick-fix-all" dir Aeson.Null
 
 data DeepFixRequest = DeepFixRequest {
   instructions :: Maybe Instructions
