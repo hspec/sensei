@@ -73,6 +73,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
           package = " (" <> Builder.fromText module_.package.name <> ")"
       AddArgument _ -> "Insert hole: _"
       AddPatterns _ -> "Add missing patterns"
+      DeriveInstance text -> "derive instance " <> Builder.fromText text
 
     faint :: Builder -> Builder
     faint = Builder.withSGR [SetConsoleIntensity FaintIntensity]
@@ -172,12 +173,17 @@ extractIdentifiers old input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ i
 
 parseAnnotation :: Diagnostic -> Maybe Annotation
 parseAnnotation diagnostic = case diagnostic.code of
+  Just 39999 -> missingInstance
   Just 66111 -> Just RedundantImport
   Just 61948 -> parseUnknownImport
   Just 87110 -> parseUnknownImport
   Just 62161 -> parseNonExhaustivePatternMatch
   _ -> analyzeMessage
   where
+    missingInstance :: Maybe Annotation
+    missingInstance = head diagnostic.message >>= stripPrefix "No instance for `"
+      <&> MissingInstance . T.unwords . T.words . T.takeWhile (/= '\'')
+
     parseNonExhaustivePatternMatch :: Maybe Annotation
     parseNonExhaustivePatternMatch = head diagnostic.message <&> T.lines >>= \ case
       "Pattern match(es) are non-exhaustive" : xs -> case xs of
@@ -340,6 +346,7 @@ analyzeAnnotation availableImports diagnostic = \ case
   FoundHole name _ fits -> map (ReplaceName name . (.name)) fits
   FoundTypeHole name type_ -> [ReplaceName name type_, EnableExtension "PartialTypeSignatures"]
   NonExhaustivePatternMatch _name patterns -> [AddPatterns patterns]
+  MissingInstance text -> [DeriveInstance text]
   where
     createModule :: Text -> [Solution]
     createModule name = case diagnostic.span <&> (.file) <&> List.takeWhile (not . isUpper) of
@@ -390,6 +397,7 @@ data Edit =
   | AddImport FilePath Module Qualification [Text]
   | Replace Span Text
   | ReplaceFirst Span Text Text
+  | Append FilePath Text
   | CreateFile FilePath Text
   deriving (Eq, Show)
 
@@ -409,6 +417,7 @@ edits annotated = case annotated.diagnostic.span of
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
         AddArgument _ -> insertEnd " _"
         AddPatterns patterns -> insertEnd (T.intercalate "\n" $ "" : map ("  " <>) patterns)
+        DeriveInstance text -> Append file $ "\nderiving instance " <> text <> "\n"
 
       file :: FilePath
       file = span.file
@@ -444,6 +453,7 @@ relativeTo dir = \ case
   AddImport file module_ qualification names -> AddImport (dir </> file) module_ qualification names
   Replace span substitute -> Replace span { file = dir </> span.file } substitute
   ReplaceFirst span old new -> ReplaceFirst span { file = dir </> span.file } old new
+  Append file content -> Append (dir </> file) content
   CreateFile file content -> CreateFile (dir </> file) content
 
 applyEdit :: Edit -> IO ()
@@ -462,6 +472,9 @@ applyEdit = \ case
 
   ReplaceFirst span old new -> do
     modifyFile span.file $ applyReplaceFirst span.start span.end old new
+
+  Append file content -> do
+    Utf8.appendFile file content
 
   CreateFile file content -> do
     createDirectoryIfMissing True (takeDirectory file)

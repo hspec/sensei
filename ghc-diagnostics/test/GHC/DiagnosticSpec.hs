@@ -285,6 +285,9 @@ addArgument expression = ExpectedSolution (AddArgument expression) . expectFileC
 addPatterns :: HasCallStack => [Text] -> String -> ExpectedSolution
 addPatterns patterns = ExpectedSolution (AddPatterns patterns) . expectFileContent
 
+deriveInstance :: HasCallStack => Text -> String -> ExpectedSolution
+deriveInstance text = ExpectedSolution (DeriveInstance text) . expectFileContent
+
 spec :: Spec
 spec = do
   describe "format" do
@@ -658,7 +661,29 @@ spec = do
       module Foo where
 
       foo = "foo" + 23
-      |] Nothing []
+      |] (Just $ MissingInstance "Num String") [
+        deriveInstance "Num String" [r|
+      module Foo where
+
+      foo = "foo" + 23
+
+      deriving instance Num String
+      |]
+      ]
+
+    test "missing-instance" [] [r|
+      module Foo where
+      data Bar = Bar (IO ())
+        deriving Eq
+      |] (Just $ MissingInstance "Eq (IO ())") [
+        deriveInstance "Eq (IO ())" [r|
+      module Foo where
+      data Bar = Bar (IO ())
+        deriving Eq
+
+      deriving instance Eq (IO ())
+      |]
+      ]
 
   describe "analyzeHint" do
     it "detects missing extension" do
