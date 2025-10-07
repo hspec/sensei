@@ -219,12 +219,15 @@ isErrorContext m = or [
     startsWith "  defined at "
   , startsWith "In an equation for "
   , startsWith "In a stmt of a "
-  , startsWith "In the expression: "
+  , startsWith "In the expression:"
+  , startsWith "In the pattern:"
   , startsWith "In the Template Haskell quotation "
-  , startsWith "Probable cause: "
-  , startsWith "In the type signature: "
+  , startsWith "Probable cause:"
+  , startsWith "In the type signature:"
+  , startsWith "When deriving the instance for "
   , case T.words m of
       "In" : "the" : _ : "argument" : "of" : _ -> True
+      "In" : "the" : _ : "field" : "of" : "a" :  "record" : _ -> True
       _ -> False
   ]
   where
