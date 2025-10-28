@@ -285,6 +285,9 @@ addArgument expression = ExpectedSolution (AddArgument expression) . expectFileC
 addPatterns :: HasCallStack => [Text] -> String -> ExpectedSolution
 addPatterns patterns = ExpectedSolution (AddPatterns patterns) . expectFileContent
 
+addFields :: HasCallStack => [Text] -> String -> ExpectedSolution
+addFields patterns = ExpectedSolution (AddFields patterns) . expectFileContent
+
 deriveInstance :: HasCallStack => Text -> String -> ExpectedSolution
 deriveInstance text = ExpectedSolution (DeriveInstance text) . expectFileContent
 
@@ -685,30 +688,6 @@ spec = do
       |]
       ]
 
-  describe "analyzeHint" do
-    it "detects missing extension" do
-      let
-        inputs :: [Text]
-        inputs = [
-            requiredFor GHC_910 "Perhaps you intended to use BlockArguments"
-          , requiredFor GHC_912 "Perhaps you intended to use the `BlockArguments' extension"
-          ]
-      for_ inputs \ input -> analyzeHint input `shouldBe` Just [
-          EnableExtension "BlockArguments"
-        ]
-
-    it "detects missing extensions" do
-      let
-        inputs :: [Text]
-        inputs = [
-            requiredFor GHC_910 "Enable any of the following extensions: TemplateHaskell, TemplateHaskellQuotes"
-          , requiredFor GHC_912 "Perhaps you intended to use the `TemplateHaskellQuotes' extension (implied by `TemplateHaskell')"
-          ]
-      for_ inputs \ input -> analyzeHint input `shouldBe` Just [
-          EnableExtension "TemplateHaskellQuotes"
-        , EnableExtension "TemplateHaskell"
-        ]
-
     test "non-exhaustive-pattern" ["-Wall", "-Werror"] [r|
       module Foo where
       foo :: Maybe Int -> Int
@@ -764,6 +743,50 @@ spec = do
       |]
       , ignoreWarning_ "incomplete-patterns"
       ]
+
+    test "missing-fields" [] [r|
+      module Foo where
+      import GHC.IO.Exception
+      foo = IOError {}
+      |] (Just $ MissingFields ["ioe_handle", "ioe_type", "ioe_location", "ioe_description", "ioe_errno", "ioe_filename"]) [
+        addFields ["ioe_handle", "ioe_type", "ioe_location", "ioe_description", "ioe_errno", "ioe_filename"] [r|
+      module Foo where
+      import GHC.IO.Exception
+      foo = IOError {
+      , ioe_handle = undefined
+      , ioe_type = undefined
+      , ioe_location = undefined
+      , ioe_description = undefined
+      , ioe_errno = undefined
+      , ioe_filename = undefined
+      }
+      |]
+      , ignoreWarning_ "missing-fields"
+      ]
+
+  describe "analyzeHint" do
+    it "detects missing extension" do
+      let
+        inputs :: [Text]
+        inputs = [
+            requiredFor GHC_910 "Perhaps you intended to use BlockArguments"
+          , requiredFor GHC_912 "Perhaps you intended to use the `BlockArguments' extension"
+          ]
+      for_ inputs \ input -> analyzeHint input `shouldBe` Just [
+          EnableExtension "BlockArguments"
+        ]
+
+    it "detects missing extensions" do
+      let
+        inputs :: [Text]
+        inputs = [
+            requiredFor GHC_910 "Enable any of the following extensions: TemplateHaskell, TemplateHaskellQuotes"
+          , requiredFor GHC_912 "Perhaps you intended to use the `TemplateHaskellQuotes' extension (implied by `TemplateHaskell')"
+          ]
+      for_ inputs \ input -> analyzeHint input `shouldBe` Just [
+          EnableExtension "TemplateHaskellQuotes"
+        , EnableExtension "TemplateHaskell"
+        ]
 
   describe "extractIdentifiers" do
     it "extracts identifiers" do

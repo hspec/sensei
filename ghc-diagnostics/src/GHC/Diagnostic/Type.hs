@@ -223,6 +223,7 @@ isErrorContext m = or [
   , startsWith "In the pattern:"
   , startsWith "In the Template Haskell quotation "
   , startsWith "Probable cause:"
+  , startsWith "In the kind"
   , startsWith "In the type signature:"
   , startsWith "When deriving the instance for "
   , case T.words m of
