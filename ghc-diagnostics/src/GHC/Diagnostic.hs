@@ -73,6 +73,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
           package = " (" <> Builder.fromText module_.package.name <> ")"
       AddArgument _ -> "Insert hole: _"
       AddPatterns _ -> "Add missing patterns"
+      AddFields _ -> "Add missing fields"
       DeriveInstance text -> "derive instance " <> Builder.fromText text
 
     faint :: Builder -> Builder
@@ -173,6 +174,7 @@ extractIdentifiers old input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ i
 
 parseAnnotation :: Diagnostic -> Maybe Annotation
 parseAnnotation diagnostic = case diagnostic.code of
+  Just 20125 -> missingFields
   Just 39999 -> missingInstance
   Just 66111 -> Just RedundantImport
   Just 61948 -> parseUnknownImport
@@ -180,12 +182,24 @@ parseAnnotation diagnostic = case diagnostic.code of
   Just 62161 -> parseNonExhaustivePatternMatch
   _ -> analyzeMessage
   where
+    firstMessage :: Maybe Text
+    firstMessage = head diagnostic.message
+
+    missingFields :: Maybe Annotation
+    missingFields = firstMessage >>= dropFirstLine >>= mapM extractField <&> MissingFields
+      where
+        dropFirstLine :: Text -> Maybe [Text]
+        dropFirstLine = fmap (T.lines >>> drop 1) . stripPrefix "Fields of `"
+
+        extractField :: Text -> Maybe Text
+        extractField = stripPrefix "  " >=> stripSuffix " ::" . T.dropWhileEnd (/= ':')
+
     missingInstance :: Maybe Annotation
-    missingInstance = head diagnostic.message >>= stripPrefix "No instance for `"
+    missingInstance = firstMessage >>= stripPrefix "No instance for `"
       <&> MissingInstance . T.unwords . T.words . T.takeWhile (/= '\'')
 
     parseNonExhaustivePatternMatch :: Maybe Annotation
-    parseNonExhaustivePatternMatch = head diagnostic.message <&> T.lines >>= \ case
+    parseNonExhaustivePatternMatch = firstMessage <&> T.lines >>= \ case
       "Pattern match(es) are non-exhaustive" : xs -> case xs of
         "In a \\case alternative:" : type_ : patterns -> nonExhaustivePatternMatch type_ patterns
         "In a case alternative:" : type_ : patterns -> nonExhaustivePatternMatch type_ patterns
@@ -346,6 +360,7 @@ analyzeAnnotation availableImports diagnostic = \ case
   FoundHole name _ fits -> map (ReplaceName name . (.name)) fits
   FoundTypeHole name type_ -> [ReplaceName name type_, EnableExtension "PartialTypeSignatures"]
   NonExhaustivePatternMatch _name patterns -> [AddPatterns patterns]
+  MissingFields fields -> [AddFields fields]
   MissingInstance text -> [DeriveInstance text]
   where
     createModule :: Text -> [Solution]
@@ -417,13 +432,20 @@ edits annotated = case annotated.diagnostic.span of
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
         AddArgument _ -> insertEnd " _"
         AddPatterns patterns -> insertEnd . T.intercalate "\n" $ "" : map formatMissingPattern patterns
+        AddFields fields -> insertEndMinusOne . T.unlines $ "" : map formatMissingField fields
         DeriveInstance text -> Append file $ "\nderiving instance " <> text <> "\n"
 
       file :: FilePath
       file = span.file
 
       insertEnd :: Text -> Edit
-      insertEnd = Replace (Span file span.end span.end)
+      insertEnd = insertAt span.end
+
+      insertEndMinusOne :: Text -> Edit
+      insertEndMinusOne = insertAt span.end { column = span.end.column - 1 }
+
+      insertAt :: Location -> Text -> Edit
+      insertAt p = Replace (Span file p p)
 
       removeLines :: Edit
       removeLines = Replace diagnosticLines ""
@@ -436,6 +458,9 @@ edits annotated = case annotated.diagnostic.span of
 
       formatMissingPattern :: Text -> Text
       formatMissingPattern p = "  " <> p <> " -> undefined"
+
+      formatMissingField :: Text -> Text
+      formatMissingField name = ", " <> name <> " = undefined"
 
 apply :: FilePath -> Maybe Int -> [Edit] -> IO ()
 apply dir choice = selectChoice >>> applyChoice
