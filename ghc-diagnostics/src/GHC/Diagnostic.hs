@@ -416,7 +416,7 @@ edits annotated = case annotated.diagnostic.span of
         ReplaceName old new -> ReplaceFirst span old new
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
         AddArgument _ -> insertEnd " _"
-        AddPatterns patterns -> insertEnd (T.intercalate "\n" $ "" : map ("  " <>) patterns)
+        AddPatterns patterns -> insertEnd . T.intercalate "\n" $ "" : map formatMissingPattern patterns
         DeriveInstance text -> Append file $ "\nderiving instance " <> text <> "\n"
 
       file :: FilePath
@@ -433,6 +433,9 @@ edits annotated = case annotated.diagnostic.span of
         start = Location span.start.line 1
       , end = Location (span.end.line + 1) 1
       }
+
+      formatMissingPattern :: Text -> Text
+      formatMissingPattern p = "  " <> p <> " -> undefined"
 
 apply :: FilePath -> Maybe Int -> [Edit] -> IO ()
 apply dir choice = selectChoice >>> applyChoice

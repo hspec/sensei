@@ -720,7 +720,7 @@ spec = do
       foo :: Maybe Int -> Int
       foo x = case x of
         Just n -> n
-        Nothing
+        Nothing -> undefined
       |]
       , ignoreWarning_ "incomplete-patterns"
       ]
@@ -738,9 +738,9 @@ spec = do
 
       foo :: Foo -> Int
       foo x = case x of
-        Foo
-        Bar _
-        Baz _ _
+        Foo -> undefined
+        Bar _ -> undefined
+        Baz _ _ -> undefined
       |]
       , ignoreWarning_ "incomplete-patterns"
       ]
@@ -758,9 +758,9 @@ spec = do
 
       foo :: Foo -> Int
       foo = \ case
-        Foo
-        Bar _
-        Baz _ _
+        Foo -> undefined
+        Bar _ -> undefined
+        Baz _ _ -> undefined
       |]
       , ignoreWarning_ "incomplete-patterns"
       ]
