@@ -333,6 +333,16 @@ spec = do
       |]
       ]
 
+    test "not-in-scope-type-perhaps-use" [] [r|
+      module Foo where
+      data Foo a = Foo Int (Mabye a)
+      |] (Just $ TypeNotInScope Unqualified "Mabye") [
+        replaceName "Mabye" "Maybe" [r|
+      module Foo where
+      data Foo a = Foo Int (Maybe a)
+      |]
+      ]
+
     test "not-in-scope-perhaps-use-one-of-these" [] [r|
       module Foo where
       foo = fold
