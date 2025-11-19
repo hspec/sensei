@@ -175,6 +175,7 @@ extractIdentifiers old input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ i
 parseAnnotation :: Diagnostic -> Maybe Annotation
 parseAnnotation diagnostic = case diagnostic.code of
   Just 20125 -> missingFields
+  Just 95909 -> missingStrictFields
   Just 39999 -> missingInstance
   Just 66111 -> Just RedundantImport
   Just 61948 -> parseUnknownImport
@@ -191,8 +192,14 @@ parseAnnotation diagnostic = case diagnostic.code of
         dropFirstLine :: Text -> Maybe [Text]
         dropFirstLine = fmap (T.lines >>> drop 1) . stripPrefix "Fields of `"
 
-        extractField :: Text -> Maybe Text
-        extractField = stripPrefix "  " >=> stripSuffix " ::" . T.dropWhileEnd (/= ':')
+    missingStrictFields :: Maybe Annotation
+    missingStrictFields = firstMessage >>= dropFirstLine >>= mapM extractField <&> MissingFields
+      where
+        dropFirstLine :: Text -> Maybe [Text]
+        dropFirstLine = fmap (T.lines >>> drop 1) . stripPrefix "Constructor `"
+
+    extractField :: Text -> Maybe Text
+    extractField = stripPrefix "  " >=> stripSuffix " ::" . T.dropWhileEnd (/= ':')
 
     missingInstance :: Maybe Annotation
     missingInstance = firstMessage >>= stripPrefix "No instance for `"
