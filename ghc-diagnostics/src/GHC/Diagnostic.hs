@@ -208,19 +208,31 @@ parseAnnotation diagnostic = case diagnostic.code of
     parseNonExhaustivePatternMatch :: Maybe Annotation
     parseNonExhaustivePatternMatch = firstMessage <&> T.lines >>= \ case
       "Pattern match(es) are non-exhaustive" : xs -> case xs of
-        "In a \\case alternative:" : type_ : patterns -> nonExhaustivePatternMatch type_ patterns
-        "In a case alternative:" : type_ : patterns -> nonExhaustivePatternMatch type_ patterns
+        "In a \\case alternative:" : type_ : patterns -> accept type_ patterns
+        "In a case alternative:" : type_ : patterns -> accept type_ patterns
         _ -> Nothing
       _ -> Nothing
+      where
+        accept :: Text -> [Text] -> Maybe Annotation
+        accept type_ = List.span (T.isPrefixOf continuationPrefix) >>> \ case
+          (typeContinuations, patterns) -> nonExhaustivePatternMatch
+            (T.unwords $ type_ : map T.stripStart typeContinuations)
+            patterns
 
-    nonExhaustivePatternMatch :: Text -> [Text] -> Maybe Annotation
-    nonExhaustivePatternMatch type_ patterns = case mapMaybe (stripPrefix "        ") patterns of
-      [] -> do
-        (name, pattern_) <- stripPrefix "    Patterns of type `" type_ <&> breakOn "' not matched: "
-        return $ NonExhaustivePatternMatch name [pattern_]
-      ps -> do
-        name <- stripPrefix "    Patterns of type `" type_ >>= stripSuffix "' not matched:"
-        return $ NonExhaustivePatternMatch name ps
+        continuationPrefix :: Text
+        continuationPrefix = " " <> patternPrefix
+
+        patternPrefix :: Text
+        patternPrefix = "        "
+
+        nonExhaustivePatternMatch :: Text -> [Text] -> Maybe Annotation
+        nonExhaustivePatternMatch type_ patterns = case mapMaybe (stripPrefix patternPrefix) patterns of
+          [] -> do
+            (name, pattern_) <- stripPrefix "    Patterns of type `" type_ <&> breakOn "' not matched: "
+            return $ NonExhaustivePatternMatch name [pattern_]
+          ps -> do
+            name <- stripPrefix "    Patterns of type `" type_ >>= stripSuffix "' not matched:"
+            return $ NonExhaustivePatternMatch name ps
 
     parseUnknownImport :: Maybe Annotation
     parseUnknownImport = case diagnostic.message of
