@@ -774,6 +774,27 @@ spec = do
       , ignoreWarning_ "missing-fields"
       ]
 
+    test "missing-strict-fields" [] [r|
+      module Foo where
+      data User = User {
+        name :: !String
+      , age :: !Int
+      }
+      foo = User {}
+      |] (Just $ MissingFields ["name", "age"]) [
+        addFields ["name", "age"] [r|
+      module Foo where
+      data User = User {
+        name :: !String
+      , age :: !Int
+      }
+      foo = User {
+      , name = undefined
+      , age = undefined
+      }
+      |]
+      ]
+
   describe "analyzeHint" do
     it "detects missing extension" do
       let
