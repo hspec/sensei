@@ -232,7 +232,7 @@ parseAnnotation diagnostic = case diagnostic.code of
             return $ NonExhaustivePatternMatch name [pattern_]
           ps -> do
             name <- stripPrefix "    Patterns of type `" type_ >>= stripSuffix "' not matched:"
-            return $ NonExhaustivePatternMatch name ps
+            return $ NonExhaustivePatternMatch name $ filter (/= "...") ps
 
     parseUnknownImport :: Maybe Annotation
     parseUnknownImport = case diagnostic.message of
