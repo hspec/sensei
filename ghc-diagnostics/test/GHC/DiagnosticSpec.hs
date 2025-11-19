@@ -734,6 +734,27 @@ spec = do
       , ignoreWarning_ "incomplete-patterns"
       ]
 
+    test "non-exhaustive-patterns-multiline" ["-Wall", "-Werror"] [r|
+      module Foo where
+      import Prelude (Int)
+      import qualified Data.Maybe as Some.Very.Long.Hierarchical.Module.Name
+
+      foo :: Some.Very.Long.Hierarchical.Module.Name.Maybe Int -> Int
+      foo x = case x of
+      |] (Just $ NonExhaustivePatternMatch "Some.Very.Long.Hierarchical.Module.Name.Maybe Int" ["Some.Very.Long.Hierarchical.Module.Name.Nothing", "Some.Very.Long.Hierarchical.Module.Name.Just _"]) [
+        addPatterns ["Some.Very.Long.Hierarchical.Module.Name.Nothing", "Some.Very.Long.Hierarchical.Module.Name.Just _"]  [r|
+      module Foo where
+      import Prelude (Int)
+      import qualified Data.Maybe as Some.Very.Long.Hierarchical.Module.Name
+
+      foo :: Some.Very.Long.Hierarchical.Module.Name.Maybe Int -> Int
+      foo x = case x of
+        Some.Very.Long.Hierarchical.Module.Name.Nothing -> undefined
+        Some.Very.Long.Hierarchical.Module.Name.Just _ -> undefined
+      |]
+      , ignoreWarning_ "incomplete-patterns"
+      ]
+
     test "non-exhaustive-lambda-patterns" ["-XLambdaCase", "-Wall", "-Werror"] [r|
       module Foo where
       data Foo = Foo | Bar String | Baz Int String
