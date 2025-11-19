@@ -734,6 +734,29 @@ spec = do
       , ignoreWarning_ "incomplete-patterns"
       ]
 
+    test "non-exhaustive-patterns-dot-dot-dot" ["-Wall", "-Werror"] [r|
+      module Foo where
+      import GHC.IO.Exception
+
+      foo :: IOErrorType -> Int
+      foo x = case x of
+        AlreadyExists -> undefined
+      |] (Just $ NonExhaustivePatternMatch "IOErrorType" ["NoSuchThing", "ResourceBusy", "ResourceExhausted", "EOF"]) [
+        addPatterns ["NoSuchThing", "ResourceBusy", "ResourceExhausted", "EOF"]  [r|
+      module Foo where
+      import GHC.IO.Exception
+
+      foo :: IOErrorType -> Int
+      foo x = case x of
+        AlreadyExists -> undefined
+        NoSuchThing -> undefined
+        ResourceBusy -> undefined
+        ResourceExhausted -> undefined
+        EOF -> undefined
+      |]
+      , ignoreWarning_ "incomplete-patterns"
+      ]
+
     test "non-exhaustive-patterns-multiline" ["-Wall", "-Werror"] [r|
       module Foo where
       import Prelude (Int)
