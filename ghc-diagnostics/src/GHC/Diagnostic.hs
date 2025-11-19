@@ -356,7 +356,7 @@ analyzeAnnotation availableImports diagnostic = \ case
   UnknownImport name suggestions -> map (ReplaceImport name) suggestions ++ createModule name
   VariableNotInScope variable -> variableNotInScope variable diagnostic.hints
   TermLevelUseOfTypeConstructor variable -> variableNotInScope variable diagnostic.message
-  TypeNotInScope qualification name -> importName qualification (Name TypeName name)
+  TypeNotInScope qualification name -> typeNotInScope qualification name diagnostic.hints
   FoundHole name _ fits -> map (ReplaceName name . (.name)) fits
   FoundTypeHole name type_ -> [ReplaceName name type_, EnableExtension "PartialTypeSignatures"]
   NonExhaustivePatternMatch _name patterns -> [AddPatterns patterns]
@@ -380,12 +380,15 @@ analyzeAnnotation availableImports diagnostic = \ case
     providedByModule (ProvidedBy module_ _) = module_
 
     variableNotInScope :: RequiredVariable -> [Text] -> [Solution]
-    variableNotInScope variable hints = useSuggestedNames variable hints ++ importVariable variable
+    variableNotInScope variable hints = useSuggestedNames variable.qualification variable.name hints ++ importVariable variable
 
-    useSuggestedNames :: RequiredVariable -> [Text] -> [Solution]
-    useSuggestedNames variable = analyzePerhapsUseHints case variable.qualification of
-      Unqualified -> variable.name
-      Qualified qualification -> T.concat [qualification, ".", variable.name]
+    typeNotInScope :: Qualification -> Text -> [Text] -> [Solution]
+    typeNotInScope qualification name hints = useSuggestedNames qualification name hints ++ importName qualification (Name TypeName name)
+
+    useSuggestedNames :: Qualification -> Text -> [Text] -> [Solution]
+    useSuggestedNames qualification name = analyzePerhapsUseHints case qualification of
+      Unqualified -> name
+      Qualified q -> T.concat [q, ".", name]
 
     importVariable :: RequiredVariable -> [Solution]
     importVariable variable = importName variable.qualification (Name VariableName variable.name)
