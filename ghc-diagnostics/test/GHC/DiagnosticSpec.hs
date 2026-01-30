@@ -280,7 +280,7 @@ importName_ :: Module -> Text -> ExpectedSolution
 importName_ module_ name = ExpectedSolution (ImportName module_ Unqualified name) mempty
 
 addArgument :: HasCallStack => Text -> String -> ExpectedSolution
-addArgument expression = ExpectedSolution (AddArgument expression) . expectFileContent
+addArgument expression = ExpectedSolution (AddArgumentTo expression) . expectFileContent
 
 addPatterns :: HasCallStack => [Text] -> String -> ExpectedSolution
 addPatterns patterns = ExpectedSolution (AddPatterns patterns) . expectFileContent
@@ -863,10 +863,6 @@ spec = do
         , EnableExtension "TemplateHaskell"
         ]
 
-  describe "extractIdentifiers" do
-    it "extracts identifiers" do
-      extractIdentifiers "foo" ".. `foldl' ..., `foldr' .." `shouldBe` [ReplaceName "foo" "foldl", ReplaceName "foo" "foldr"]
-
   describe "qualifiedName" do
     it "parses an unqualified name" do
       qualifiedName "foo" `shouldBe` RequiredVariable Unqualified "foo" NoTypeSignature
@@ -985,14 +981,14 @@ spec = do
       -- some comment
 
       import Data.ByteString
-      |]) `shouldBe` (unindent [r|
+      |]) `shouldBe` unindent [r|
       module Foo where
 
       -- some comment
 
       import Data.Text
       import Data.ByteString
-      |])
+      |]
 
     context "without any import statement" do
       it "adds the import after the module header" do
@@ -1000,18 +996,18 @@ spec = do
         module Foo where
 
         -- some comment
-        |]) `shouldBe` (unindent [r|
+        |]) `shouldBe` unindent [r|
         module Foo where
         import Data.Text
 
         -- some comment
-        |])
+        |]
 
       context "without any module header" do
         it "adds the import at the start of the file" do
           addImport "import Data.Text" (unindent [r|
           -- some comment
-          |]) `shouldBe` (unindent [r|
+          |]) `shouldBe` unindent [r|
           import Data.Text
           -- some comment
-          |])
+          |]

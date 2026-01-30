@@ -18,7 +18,7 @@ data Solution =
   | CreateModule FilePath Text
   | ReplaceName Text Text
   | ImportName Module Qualification Text
-  | AddArgument Text
+  | AddArgumentTo Text
   | AddPatterns [Text]
   | AddFields [Text]
   | DeriveInstance Text

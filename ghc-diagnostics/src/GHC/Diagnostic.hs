@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 {-# LANGUAGE CPP #-}
 module GHC.Diagnostic (
   module Diagnostic
@@ -16,7 +17,6 @@ module GHC.Diagnostic (
 
 #ifdef TEST
 , analyzeHint
-, extractIdentifiers
 , qualifiedName
 , analyzeAnnotation
 , addImport
@@ -36,11 +36,28 @@ import qualified Data.Text as T hiding (stripPrefix, stripSuffix)
 import qualified Data.Text.IO.Utf8 as Utf8
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Attoparsec.Text (Parser)
+import qualified Data.Attoparsec.Text as A
 
 import           GHC.Diagnostic.Type as Diagnostic
 import           GHC.Diagnostic.Annotated
 import           GHC.Diagnostic.Util
 import qualified GHC.Diagnostic.Edit as Edit
+
+run :: Parser a -> Text -> Maybe a
+run p = either (\ _ -> Nothing) Just . A.parseOnly p
+
+quoted :: Parser Text
+quoted = "`" *> A.takeTill (== '\'') <* "'"
+
+typeName :: Parser Text
+typeName = T.unwords . T.words <$> quoted
+
+skipTillQuoted :: Parser ()
+skipTillQuoted = A.skipWhile (/= '`')
+
+remainingInput :: Parser Text
+remainingInput = A.takeText
 
 formatAnnotated :: FormatConfig -> Int -> Annotated -> (Int, Text)
 formatAnnotated config start annotated = case formatSolutions start annotated.solutions of
@@ -71,7 +88,7 @@ formatSolutions start = zipWith formatNumbered [start..] >>> reverse >>> \ case
       ImportName module_ qualification name -> importStatement module_ qualification [name] <> faint package
         where
           package = " (" <> Builder.fromText module_.package.name <> ")"
-      AddArgument _ -> "Insert hole: _"
+      AddArgumentTo _ -> "Insert hole: _"
       AddPatterns _ -> "Add missing patterns"
       AddFields _ -> "Add missing fields"
       DeriveInstance text -> "derive instance " <> Builder.fromText text
@@ -106,13 +123,16 @@ annotate getAvailableImports diagnostic = getAvailableImports >>= \ case
         ++ analyzeReason
 
       analyzeMessageContext :: [Solution]
-      analyzeMessageContext = mapMaybe addArgument messageLines
+      analyzeMessageContext = mapMaybe (run missingArgument) messageLines
         where
           messageLines :: [Text]
           messageLines = concatMap T.lines diagnostic.message
 
-          addArgument :: Text -> Maybe Solution
-          addArgument = fmap AddArgument . (stripPrefix "Probable cause: `" >=> stripSuffix "' is applied to too few arguments")
+          missingArgument :: Parser Solution
+          missingArgument = "Probable cause: " *> name <* " is applied to too few arguments"
+            where
+              name :: Parser Solution
+              name = AddArgumentTo <$> quoted
 
       analyzeReason :: [Solution]
       analyzeReason = case diagnostic.reason of
@@ -135,52 +155,58 @@ analyzeHint hint = asum [
     prefix p = stripPrefix p hint
 
     takeExtensions :: Text -> [Solution]
-    takeExtensions input = fromMaybe takeExtensionGhc910 takeExtensionGhc912
+    takeExtensions input = fromMaybe takeExtensionGhc910 $ run takeExtensionGhc912 input
       where
         takeExtensionGhc910 :: [Solution]
         takeExtensionGhc910 = requiredFor GHC_910 [EnableExtension input]
 
-        takeExtensionGhc912 :: Maybe [Solution]
-        takeExtensionGhc912 = map EnableExtension <$> do
-          stripPrefix "the `" input <&> T.span (/= '\'') >>= \ case
-            (extension, "' extension") -> Just [extension]
-            (implied, impliedBy -> Just extension) -> Just [implied, extension]
-            _ -> Nothing
+        takeExtensionGhc912 :: Parser [Solution]
+        takeExtensionGhc912 = (:) <$> extension <*> opt impliedBy
           where
-            impliedBy = stripPrefix "' extension (implied by `" >=> stripSuffix "')"
+            name :: Parser Solution
+            name = EnableExtension <$> quoted
+
+            extension :: Parser Solution
+            extension = "the " *> name <* " extension"
+
+            impliedBy :: Parser Solution
+            impliedBy = " (implied by " *> name <* ")"
+
+            opt :: Parser a -> Parser [a]
+            opt p = A.option [] $ return <$> p
 
 analyzePerhapsUseHints :: Text -> [Text] -> [Solution]
 analyzePerhapsUseHints old = concat . mapMaybe (analyzePerhapsUseHint old)
 
 analyzePerhapsUseHint :: Text -> Text -> Maybe [Solution]
-analyzePerhapsUseHint old hint = asum [
-    prefix "Perhaps use `" <&> return . takeIdentifier
-  , prefix "Perhaps use data constructor `" <&> return . takeIdentifier
-  , prefix "Perhaps use variable `" <&> return . takeIdentifier
-  , prefix "Perhaps use one of these:" <&> extractIdentifiers old
+analyzePerhapsUseHint old = run $ asum [
+    "Perhaps use " *> identifier_
+  , "Perhaps use data constructor " *> identifier_
+  , "Perhaps use variable " *> identifier_
+  , "Perhaps use one of these:" *> extractIdentifiers
   ]
   where
-    prefix :: Text -> Maybe Text
-    prefix p = stripPrefix p hint
+    identifier_ :: Parser [Solution]
+    identifier_ = return <$> identifier
 
-    takeIdentifier :: Text -> Solution
-    takeIdentifier = ReplaceName old . T.takeWhile (/= '\'')
+    identifier :: Parser Solution
+    identifier = ReplaceName old <$> quoted
 
-extractIdentifiers :: Text -> Text -> [Solution]
-extractIdentifiers old input = case T.breakOn "`" >>> snd >>> T.breakOn "\'" $ input of
-  (T.drop 1 -> identifier, rest)
-    | T.null rest -> []
-    | otherwise -> ReplaceName old identifier : extractIdentifiers old rest
+    extractIdentifiers :: Parser [Solution]
+    extractIdentifiers = A.many1 extractIdentifier
+
+    extractIdentifier :: Parser Solution
+    extractIdentifier = skipTillQuoted *> identifier
 
 parseAnnotation :: Diagnostic -> Maybe Annotation
 parseAnnotation diagnostic = case diagnostic.code of
   Just 20125 -> missingFields
   Just 95909 -> missingStrictFields
-  Just 39999 -> missingInstance
+  Just 39999 -> firstMessage >>= run missingInstance
   Just 66111 -> Just RedundantImport
-  Just 61948 -> parseUnknownImport
-  Just 87110 -> parseUnknownImport
-  Just 62161 -> parseNonExhaustivePatternMatch
+  Just 61948 -> firstMessage >>= run parseUnknownImport
+  Just 87110 -> firstMessage >>= run parseUnknownImport
+  Just 62161 -> firstMessage >>= run parseNonExhaustivePatternMatch
   _ -> analyzeMessage
   where
     firstMessage :: Maybe Text
@@ -190,71 +216,45 @@ parseAnnotation diagnostic = case diagnostic.code of
     missingFields = firstMessage >>= dropFirstLine >>= mapM extractField <&> MissingFields
       where
         dropFirstLine :: Text -> Maybe [Text]
-        dropFirstLine = fmap (T.lines >>> drop 1) . stripPrefix "Fields of `"
+        dropFirstLine = fmap (T.lines >>> drop 1) . stripPrefix "Fields of "
 
     missingStrictFields :: Maybe Annotation
     missingStrictFields = firstMessage >>= dropFirstLine >>= mapM extractField <&> MissingFields
       where
         dropFirstLine :: Text -> Maybe [Text]
-        dropFirstLine = fmap (T.lines >>> drop 1) . stripPrefix "Constructor `"
+        dropFirstLine = fmap (T.lines >>> drop 1) . stripPrefix "Constructor "
 
     extractField :: Text -> Maybe Text
     extractField = stripPrefix "  " >=> stripSuffix " ::" . T.dropWhileEnd (/= ':')
 
-    missingInstance :: Maybe Annotation
-    missingInstance = firstMessage >>= stripPrefix "No instance for `"
-      <&> MissingInstance . T.unwords . T.words . T.takeWhile (/= '\'')
+    missingInstance :: Parser Annotation
+    missingInstance = "No instance for " *> typeName <&> MissingInstance
 
-    parseNonExhaustivePatternMatch :: Maybe Annotation
-    parseNonExhaustivePatternMatch = firstMessage <&> T.lines >>= \ case
-      "Pattern match(es) are non-exhaustive" : xs -> case xs of
-        "In a \\case alternative:" : type_ : patterns -> accept type_ patterns
-        "In a case alternative:" : type_ : patterns -> accept type_ patterns
-        _ -> Nothing
-      _ -> Nothing
+    parseNonExhaustivePatternMatch :: Parser Annotation
+    parseNonExhaustivePatternMatch = do
+      "Pattern match(es) are non-exhaustive\n"
+      "In a " *> optional "\\" *> "case alternative:\n"
+      NonExhaustivePatternMatch <$> type_ <*> patterns
       where
-        accept :: Text -> [Text] -> Maybe Annotation
-        accept type_ = List.span (T.isPrefixOf continuationPrefix) >>> \ case
-          (typeContinuations, patterns) -> nonExhaustivePatternMatch
-            (T.unwords $ type_ : map T.stripStart typeContinuations)
-            patterns
+        type_ :: Parser Text
+        type_ = "    Patterns of type " *> typeName <* " not matched:" <* optional "\n"
 
-        continuationPrefix :: Text
-        continuationPrefix = " " <> patternPrefix
+        patterns :: Parser [Text]
+        patterns = remainingInput <&> filter (/= "...") . map T.strip . T.lines
 
-        patternPrefix :: Text
-        patternPrefix = "        "
-
-        nonExhaustivePatternMatch :: Text -> [Text] -> Maybe Annotation
-        nonExhaustivePatternMatch type_ patterns = case mapMaybe (stripPrefix patternPrefix) patterns of
-          [] -> do
-            (name, pattern_) <- stripPrefix "    Patterns of type `" type_ <&> breakOn "' not matched: "
-            return $ NonExhaustivePatternMatch name [pattern_]
-          ps -> do
-            name <- stripPrefix "    Patterns of type `" type_ >>= stripSuffix "' not matched:"
-            return $ NonExhaustivePatternMatch name $ filter (/= "...") ps
-
-    parseUnknownImport :: Maybe Annotation
-    parseUnknownImport = case diagnostic.message of
-      [] -> Nothing
-      message : _ -> case T.lines message of
-        [] -> Nothing
-        name : suggestions -> UnknownImport <$> unknownModule name <*> pure (moduleSuggestions suggestions)
+    parseUnknownImport :: Parser Annotation
+    parseUnknownImport = UnknownImport <$> name <*> suggestions
       where
-        unknownModule :: Text -> Maybe Text
-        unknownModule = stripPrefix "Could not find module `" >=> stripSuffix "'."
+        name :: Parser Text
+        name = "Could not find module " *> quoted <* ".\n"
 
-        moduleSuggestions :: [Text] -> [Text]
-        moduleSuggestions input = case input of
-          "Perhaps you meant" : suggestions -> takeSuggestions suggestions
-          (stripPrefix "Perhaps you meant " -> Just suggestion) : _ -> [takeSuggestion suggestion]
-          _ -> []
+        suggestions :: Parser [Text]
+        suggestions = A.option [] do
+          "Perhaps you meant"
+          (:) <$> (A.skipSpace *> suggestion) <*> many ("\n  " >> suggestion)
 
-        takeSuggestions :: [Text] -> [Text]
-        takeSuggestions = map takeSuggestion . takeWhile (T.isPrefixOf "  ")
-
-        takeSuggestion :: Text -> Text
-        takeSuggestion = T.dropWhile (== ' ') >>> T.takeWhile (/= ' ')
+        suggestion :: Parser Text
+        suggestion = A.takeWhile1 (not . isSpace) <* A.skipWhile (/= '\n')
 
     analyzeMessage :: Maybe Annotation
     analyzeMessage = asum . map analyzeMessageLine $ concatMap T.lines message
@@ -265,13 +265,13 @@ parseAnnotation diagnostic = case diagnostic.code of
     analyzeMessageLine :: Text -> Maybe Annotation
     analyzeMessageLine input = asum [
         VariableNotInScope <$> variableNotInScope
-      , VariableNotInScope <$> qualifiedNameNotInScope
+      , VariableNotInScope <$> run qualifiedNameNotInScope input
       , VariableNotInScope <$> dataConstructorNotInScope
-      , VariableNotInScope <$> dataConstructorNotInScopeInPattern
-      , TermLevelUseOfTypeConstructor <$> termLevelUseOfTypeConstructor
-      , typeConstructorNotInScope
+      , VariableNotInScope <$> run dataConstructorNotInScopeInPattern input
+      , TermLevelUseOfTypeConstructor <$> run termLevelUseOfTypeConstructor input
+      , run typeConstructorNotInScope input
       , foundHole
-      , foundTypeHole
+      , run foundTypeHole input
       ]
       where
         foundHole :: Maybe Annotation
@@ -279,34 +279,29 @@ parseAnnotation diagnostic = case diagnostic.code of
           (name, signature) <- prefix "Found hole: " <&> T.span (not . isSpace)
           FoundHole name <$> takeTypeSignature signature <*> analyzeHoleFits
 
-        foundTypeHole :: Maybe Annotation
-        foundTypeHole = prefix "Found type wildcard `" <&> breakOn "'" >>= \ case
-          (name, type_) -> stripPrefix " standing for `" type_ >>= stripSuffix "'" <&> FoundTypeHole name
+        foundTypeHole :: Parser Annotation
+        foundTypeHole = FoundTypeHole <$> ("Found type wildcard " *> quoted) <* " standing for " <*> quoted
 
         prefix :: Text -> Maybe Text
         prefix p = stripPrefix p input
 
-        match :: Text -> Maybe Text
-        match t = prefix (t <> " `") >>= stripSuffix "'"
-
         variableNotInScope :: Maybe RequiredVariable
         variableNotInScope = prefix "Variable not in scope: " <&> qualifiedName
 
-        qualifiedNameNotInScope :: Maybe RequiredVariable
-        qualifiedNameNotInScope = match "Not in scope:" <&> qualifiedName
+        qualifiedNameNotInScope :: Parser RequiredVariable
+        qualifiedNameNotInScope = "Not in scope: " *> quotedQualifiedName
 
         dataConstructorNotInScope :: Maybe RequiredVariable
         dataConstructorNotInScope = prefix "Data constructor not in scope: " <&> qualifiedName
 
-        dataConstructorNotInScopeInPattern :: Maybe RequiredVariable
-        dataConstructorNotInScopeInPattern = match "Not in scope: data constructor" <&> qualifiedName
+        dataConstructorNotInScopeInPattern :: Parser RequiredVariable
+        dataConstructorNotInScopeInPattern = "Not in scope: data constructor " *> quotedQualifiedName
 
-        termLevelUseOfTypeConstructor :: Maybe RequiredVariable
-        termLevelUseOfTypeConstructor = match "Illegal term-level use of the type constructor"
-          <&> qualifiedName
+        termLevelUseOfTypeConstructor :: Parser RequiredVariable
+        termLevelUseOfTypeConstructor = "Illegal term-level use of the type constructor " *> quotedQualifiedName
 
-        typeConstructorNotInScope :: Maybe Annotation
-        typeConstructorNotInScope = match "Not in scope: type constructor or class" <&> qualified TypeNotInScope
+        typeConstructorNotInScope :: Parser Annotation
+        typeConstructorNotInScope = "Not in scope: type constructor or class " *> (qualified TypeNotInScope <$> quoted)
 
     analyzeHoleFits :: Maybe [HoleFit]
     analyzeHoleFits = asum $ map validHoleFitsInclude diagnostic.message
@@ -349,6 +344,9 @@ breakOnTypeSignature :: (Text -> TypeSignature -> a) -> Text -> a
 breakOnTypeSignature c t = case breakOn " :: " t of
   (name, "") -> c name NoTypeSignature
   (name, type_) -> c name (TypeSignature $ Type type_)
+
+quotedQualifiedName :: Parser RequiredVariable
+quotedQualifiedName = qualifiedName <$> quoted
 
 qualifiedName :: Text -> RequiredVariable
 qualifiedName = breakOnTypeSignature $ qualified RequiredVariable
@@ -452,7 +450,7 @@ edits annotated = case annotated.diagnostic.span of
         CreateModule dst name -> CreateFile dst $ T.concat ["module ", name, " where\n"]
         ReplaceName old new -> ReplaceFirst span old new
         ImportName module_ qualification name -> AddImport file module_ qualification [name]
-        AddArgument _ -> insertEnd " _"
+        AddArgumentTo _ -> insertEnd " _"
         AddPatterns patterns -> insertEnd . T.intercalate "\n" $ "" : map formatMissingPattern patterns
         AddFields fields -> insertEndMinusOne . T.unlines $ "" : map formatMissingField fields
         DeriveInstance text -> Append file $ "\nderiving instance " <> text <> "\n"
