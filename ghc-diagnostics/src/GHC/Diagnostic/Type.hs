@@ -221,7 +221,7 @@ isErrorContext m = or [
   , startsWith "In a stmt of a "
   , startsWith "In the expression:"
   , startsWith "In the pattern:"
-  , startsWith "In the Template Haskell quotation "
+  , startsWith "In the Template Haskell quotation"
   , startsWith "Probable cause:"
   , startsWith "In the kind"
   , startsWith "In the type signature:"

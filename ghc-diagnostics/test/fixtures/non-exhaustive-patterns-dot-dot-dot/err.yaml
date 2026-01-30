@@ -14,7 +14,7 @@ message:
 - |-
   Pattern match(es) are non-exhaustive
   In a case alternative:
-      Patterns of type `IOErrorType' not matched:
+      Patterns of type ‘IOErrorType’ not matched:
           NoSuchThing
           ResourceBusy
           ResourceExhausted

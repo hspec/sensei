@@ -11,5 +11,5 @@ span:
 severity: Error
 code: 76037
 message:
-- 'Not in scope: data constructor `NoArg'''
+- 'Not in scope: data constructor ‘NoArg’'
 hints: []

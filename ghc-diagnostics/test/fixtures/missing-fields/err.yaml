@@ -12,7 +12,7 @@ severity: Warning
 code: 20125
 message:
 - |-
-  Fields of `IOError' not initialised:
+  Fields of ‘IOError’ not initialised:
     ioe_handle :: Maybe GHC.Internal.IO.Handle.Types.Handle
     ioe_type :: IOErrorType
     ioe_location :: String
@@ -21,7 +21,7 @@ message:
     ioe_filename :: Maybe FilePath
 - |-
   In the expression: IOError {}
-  In an equation for `foo': foo = IOError {}
+  In an equation for ‘foo’: foo = IOError {}
 hints: []
 reason:
   flags:

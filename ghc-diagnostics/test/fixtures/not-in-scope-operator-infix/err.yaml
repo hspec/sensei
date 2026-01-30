@@ -15,4 +15,4 @@ message:
   Variable not in scope:
     (&&&) :: (t0 a0 -> Int) -> (a1 -> a1) -> [a] -> (Int, [a])
 hints:
-- Perhaps use `&&' (imported from Prelude)
+- Perhaps use ‘&&’ (imported from Prelude)

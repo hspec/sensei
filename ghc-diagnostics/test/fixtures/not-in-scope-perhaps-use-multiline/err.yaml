@@ -15,5 +15,5 @@ message:
 hints:
 - |-
   Perhaps use one of these:
-    `foldl' (imported from Data.List),
-    `foldr' (imported from Data.List)
+    ‘foldl’ (imported from Data.List),
+    ‘foldr’ (imported from Data.List)

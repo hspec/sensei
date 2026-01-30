@@ -12,7 +12,7 @@ severity: Warning
 code: 63394
 message:
 - |-
-  In the use of `head'
+  In the use of ‘head’
   (imported from Prelude, but defined in GHC.Internal.List):
   "This is a partial function, it throws an error on empty lists. Use pattern matching, 'Data.List.uncons' or 'Data.Maybe.listToMaybe' instead. Consider refactoring to use "Data.List.NonEmpty"."
 hints: []

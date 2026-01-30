@@ -11,7 +11,6 @@ span:
 severity: Error
 code: 76037
 message:
-- |-
-  Not in scope: `M.catMaybes'
-  Note: No module named `M' is imported.
+- 'Not in scope: ‘M.catMaybes’'
+- 'Note: No module named ‘M’ is imported.'
 hints: []

@@ -12,7 +12,7 @@ severity: Error
 code: 61948
 message:
 - |-
-  Could not find module `Data.Binary.Gut'.
+  Could not find module ‘Data.Binary.Gut’.
   Perhaps you meant
     Data.Binary.Get (from binary-0.8.9.3)
     Data.Binary.Put (from binary-0.8.9.3)

@@ -15,4 +15,4 @@ message:
 hints:
 - |-
   Perhaps use one of these:
-    `foldl' (imported from Prelude), `foldr' (imported from Prelude)
+    ‘foldl’ (imported from Prelude), ‘foldr’ (imported from Prelude)

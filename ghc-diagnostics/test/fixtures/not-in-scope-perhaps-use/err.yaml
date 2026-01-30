@@ -13,4 +13,4 @@ code: 88464
 message:
 - 'Variable not in scope: filter_'
 hints:
-- Perhaps use `filter' (imported from Prelude)
+- Perhaps use ‘filter’ (imported from Prelude)

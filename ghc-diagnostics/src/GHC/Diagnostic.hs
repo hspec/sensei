@@ -48,13 +48,18 @@ run :: Parser a -> Text -> Maybe a
 run p = either (\ _ -> Nothing) Just . A.parseOnly p
 
 quoted :: Parser Text
-quoted = "`" *> A.takeTill (== '\'') <* "'"
+quoted = unicode <|> requiredFor GHC_912 ascii
+  where
+    unicode = "\8216" *> A.takeTill (== '\8217') <* "\8217"
+    ascii = "`" *> A.takeTill (== '\'') <* "'"
 
 typeName :: Parser Text
 typeName = T.unwords . T.words <$> quoted
 
 skipTillQuoted :: Parser ()
-skipTillQuoted = A.skipWhile (/= '`')
+skipTillQuoted = A.skipWhile \ c ->
+     c /= '\8216'
+  && requiredFor GHC_912 (c /= '`')
 
 remainingInput :: Parser Text
 remainingInput = A.takeText
@@ -298,7 +303,10 @@ parseAnnotation diagnostic = case diagnostic.code of
         dataConstructorNotInScopeInPattern = "Not in scope: data constructor " *> quotedQualifiedName
 
         termLevelUseOfTypeConstructor :: Parser RequiredVariable
-        termLevelUseOfTypeConstructor = "Illegal term-level use of the type constructor " *> quotedQualifiedName
+        termLevelUseOfTypeConstructor = asum [
+            "Data constructor out of scope: "
+          , requiredFor GHC_912 "Illegal term-level use of the type constructor "
+          ] *> quotedQualifiedName
 
         typeConstructorNotInScope :: Parser Annotation
         typeConstructorNotInScope = "Not in scope: type constructor or class " *> (qualified TypeNotInScope <$> quoted)
@@ -372,7 +380,7 @@ analyzeAnnotation availableImports diagnostic = \ case
   RedundantImport -> [RemoveImport]
   UnknownImport name suggestions -> map (ReplaceImport name) suggestions ++ createModule name
   VariableNotInScope variable -> variableNotInScope variable diagnostic.hints
-  TermLevelUseOfTypeConstructor variable -> variableNotInScope variable diagnostic.message
+  TermLevelUseOfTypeConstructor variable -> variableNotInScope variable (requiredFor GHC_912 diagnostic.message ++ diagnostic.hints)
   TypeNotInScope qualification name -> typeNotInScope qualification name diagnostic.hints
   FoundHole name _ fits -> map (ReplaceName name . (.name)) fits
   FoundTypeHole name type_ -> [ReplaceName name type_, EnableExtension "PartialTypeSignatures"]

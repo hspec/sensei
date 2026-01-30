@@ -15,5 +15,5 @@ message:
 hints:
 - |-
   Perhaps use one of these:
-    `<>' (imported from Prelude), `<$>' (imported from Prelude),
-    `<*>' (imported from Prelude)
+    ‘<>’ (imported from Prelude), ‘<$>’ (imported from Prelude),
+    ‘<*>’ (imported from Prelude)

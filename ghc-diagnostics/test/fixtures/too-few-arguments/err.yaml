@@ -15,7 +15,7 @@ message:
   Couldn't match expected type: Maybe Int
               with actual type: a0 -> Maybe a0
 - |-
-  Probable cause: `Just' is applied to too few arguments
+  Probable cause: ‘Just’ is applied to too few arguments
   In the expression: Just
-  In an equation for `foo': foo = Just
+  In an equation for ‘foo’: foo = Just
 hints: []

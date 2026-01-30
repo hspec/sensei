@@ -26,7 +26,6 @@ import Data.Map.Strict qualified as Map
 import Data.String.ANSI.Strip (stripAnsi)
 
 import "ghc-hie" GHC.Iface.Ext.Binary
-import GHC.Types.Name.Cache (initNameCache)
 
 import GHC.HIE
 import GHC.Diagnostic hiding (edits)
@@ -154,10 +153,14 @@ test name extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions_ = it
       cached "ghc" (["-XNoStarIsType", "-fno-code", "-fno-diagnostics-show-caret", "-fdiagnostics-color=always", "-fprint-error-index-links=always"] ++ args ++ extraArgs ++ [src])
 
     translate :: String -> String
+#if __GLASGOW_HASKELL__ >= 914
+    translate = id
+#else
     translate = map \ case
       '‘' -> '`'
       '’' -> '\''
       c -> c
+#endif
 
 cached :: FilePath -> [String] -> IO String
 cached program args = do
@@ -196,7 +199,7 @@ getAvailableImports_ :: IO AvailableImports
 getAvailableImports_ = unsafePerformIO do
   home <- getHomeDirectory
   files <- listHieFiles $ home </> ".local" </> "state" </> "ghc-hie-files" </> "ghc-9.12.2" </> "base"
-  nameCache <- initNameCache 'r' []
+  nameCache <- newEmptyNameCache
   hieFiles <- map hie_file_result <$> mapM (readHieFile nameCache) files
   let
     base :: Package
@@ -461,7 +464,11 @@ spec = do
       , HoleFit "readFile" "FilePath -> IO String"
       , HoleFit "readIO" "forall a. Read a => String -> IO a"
       , HoleFit "return" "forall (m :: Type -> Type) a. Monad m => a -> m a"
+#if __GLASGOW_HASKELL__ >= 914
+      , HoleFit "fail" "forall (m :: Type -> Type) a. (MonadFail m, GHC.Internal.Stack.Types.HasCallStack) => String -> m a"
+#else
       , HoleFit "fail" "forall (m :: Type -> Type) a. MonadFail m => String -> m a"
+#endif
       , HoleFit "pure" "forall (f :: Type -> Type) a. Applicative f => a -> f a"
       ]
       ) [
@@ -898,8 +905,13 @@ spec = do
         , "    Variable not in scope: <&>"
         , "    Suggested fix:"
         , "      Perhaps use one of these:"
+#if __GLASGOW_HASKELL__ >= 914
+        , "        \8216<>\8217 (imported from Prelude), \8216<$>\8217 (imported from Prelude),"
+        , "        \8216<*>\8217 (imported from Prelude)"
+#else
         , "        `<>' (imported from Prelude), `<$>' (imported from Prelude),"
         , "        `<*>' (imported from Prelude)"
+#endif
         , ""
         , solution 1 "Use <>"
         , solution 2 "Use <$>"

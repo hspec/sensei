@@ -14,7 +14,7 @@ message:
 - |-
   Pattern match(es) are non-exhaustive
   In a case alternative:
-      Patterns of type `Maybe Int' not matched: Nothing
+      Patterns of type ‘Maybe Int’ not matched: Nothing
 hints: []
 reason:
   flags:

@@ -12,6 +12,6 @@ severity: Error
 code: 87110
 message:
 - |-
-  Could not find module `Bar'.
+  Could not find module ‘Bar’.
   Use :set -v to see a list of the files searched for.
 hints: []

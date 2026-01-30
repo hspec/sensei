@@ -6,3 +6,5 @@ program-options
   ghc-options: -Werror -fhide-source-paths
 
 tests: True
+
+allow-newer: all:all

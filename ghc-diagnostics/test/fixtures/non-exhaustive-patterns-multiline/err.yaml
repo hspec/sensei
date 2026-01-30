@@ -14,8 +14,8 @@ message:
 - |-
   Pattern match(es) are non-exhaustive
   In a case alternative:
-      Patterns of type `Some.Very.Long.Hierarchical.Module.Name.Maybe
-                          Int' not matched:
+      Patterns of type ‘Some.Very.Long.Hierarchical.Module.Name.Maybe
+                          Int’ not matched:
           Some.Very.Long.Hierarchical.Module.Name.Nothing
           Some.Very.Long.Hierarchical.Module.Name.Just _
 hints: []

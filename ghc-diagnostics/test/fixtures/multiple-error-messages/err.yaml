@@ -11,8 +11,8 @@ span:
 severity: Error
 code: 39999
 message:
-- No instance for `Num String' arising from a use of `+'
+- No instance for ‘Num String’ arising from a use of ‘+’
 - |-
   In the expression: "foo" + 23
-  In an equation for `foo': foo = "foo" + 23
+  In an equation for ‘foo’: foo = "foo" + 23
 hints: []

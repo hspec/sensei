@@ -105,7 +105,7 @@ test-suite spec
     , directory
     , filepath
     , ghc
-    , ghc-hie >=0.0.2
+    , ghc-hie >=0.0.4
     , hspec >=2.9.0
     , hspec-contrib >=0.5.2
     , hspec-expectations >=0.5.2

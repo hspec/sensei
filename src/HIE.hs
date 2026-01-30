@@ -98,7 +98,7 @@ instance Monoid Result where
 
 readHieFiles :: [HieFilePath] -> ((AvailableImports -> AvailableImports) -> IO ()) -> IO Result
 readHieFiles files updateAvailableImports = do
-  nameCache <- initNameCache 'r' []
+  nameCache <- newEmptyNameCache
   (duration, errors) <- timeAction $ catMaybes <$> for files \ file -> do
     try (readExports nameCache updateAvailableImports file) >>= \ case
       Left err -> return . Just $ formatException file err

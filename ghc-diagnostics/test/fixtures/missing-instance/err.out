@@ -1,6 +1,6 @@
 test/fixtures/missing-instance/Foo.hs:3:12: error: [GHC-39999]
-    • No instance for `Eq (IO ())'
-        arising from the first field of `Bar' (type `IO ()')
+    • No instance for ‘Eq (IO ())’
+        arising from the first field of ‘Bar’ (type ‘IO ()’)
       Possible fix:
         use a standalone 'deriving instance' declaration,
           so you can specify the instance context yourself

@@ -12,7 +12,7 @@ severity: Error
 code: 88464
 message:
 - |-
-  Found type wildcard `_foo' standing for `String'
+  Found type wildcard ‘_foo’ standing for ‘String’
   To use the inferred type, enable PartialTypeSignatures
 - 'In the type signature: foo :: FilePath -> IO _foo'
 hints: []

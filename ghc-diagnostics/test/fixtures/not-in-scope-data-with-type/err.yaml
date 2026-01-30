@@ -13,4 +13,4 @@ code: 88464
 message:
 - 'Data constructor not in scope: Foo :: Int -> Maybe Int'
 hints:
-- Perhaps use variable `foo' (line 4)
+- Perhaps use variable ‘foo’ (line 4)

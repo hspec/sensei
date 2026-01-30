@@ -56,7 +56,7 @@ tests:
       - raw-strings-qq
       - template-haskell
       - ghc
-      - ghc-hie >= 0.0.2
+      - ghc-hie >= 0.0.4
       - temporary
       - strip-ansi >= 0.0.1
       - process

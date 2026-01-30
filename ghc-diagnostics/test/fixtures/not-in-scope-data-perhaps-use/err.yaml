@@ -13,4 +13,4 @@ code: 88464
 message:
 - 'Variable not in scope: someOption'
 hints:
-- Perhaps use data constructor `SomeOption' (line 2)
+- Perhaps use data constructor ‘SomeOption’ (line 2)
