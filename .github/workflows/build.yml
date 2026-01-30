@@ -27,10 +27,10 @@ jobs:
         ghc:
           - '9.8'
           - '9.10'
-          - 'latest'
+          - '9.12'
         include:
           - os: macos-latest
-            ghc: system
+            ghc: '9.12'
     steps:
       - uses: actions/checkout@v4
 

@@ -21,6 +21,7 @@ default-extensions:
 
 dependencies:
   - aeson
+  - attoparsec
   - ansi-terminal
   - base >= 4.18 && < 5
   - bytestring >= 0.11
