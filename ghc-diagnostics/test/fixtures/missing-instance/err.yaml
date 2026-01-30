@@ -12,8 +12,8 @@ severity: Error
 code: 39999
 message:
 - |-
-  No instance for `Eq (IO ())'
-    arising from the first field of `Bar' (type `IO ()')
+  No instance for ‘Eq (IO ())’
+    arising from the first field of ‘Bar’ (type ‘IO ()’)
   Possible fix:
     use a standalone 'deriving instance' declaration,
       so you can specify the instance context yourself

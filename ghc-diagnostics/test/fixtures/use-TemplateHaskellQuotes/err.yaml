@@ -12,9 +12,9 @@ severity: Error
 code: 62558
 message:
 - Syntax error on [| 23 |]
-- In the Template Haskell quotation [| 23 |]
+- 'In the Template Haskell quotation: [| 23 |]'
 hints:
 - |-
-  Perhaps you intended to use the `TemplateHaskellQuotes' extension (implied by `TemplateHaskell')
+  Perhaps you intended to use the ‘TemplateHaskellQuotes’ extension (implied by ‘TemplateHaskell’)
   You may enable this language extension in GHCi with:
     :set -XTemplateHaskellQuotes

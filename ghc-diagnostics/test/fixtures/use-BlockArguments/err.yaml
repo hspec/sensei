@@ -17,6 +17,6 @@ message:
 hints:
 - Use parentheses.
 - |-
-  Perhaps you intended to use the `BlockArguments' extension
+  Perhaps you intended to use the ‘BlockArguments’ extension
   You may enable this language extension in GHCi with:
     :set -XBlockArguments

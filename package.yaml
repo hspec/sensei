@@ -54,7 +54,7 @@ dependencies:
   - clock
   - double-conversion
   - ghc
-  - ghc-hie >= 0.0.2
+  - ghc-hie >= 0.0.4
   - Cabal-syntax
   - strip-ansi
 

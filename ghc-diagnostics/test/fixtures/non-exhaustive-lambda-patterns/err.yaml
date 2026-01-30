@@ -14,7 +14,7 @@ message:
 - |-
   Pattern match(es) are non-exhaustive
   In a \case alternative:
-      Patterns of type `Foo' not matched:
+      Patterns of type ‘Foo’ not matched:
           Foo
           Bar _
           Baz _ _

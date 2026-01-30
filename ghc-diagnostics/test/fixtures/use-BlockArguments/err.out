@@ -3,5 +3,5 @@ test/fixtures/use-BlockArguments/Foo.hs:5:10: error: [GHC-52095]
         do return ()
     Suggested fixes:
       • Use parentheses.
-      • Perhaps you intended to use the `BlockArguments' extension
+      • Perhaps you intended to use the ‘BlockArguments’ extension
 

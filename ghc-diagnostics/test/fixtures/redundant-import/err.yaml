@@ -12,8 +12,8 @@ severity: Warning
 code: 66111
 message:
 - |-
-  The import of `Data.Maybe' is redundant
-    except perhaps to import instances from `Data.Maybe'
+  The import of ‘Data.Maybe’ is redundant
+    except perhaps to import instances from ‘Data.Maybe’
   To import instances alone, use: import Data.Maybe()
 hints: []
 reason:

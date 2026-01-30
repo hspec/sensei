@@ -1,4 +1,4 @@
 test/fixtures/not-in-scope-perhaps-use/Foo.hs:2:7: error: [GHC-88464]
     Variable not in scope: filter_
-    Suggested fix: Perhaps use `filter' (imported from Prelude)
+    Suggested fix: Perhaps use ‘filter’ (imported from Prelude)
 

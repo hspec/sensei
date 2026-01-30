@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module TriggerSpec (spec) where
 
 import           Helper
@@ -13,17 +12,21 @@ import           Trigger hiding (trigger, triggerAll)
 import qualified Trigger
 
 normalize :: String -> [String]
-normalize = normalizeTiming . lines . forGhc9dot4
+normalize = forGhc9dot4 >>> lines >>> map (forGhc9dot12 >>> normalizeTiming)
   where
-    normalizeTiming :: [String] -> [String]
+    normalizeTiming :: String -> String
     normalizeTiming = normalizeLine "Finished in "
 
-    normalizeLine :: String -> [String] -> [String]
-    normalizeLine message = map f
-      where
-        f line
-          | message `isPrefixOf` line = message ++ "..."
-          | otherwise = line
+    normalizeLine :: String -> String -> String
+    normalizeLine message line
+      | message `isPrefixOf` line = message ++ "..."
+      | otherwise = line
+
+    forGhc9dot12 :: String -> String
+    forGhc9dot12 = requiredFor GHC_912 \ case
+      "[1 of 1] Compiling Spec" -> "[1 of 1] Compiling Spec[main]"
+      line | Just rest <- stripPrefix "[1 of 1] Compiling Spec " line -> "[1 of 1] Compiling Spec[main] " <> rest
+      line -> line
 
     forGhc9dot4 :: String -> String
     forGhc9dot4 = requiredFor GHC_904 $ unpack
@@ -168,7 +171,7 @@ spec = do
             fitterNotNull = filter (not . null)
 
           (fmap (map stripAnsi . fitterNotNull) <$> (trigger session >> trigger session)) `shouldReturn` (Failure, [
-              "[1 of 1] Compiling Spec"
+              "[1 of 1] Compiling Spec[main]"
             , "Spec.hs:9:7: error: [GHC-88464] Variable not in scope: bar"
             , "RELOADING FAILED"
             ])
@@ -179,7 +182,7 @@ spec = do
           writeFile name failingSpec
           (Failure, xs) <- trigger session
           xs `shouldBe` [
-              "[1 of 1] Compiling Spec [Source file changed]"
+              "[1 of 1] Compiling Spec[main] [Source file changed]"
             , withColor Green "RELOADING SUCCEEDED"
             , ""
             , "foo [✔]"
@@ -222,7 +225,7 @@ spec = do
           _ <- trigger session
           writeFile name passingSpec
           trigger session `shouldReturn` (Success, [
-              "[1 of 1] Compiling Spec [Source file changed]"
+              "[1 of 1] Compiling Spec[main] [Source file changed]"
             , withColor Green "RELOADING SUCCEEDED"
             , ""
             , "bar [✔]"

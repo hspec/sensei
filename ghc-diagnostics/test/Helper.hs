@@ -3,8 +3,6 @@
 module Helper (
   module Imports
 
-, whenGhc
-
 , encodeUtf8
 , decodeUtf8
 , ensureFile
@@ -37,17 +35,6 @@ import           System.Directory
 import           System.Process as Imports (readProcess, callProcess, callCommand)
 
 import           GHC.Diagnostic.Annotated
-
-whenGhc :: GHC -> IO () -> IO ()
-whenGhc required action = case required of
-  ANY -> action
-  GHC_910 -> action
-  GHC_912 -> do
-#if __GLASGOW_HASKELL__ >= 912
-    action
-#else
-    pass
-#endif
 
 encodeUtf8 :: String -> ByteString
 encodeUtf8 = T.encodeUtf8 . pack

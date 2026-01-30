@@ -11,6 +11,6 @@ span:
 severity: Error
 code: 76037
 message:
-- 'Not in scope: type constructor or class `Mabye'''
+- 'Not in scope: type constructor or class ‘Mabye’'
 hints:
-- Perhaps use `Maybe' (imported from Prelude)
+- Perhaps use ‘Maybe’ (imported from Prelude)

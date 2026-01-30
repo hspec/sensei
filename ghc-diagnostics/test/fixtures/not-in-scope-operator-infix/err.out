@@ -1,5 +1,5 @@
 test/fixtures/not-in-scope-operator-infix/Foo.hs:3:14: error: [GHC-88464]
     Variable not in scope:
       (&&&) :: (t0 a0 -> Int) -> (a1 -> a1) -> [a] -> (Int, [a])
-    Suggested fix: Perhaps use `&&' (imported from Prelude)
+    Suggested fix: Perhaps use ‘&&’ (imported from Prelude)
 

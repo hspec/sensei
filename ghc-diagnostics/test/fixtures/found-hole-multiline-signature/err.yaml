@@ -21,7 +21,7 @@ message:
          -> String
          -> String
          -> String
-- 'In an equation for `a'': a = _'
+- 'In an equation for ‘a’: a = _'
 - |-
   Relevant bindings include
     a :: String
@@ -52,6 +52,6 @@ message:
                     -> String
                     -> String
                     -> String)
-      (imported from `Prelude' at test/fixtures/found-hole-multiline-signature/Foo.hs:1:1
-       (and originally defined in `GHC.Internal.Base'))
+      (imported from ‘Prelude’ at test/fixtures/found-hole-multiline-signature/Foo.hs:1:1
+       (and originally defined in ‘GHC.Internal.Base’))
 hints: []

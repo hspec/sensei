@@ -11,12 +11,13 @@ span:
 severity: Error
 code: 1928
 message:
-- Illegal term-level use of the type constructor `Foo'
-- '  defined at test/fixtures/term-level-use-of-type-constructor/Foo.hs:2:1'
 - |-
-  Perhaps use one of these:
-    variable `foo' (line 3), `Fooa' (line 2), `Fooi' (line 2)
+  Data constructor out of scope: ‘Foo’.
+  NB: the type constructor ‘Foo’ cannot appear in this position.
 - |-
   In the expression: Foo
-  In an equation for `foo': foo = Foo
-hints: []
+  In an equation for ‘foo’: foo = Foo
+hints:
+- |-
+  Perhaps use one of these:
+    variable ‘foo’ (line 3), ‘Fooa’ (line 2), ‘Fooi’ (line 2)

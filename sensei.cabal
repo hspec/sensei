@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.38.1.
+-- This file has been generated from package.yaml by hpack version 0.39.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -79,7 +79,7 @@ library
     , fsnotify ==0.4.*
     , ghc
     , ghc-diagnostics
-    , ghc-hie >=0.0.2
+    , ghc-hie >=0.0.4
     , http-client >=0.5.0
     , http-conduit
     , http-media
@@ -159,7 +159,7 @@ executable seito
     , fsnotify ==0.4.*
     , ghc
     , ghc-diagnostics
-    , ghc-hie >=0.0.2
+    , ghc-hie >=0.0.4
     , http-client >=0.5.0
     , http-conduit
     , http-media
@@ -239,7 +239,7 @@ executable sensei
     , fsnotify ==0.4.*
     , ghc
     , ghc-diagnostics
-    , ghc-hie >=0.0.2
+    , ghc-hie >=0.0.4
     , http-client >=0.5.0
     , http-conduit
     , http-media
@@ -342,7 +342,7 @@ test-suite spec
     , fsnotify ==0.4.*
     , ghc
     , ghc-diagnostics
-    , ghc-hie >=0.0.2
+    , ghc-hie >=0.0.4
     , hspec >=2.9.0
     , hspec-contrib >=0.5.2
     , hspec-wai

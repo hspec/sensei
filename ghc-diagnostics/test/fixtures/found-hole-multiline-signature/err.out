@@ -8,7 +8,7 @@ test/fixtures/found-hole-multiline-signature/Foo.hs:2:5: error: [GHC-88464]
              -> String
              -> String
              -> String
-    • In an equation for `a': a = _
+    • In an equation for ‘a’: a = _
     • Relevant bindings include
         a :: String
              -> String
@@ -38,6 +38,6 @@ test/fixtures/found-hole-multiline-signature/Foo.hs:2:5: error: [GHC-88464]
                         -> String
                         -> String
                         -> String)
-          (imported from `Prelude' at test/fixtures/found-hole-multiline-signature/Foo.hs:1:1
-           (and originally defined in `GHC.Internal.Base'))
+          (imported from ‘Prelude’ at test/fixtures/found-hole-multiline-signature/Foo.hs:1:1
+           (and originally defined in ‘GHC.Internal.Base’))
 

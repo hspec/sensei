@@ -1,7 +1,7 @@
 test/fixtures/found-hole-named/Foo.hs:3:5: error: [GHC-88464]
     • Found hole: _foo :: A
-      Or perhaps `_foo' is mis-spelled, or not in scope
-    • In an equation for `a': a = _foo
+      Or perhaps ‘_foo’ is mis-spelled, or not in scope
+    • In an equation for ‘a’: a = _foo
     • Relevant bindings include
         a :: A (bound at test/fixtures/found-hole-named/Foo.hs:3:1)
       Valid hole fits include

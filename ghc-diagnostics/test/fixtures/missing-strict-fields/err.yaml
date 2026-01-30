@@ -12,10 +12,10 @@ severity: Error
 code: 95909
 message:
 - |-
-  Constructor `User' does not have the required strict field(s):
+  Constructor ‘User’ does not have the required strict field(s):
     name :: String
     age :: Int
 - |-
   In the expression: User {}
-  In an equation for `foo': foo = User {}
+  In an equation for ‘foo’: foo = User {}
 hints: []
