@@ -1,0 +1,3 @@
+fixtures/not-in-scope-pattern/Foo.hs:3:3: error: [GHC-76037]
+    Not in scope: data constructor ‘NoArg’
+

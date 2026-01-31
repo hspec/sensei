@@ -1,4 +1,0 @@
-test/fixtures/not-in-scope-data-with-type/Foo.hs:4:7: error: [GHC-88464]
-    Data constructor not in scope: Foo :: Int -> Maybe Int
-    Suggested fix: Perhaps use variable ‘foo’ (line 4)
-

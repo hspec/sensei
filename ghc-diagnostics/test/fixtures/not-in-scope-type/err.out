@@ -1,3 +1,0 @@
-test/fixtures/not-in-scope-type/Foo.hs:2:8: error: [GHC-76037]
-    Not in scope: type constructor or class ‘Map’
-

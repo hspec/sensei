@@ -1,8 +1,0 @@
-test/fixtures/non-exhaustive-patterns/Foo.hs:5:9: error: [GHC-62161] [-Wincomplete-patterns, Werror=incomplete-patterns]
-    Pattern match(es) are non-exhaustive
-    In a case alternative:
-        Patterns of type ‘Foo’ not matched:
-            Foo
-            Bar _
-            Baz _ _
-

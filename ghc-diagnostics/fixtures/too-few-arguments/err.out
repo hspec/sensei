@@ -1,0 +1,7 @@
+fixtures/too-few-arguments/Foo.hs:3:7: error: [GHC-83865]
+    • Couldn't match expected type: Maybe Int
+                  with actual type: a0 -> Maybe a0
+    • Probable cause: ‘Just’ is applied to too few arguments
+      In the expression: Just
+      In an equation for ‘foo’: foo = Just
+

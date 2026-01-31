@@ -1,9 +1,0 @@
-test/fixtures/term-level-use-of-type-constructor/Foo.hs:3:7: error: [GHC-01928]
-    • Data constructor out of scope: ‘Foo’.
-      NB: the type constructor ‘Foo’ cannot appear in this position.
-    • In the expression: Foo
-      In an equation for ‘foo’: foo = Foo
-    Suggested fix:
-      Perhaps use one of these:
-        variable ‘foo’ (line 3), ‘Fooa’ (line 2), ‘Fooi’ (line 2)
-

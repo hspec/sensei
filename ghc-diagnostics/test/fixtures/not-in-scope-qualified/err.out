@@ -1,4 +1,0 @@
-test/fixtures/not-in-scope-qualified/Foo.hs:2:7: error: [GHC-76037]
-    • Not in scope: ‘M.catMaybes’
-    • Note: No module named ‘M’ is imported.
-

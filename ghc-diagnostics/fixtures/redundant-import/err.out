@@ -1,0 +1,5 @@
+fixtures/redundant-import/Foo.hs:2:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Maybe’ is redundant
+      except perhaps to import instances from ‘Data.Maybe’
+    To import instances alone, use: import Data.Maybe()
+
