@@ -1,0 +1,9 @@
+[;1mfixtures/missing-fields/Foo.hs:3:7: [;1m[35mwarning[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-20125\GHC-20125]8;;\] [[;1m[35m-Wmissing-fields[0m[0m[;1m][0m[0m[;1m
+    Fields of `IOError' not initialised:
+      ioe_handle :: Maybe GHC.Internal.IO.Handle.Types.Handle
+      ioe_type :: IOErrorType
+      ioe_location :: String
+      ioe_description :: String
+      ioe_errno :: Maybe GHC.Internal.Foreign.C.Types.CInt
+      ioe_filename :: Maybe FilePath[0m[0m
+

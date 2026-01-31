@@ -28,8 +28,7 @@ head :: [a] -> Maybe a
 head = listToMaybe
 
 data GHC =
-    ANY
-  | GHC_910
+    GHC_910
   | GHC_912
   | GHC_914
   deriving (Eq, Ord, Bounded)

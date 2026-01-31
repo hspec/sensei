@@ -1,0 +1,4 @@
+[;1mfixtures/not-in-scope-type-qualified/Foo.hs:2:8: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-76037\GHC-76037]8;;\][0m[0m[;1m
+    • Not in scope: type constructor or class ‘My.Map’
+    • Note: No module named ‘My’ is imported.[0m[0m
+

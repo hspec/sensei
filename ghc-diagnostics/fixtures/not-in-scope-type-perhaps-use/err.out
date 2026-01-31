@@ -1,4 +1,0 @@
-fixtures/not-in-scope-type-perhaps-use/Foo.hs:2:23: error: [GHC-76037]
-    Not in scope: type constructor or class ‘Mabye’
-    Suggested fix: Perhaps use ‘Maybe’ (imported from Prelude)
-

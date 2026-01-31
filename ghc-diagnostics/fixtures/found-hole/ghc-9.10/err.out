@@ -1,0 +1,37 @@
+[;1mfixtures/found-hole/Foo.hs:5:8: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-88464\GHC-88464]8;;\][0m[0m[;1m
+    • Found hole: _ :: FilePath -> IO String
+    • In a stmt of a 'do' block: r <- _ name
+      In the expression:
+        do r <- _ name
+           return r
+      In an equation for `foo':
+          foo name
+            = do r <- _ name
+                 return r
+    • Relevant bindings include
+        name :: FilePath (bound at fixtures/found-hole/Foo.hs:4:5)
+        foo :: FilePath -> IO String
+          (bound at fixtures/found-hole/Foo.hs:4:1)
+      Valid hole fits include
+        foo :: FilePath -> IO String
+          (bound at fixtures/found-hole/Foo.hs:4:1)
+        readFile :: FilePath -> IO String
+          (imported from `Prelude' at fixtures/found-hole/Foo.hs:2:1-28
+           (and originally defined in `GHC.Internal.System.IO'))
+        readIO :: forall a. Read a => String -> IO a
+          with readIO @String
+          (imported from `Prelude' at fixtures/found-hole/Foo.hs:2:1-28
+           (and originally defined in `GHC.Internal.System.IO'))
+        return :: forall (m :: Type -> Type) a. Monad m => a -> m a
+          with return @IO @FilePath
+          (imported from `Prelude' at fixtures/found-hole/Foo.hs:2:1-28
+           (and originally defined in `GHC.Internal.Base'))
+        pure :: forall (f :: Type -> Type) a. Applicative f => a -> f a
+          with pure @IO @FilePath
+          (imported from `Prelude' at fixtures/found-hole/Foo.hs:2:1-28
+           (and originally defined in `GHC.Internal.Base'))
+        mempty :: forall a. Monoid a => a
+          with mempty @(FilePath -> IO String)
+          (imported from `Prelude' at fixtures/found-hole/Foo.hs:2:1-28
+           (and originally defined in `GHC.Internal.Base'))[0m[0m
+

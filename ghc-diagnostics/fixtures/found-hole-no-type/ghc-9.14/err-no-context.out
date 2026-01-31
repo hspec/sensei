@@ -1,0 +1,29 @@
+[;1mfixtures/found-hole-no-type/Foo.hs:4:8: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-88464\GHC-88464]8;;\][0m[0m[;1m
+    • Found hole: _ :: FilePath -> IO String
+    • Relevant bindings include
+        name :: FilePath (bound at fixtures/found-hole-no-type/Foo.hs:3:5)
+        foo :: FilePath -> IO String
+          (bound at fixtures/found-hole-no-type/Foo.hs:3:1)
+      Valid hole fits include
+        foo (bound at fixtures/found-hole-no-type/Foo.hs:3:1)
+        readFile
+          (imported from ‘Prelude’ at fixtures/found-hole-no-type/Foo.hs:1:8-10
+           (and originally defined in ‘GHC.Internal.System.IO’))
+        readIO
+          with readIO @String
+          (imported from ‘Prelude’ at fixtures/found-hole-no-type/Foo.hs:1:8-10
+           (and originally defined in ‘GHC.Internal.System.IO’))
+        return
+          with return @IO @FilePath
+          (imported from ‘Prelude’ at fixtures/found-hole-no-type/Foo.hs:1:8-10
+           (and originally defined in ‘GHC.Internal.Base’))
+        fail
+          with fail @IO @String
+          (imported from ‘Prelude’ at fixtures/found-hole-no-type/Foo.hs:1:8-10
+           (and originally defined in ‘GHC.Internal.Control.Monad.Fail’))
+        pure
+          with pure @IO @FilePath
+          (imported from ‘Prelude’ at fixtures/found-hole-no-type/Foo.hs:1:8-10
+           (and originally defined in ‘GHC.Internal.Base’))
+        (Some hole fits suppressed; use -fmax-valid-hole-fits=N or -fno-max-valid-hole-fits)[0m[0m
+

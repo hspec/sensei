@@ -2,11 +2,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Helper (
   module Imports
-
 , encodeUtf8
 , decodeUtf8
 , ensureFile
-, getCacheDirectory
+
+, md5sum
+, tryReadFile
 
 , shouldBe
 , shouldReturn
@@ -14,6 +15,7 @@ module Helper (
 , describe_
 ) where
 
+import System.IO.Unsafe (unsafePerformIO)
 import           Imports
 
 import qualified Language.Haskell.TH.Syntax as TH
@@ -26,13 +28,14 @@ import qualified Test.Hspec as Hspec
 import           Test.Hspec.Contrib.Mocks.V1 as Imports
 import           Test.Mockery.Directory as Imports (touch)
 
-import           System.Environment
-import           System.IO.Temp (getCanonicalTemporaryDirectory, createTempDirectory)
-
 import qualified Data.ByteString as ByteString
 import qualified Data.Text.Encoding as T
 import           System.Directory
 import           System.Process as Imports (readProcess, callProcess, callCommand)
+
+import           Foreign (withForeignPtr)
+import           GHC.Fingerprint
+import           Data.ByteString.Internal (ByteString(..))
 
 import           GHC.Diagnostic.Annotated
 
@@ -41,6 +44,9 @@ encodeUtf8 = T.encodeUtf8 . pack
 
 decodeUtf8 :: ByteString -> String
 decodeUtf8 = unpack . T.decodeUtf8Lenient
+
+md5sum :: ByteString -> ByteString
+md5sum (BS p n) = encodeUtf8 . show . unsafePerformIO $ withForeignPtr p $ flip fingerprintData n
 
 tryReadFile :: FilePath -> IO (Maybe ByteString)
 tryReadFile = fmap (either (const Nothing) Just) . tryJust (guard . isDoesNotExistError) . ByteString.readFile
@@ -51,16 +57,6 @@ ensureFile name new = do
   old <- tryReadFile name
   unless (old == Just new) $ do
     ByteString.writeFile name new
-
-getCacheDirectory :: IO String
-getCacheDirectory = lookupEnv "SENSEI_TEST_CACHE" >>= \ case
-  Nothing -> do
-    tmp <- getCanonicalTemporaryDirectory
-    dir <- createTempDirectory tmp "sensei-tests"
-    setEnv "SENSEI_TEST_CACHE" dir
-    return dir
-  Just dir -> do
-    return dir
 
 infixr 0 `shouldBe`, `shouldReturn`
 

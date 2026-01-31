@@ -1,0 +1,5 @@
+[;1mfixtures/use-TemplateHaskellQuotes/Foo.hs:2:7: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-62558\GHC-62558]8;;\][0m[0m[;1m
+    Syntax error on [| 23 |]
+    Suggested fix:
+      Perhaps you intended to use the ‘TemplateHaskellQuotes’ extension (implied by ‘TemplateHaskell’)[0m[0m
+

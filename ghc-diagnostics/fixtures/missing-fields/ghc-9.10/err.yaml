@@ -1,0 +1,25 @@
+version: '1.0'
+ghcVersion: ghc-9.10.3
+span:
+  file: fixtures/missing-fields/Foo.hs
+  start:
+    line: 3
+    column: 7
+  end:
+    line: 3
+    column: 17
+severity: Warning
+code: 20125
+message:
+- |-
+  Fields of `IOError' not initialised:
+    ioe_handle :: Maybe GHC.Internal.IO.Handle.Types.Handle
+    ioe_type :: IOErrorType
+    ioe_location :: String
+    ioe_description :: String
+    ioe_errno :: Maybe GHC.Internal.Foreign.C.Types.CInt
+    ioe_filename :: Maybe FilePath
+- |-
+  In the expression: IOError {}
+  In an equation for `foo': foo = IOError {}
+hints: []

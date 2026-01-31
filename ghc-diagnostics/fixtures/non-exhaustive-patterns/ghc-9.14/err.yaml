@@ -1,0 +1,24 @@
+version: '1.1'
+ghcVersion: ghc-9.14.1
+span:
+  file: fixtures/non-exhaustive-patterns/Foo.hs
+  start:
+    line: 5
+    column: 9
+  end:
+    line: 5
+    column: 18
+severity: Error
+code: 62161
+message:
+- |-
+  Pattern match(es) are non-exhaustive
+  In a case alternative:
+      Patterns of type ‘Foo’ not matched:
+          Foo
+          Bar _
+          Baz _ _
+hints: []
+reason:
+  flags:
+  - incomplete-patterns

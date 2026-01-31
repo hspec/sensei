@@ -1,0 +1,4 @@
+[;1mfixtures/not-in-scope-qualified/Foo.hs:2:7: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-76037\GHC-76037]8;;\][0m[0m[;1m
+    • Not in scope: ‘M.catMaybes’
+    • Note: No module named ‘M’ is imported.[0m[0m
+

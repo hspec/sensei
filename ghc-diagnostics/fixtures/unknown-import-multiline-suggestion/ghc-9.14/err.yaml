@@ -1,0 +1,21 @@
+version: '1.1'
+ghcVersion: ghc-9.14.1
+span:
+  file: fixtures/unknown-import-multiline-suggestion/Foo.hs
+  start:
+    line: 2
+    column: 1
+  end:
+    line: 2
+    column: 23
+severity: Error
+code: 61948
+message:
+- |-
+  Could not find module ‘Data.Binary.Gut’.
+  Perhaps you meant
+    Data.Binary.Get (from binary-0.8.9.3)
+    Data.Binary.Put (from binary-0.8.9.3)
+    Data.Binary (from binary-0.8.9.3)
+  Use :set -v to see a list of the files searched for.
+hints: []

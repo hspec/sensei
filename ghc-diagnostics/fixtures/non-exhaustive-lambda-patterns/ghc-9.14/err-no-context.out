@@ -1,0 +1,8 @@
+[;1mfixtures/non-exhaustive-lambda-patterns/Foo.hs:5:7: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-62161\GHC-62161]8;;\] [[;1m[31m-Wincomplete-patterns[0m[0m[;1m, [;1m[31mWerror=incomplete-patterns[0m[0m[;1m][0m[0m[;1m
+    Pattern match(es) are non-exhaustive
+    In a \case alternative:
+        Patterns of type ‘Foo’ not matched:
+            Foo
+            Bar _
+            Baz _ _[0m[0m
+

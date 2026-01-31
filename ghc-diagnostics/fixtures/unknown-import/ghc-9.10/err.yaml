@@ -1,0 +1,17 @@
+version: '1.0'
+ghcVersion: ghc-9.10.3
+span:
+  file: fixtures/unknown-import/Foo.hs
+  start:
+    line: 2
+    column: 1
+  end:
+    line: 2
+    column: 11
+severity: Error
+code: 87110
+message:
+- |-
+  Could not find module `Bar'.
+  Use :set -v to see a list of the files searched for.
+hints: []

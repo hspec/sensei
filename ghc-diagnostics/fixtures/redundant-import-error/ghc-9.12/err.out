@@ -1,0 +1,5 @@
+[;1mfixtures/redundant-import-error/Foo.hs:2:1: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-66111\GHC-66111]8;;\] [[;1m[31m-Wunused-imports[0m[0m[;1m, [;1m[31mWerror=unused-imports[0m[0m[;1m][0m[0m[;1m
+    The import of `Data.Maybe' is redundant
+      except perhaps to import instances from `Data.Maybe'
+    To import instances alone, use: import Data.Maybe()[0m[0m
+

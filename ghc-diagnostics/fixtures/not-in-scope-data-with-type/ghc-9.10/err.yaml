@@ -1,0 +1,16 @@
+version: '1.0'
+ghcVersion: ghc-9.10.3
+span:
+  file: fixtures/not-in-scope-data-with-type/Foo.hs
+  start:
+    line: 4
+    column: 7
+  end:
+    line: 4
+    column: 10
+severity: Error
+code: 88464
+message:
+- 'Data constructor not in scope: Foo :: Int -> Maybe Int'
+hints:
+- Perhaps use variable `foo' (line 4)

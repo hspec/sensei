@@ -1,0 +1,23 @@
+version: '1.0'
+ghcVersion: ghc-9.10.3
+span:
+  file: fixtures/non-exhaustive-patterns-dot-dot-dot/Foo.hs
+  start:
+    line: 5
+    column: 9
+  end:
+    line: 6
+    column: 29
+severity: Error
+code: 62161
+message:
+- |-
+  Pattern match(es) are non-exhaustive
+  In a case alternative:
+      Patterns of type `IOErrorType' not matched:
+          NoSuchThing
+          ResourceBusy
+          ResourceExhausted
+          EOF
+          ...
+hints: []

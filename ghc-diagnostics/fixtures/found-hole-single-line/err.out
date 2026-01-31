@@ -1,6 +1,0 @@
-A:3:5: error: [GHC-88464]
-    • Found hole: _ :: A
-    • In an equation for ‘a’: a = _
-    • Relevant bindings include a :: A (bound at A:3:1)
-      Valid hole fits include a :: A (bound at A:3:1)
-

@@ -1,0 +1,43 @@
+[;1mfixtures/found-hole-multiline-signature/Foo.hs:2:5: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-88464\GHC-88464]8;;\][0m[0m[;1m
+    • Found hole:
+        _ :: String
+             -> String
+             -> String
+             -> String
+             -> String
+             -> String
+             -> String
+             -> String
+    • In an equation for ‘a’: a = _
+    • Relevant bindings include
+        a :: String
+             -> String
+             -> String
+             -> String
+             -> String
+             -> String
+             -> String
+             -> String
+          (bound at fixtures/found-hole-multiline-signature/Foo.hs:2:1)
+      Valid hole fits include
+        a :: String
+             -> String
+             -> String
+             -> String
+             -> String
+             -> String
+             -> String
+             -> String
+          (bound at fixtures/found-hole-multiline-signature/Foo.hs:2:1)
+        mempty :: forall a. Monoid a => a
+          with mempty @(String
+                        -> String
+                        -> String
+                        -> String
+                        -> String
+                        -> String
+                        -> String
+                        -> String)
+          (imported from ‘Prelude’ at fixtures/found-hole-multiline-signature/Foo.hs:1:1
+           (and originally defined in ‘GHC.Internal.Base’))[0m[0m
+

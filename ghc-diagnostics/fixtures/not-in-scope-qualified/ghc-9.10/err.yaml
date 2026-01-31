@@ -1,0 +1,17 @@
+version: '1.0'
+ghcVersion: ghc-9.10.3
+span:
+  file: fixtures/not-in-scope-qualified/Foo.hs
+  start:
+    line: 2
+    column: 7
+  end:
+    line: 2
+    column: 18
+severity: Error
+code: 76037
+message:
+- |-
+  Not in scope: `M.catMaybes'
+  NB: no module named `M' is imported.
+hints: []
