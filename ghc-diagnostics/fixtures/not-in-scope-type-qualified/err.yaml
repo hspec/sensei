@@ -1,0 +1,16 @@
+version: '1.1'
+ghcVersion: ghc-9.10.0
+span:
+  file: fixtures/not-in-scope-type-qualified/Foo.hs
+  start:
+    line: 2
+    column: 8
+  end:
+    line: 2
+    column: 14
+severity: Error
+code: 76037
+message:
+- 'Not in scope: type constructor or class ‘My.Map’'
+- 'Note: No module named ‘My’ is imported.'
+hints: []

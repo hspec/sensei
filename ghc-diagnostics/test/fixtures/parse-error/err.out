@@ -1,3 +1,0 @@
-test/fixtures/parse-error/Foo.hs:3:6: error: [GHC-47568]
-    Malformed head of type or class declaration: foo
-

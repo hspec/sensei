@@ -1,0 +1,18 @@
+version: '1.1'
+ghcVersion: ghc-9.10.0
+span:
+  file: fixtures/found-type-hole-named/Foo.hs
+  start:
+    line: 2
+    column: 23
+  end:
+    line: 2
+    column: 27
+severity: Error
+code: 88464
+message:
+- |-
+  Found type wildcard ‘_foo’ standing for ‘String’
+  To use the inferred type, enable PartialTypeSignatures
+- 'In the type signature: foo :: FilePath -> IO _foo'
+hints: []

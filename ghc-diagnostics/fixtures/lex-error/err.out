@@ -1,0 +1,3 @@
+fixtures/lex-error/Foo.hs:3:7: error: [GHC-21231]
+    lexical error at character '\n'
+

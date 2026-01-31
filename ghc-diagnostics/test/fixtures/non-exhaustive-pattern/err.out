@@ -1,5 +1,0 @@
-test/fixtures/non-exhaustive-pattern/Foo.hs:3:9: error: [GHC-62161] [-Wincomplete-patterns, Werror=incomplete-patterns]
-    Pattern match(es) are non-exhaustive
-    In a case alternative:
-        Patterns of type ‘Maybe Int’ not matched: Nothing
-

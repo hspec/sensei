@@ -1,0 +1,7 @@
+fixtures/missing-strict-fields/Foo.hs:6:7: error: [GHC-95909]
+    • Constructor ‘User’ does not have the required strict field(s):
+        name :: String
+        age :: Int
+    • In the expression: User {}
+      In an equation for ‘foo’: foo = User {}
+

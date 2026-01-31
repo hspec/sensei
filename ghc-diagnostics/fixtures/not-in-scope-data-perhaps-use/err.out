@@ -1,0 +1,4 @@
+fixtures/not-in-scope-data-perhaps-use/Foo.hs:3:7: error: [GHC-88464]
+    Variable not in scope: someOption
+    Suggested fix: Perhaps use data constructor ‘SomeOption’ (line 2)
+

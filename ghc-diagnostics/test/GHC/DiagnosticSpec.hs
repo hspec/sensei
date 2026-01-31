@@ -143,7 +143,7 @@ test name extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions_ = it
     separator = replicate 30 '*' <> "\n"
 
     dir :: FilePath
-    dir = "test" </> "fixtures" </> name
+    dir = "fixtures" </> name
 
     src :: FilePath
     src = dir </> "Foo.hs"
@@ -262,13 +262,13 @@ createModule name path module_ expected = ExpectedSolution (CreateModule moduleP
   Utf8.readFile (takeDirectory file </> path) `shouldReturn` unindent expected
   where
     modulePath :: FilePath
-    modulePath = "test" </> "fixtures" </> name </> path
+    modulePath = "fixtures" </> name </> path
 
 createModule_ :: String -> FilePath -> Text -> ExpectedSolution
 createModule_ name path module_ = ExpectedSolution (CreateModule modulePath module_) mempty
   where
     modulePath :: FilePath
-    modulePath = "test" </> "fixtures" </> name </> path
+    modulePath = "fixtures" </> name </> path
 
 replaceName :: HasCallStack => Text -> Text -> String -> ExpectedSolution
 replaceName old new = ExpectedSolution (ReplaceName old new) . expectFileContent
@@ -889,9 +889,9 @@ spec = do
       formatConfig = FormatConfig { showErrorContext = False, color = True }
 
     it "formats an annotated diagnostic message" do
-      Just annotated <- B.readFile "test/fixtures/not-in-scope/err.yaml" >>= parseAnnotated getAvailableImports
+      Just annotated <- B.readFile "fixtures/not-in-scope/err.yaml" >>= parseAnnotated getAvailableImports
       stripAnsi . unpack <$> formatAnnotated formatConfig 1 annotated `shouldBe` (2, unlines [
-          "test/fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
+          "fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: catMaybes"
         , ""
         , solution 1 "import Data.Maybe (catMaybes) (base)"
@@ -899,9 +899,9 @@ spec = do
         ])
 
     it "formats an annotated diagnostic message" do
-      Just annotated <- B.readFile "test/fixtures/not-in-scope-operator/err.yaml" >>= parseAnnotated getAvailableImports
+      Just annotated <- B.readFile "fixtures/not-in-scope-operator/err.yaml" >>= parseAnnotated getAvailableImports
       stripAnsi . unpack <$> formatAnnotated formatConfig 1 annotated `shouldBe` (5, unlines [
-          "test/fixtures/not-in-scope-operator/Foo.hs:2:7: error: [GHC-88464]"
+          "fixtures/not-in-scope-operator/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: <&>"
         , "    Suggested fix:"
         , "      Perhaps use one of these:"

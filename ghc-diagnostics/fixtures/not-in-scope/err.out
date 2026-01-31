@@ -1,0 +1,3 @@
+fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]
+    Variable not in scope: catMaybes
+

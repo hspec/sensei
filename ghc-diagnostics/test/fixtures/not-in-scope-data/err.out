@@ -1,3 +1,0 @@
-test/fixtures/not-in-scope-data/Foo.hs:2:7: error: [GHC-88464]
-    Data constructor not in scope: NoArg
-

@@ -1,0 +1,5 @@
+fixtures/unknown-import-suggestion/Foo.hs:2:1: error: [GHC-61948]
+    Could not find module ‘Syste.IO’.
+    Perhaps you meant System.IO (from base-4.22.0.0)
+    Use -v to see a list of the files searched for.
+
