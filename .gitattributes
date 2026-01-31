@@ -1,3 +1,2 @@
 *.cabal linguist-generated=true
-/ghc-diagnostics/test/fixtures/**/*.yaml linguist-generated=true
-/ghc-diagnostics/test/fixtures/**/Foo.hs linguist-generated=true
+/ghc-diagnostics/fixtures/**/* linguist-generated=true

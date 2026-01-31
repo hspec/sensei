@@ -1,0 +1,21 @@
+version: '1.0'
+ghcVersion: ghc-9.10.3
+span:
+  file: fixtures/missing-instance/Foo.hs
+  start:
+    line: 3
+    column: 12
+  end:
+    line: 3
+    column: 14
+severity: Error
+code: 39999
+message:
+- |-
+  No instance for `Eq (IO ())'
+    arising from the first field of `Bar' (type `IO ()')
+  Possible fix:
+    use a standalone 'deriving instance' declaration,
+      so you can specify the instance context yourself
+- When deriving the instance for (Eq Bar)
+hints: []

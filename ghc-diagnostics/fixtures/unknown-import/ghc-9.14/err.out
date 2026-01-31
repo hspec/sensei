@@ -1,0 +1,4 @@
+[;1mfixtures/unknown-import/Foo.hs:2:1: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-87110\GHC-87110]8;;\][0m[0m[;1m
+    Could not find module ‘Bar’.
+    Use -v to see a list of the files searched for.[0m[0m
+

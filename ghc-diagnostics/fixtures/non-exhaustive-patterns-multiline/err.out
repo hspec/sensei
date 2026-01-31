@@ -1,8 +1,0 @@
-fixtures/non-exhaustive-patterns-multiline/Foo.hs:6:9: error: [GHC-62161] [-Wincomplete-patterns, Werror=incomplete-patterns]
-    Pattern match(es) are non-exhaustive
-    In a case alternative:
-        Patterns of type ‘Some.Very.Long.Hierarchical.Module.Name.Maybe
-                            Int’ not matched:
-            Some.Very.Long.Hierarchical.Module.Name.Nothing
-            Some.Very.Long.Hierarchical.Module.Name.Just _
-

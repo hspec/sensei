@@ -1,0 +1,5 @@
+[;1mfixtures/term-level-use-of-type-constructor/Foo.hs:3:7: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-01928\GHC-01928]8;;\][0m[0m[;1m
+    • Illegal term-level use of the type constructor `Foo'
+    • Perhaps use one of these:
+        variable `foo' (line 3), `Fooa' (line 2), `Fooi' (line 2)[0m[0m
+

@@ -1,0 +1,3 @@
+[;1mfixtures/lex-error/Foo.hs:3:7: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-21231\GHC-21231]8;;\][0m[0m[;1m
+    lexical error at character '\n'[0m[0m
+

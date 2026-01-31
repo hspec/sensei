@@ -1,0 +1,8 @@
+[;1mfixtures/missing-instance/Foo.hs:3:12: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-39999\GHC-39999]8;;\][0m[0m[;1m
+    • No instance for `Eq (IO ())'
+        arising from the first field of `Bar' (type `IO ()')
+      Possible fix:
+        use a standalone 'deriving instance' declaration,
+          so you can specify the instance context yourself
+    • When deriving the instance for (Eq Bar)[0m[0m
+

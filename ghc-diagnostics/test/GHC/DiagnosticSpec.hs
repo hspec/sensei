@@ -5,10 +5,9 @@ module GHC.DiagnosticSpec (spec) where
 
 import Helper
 
-import System.IO
 import System.IO.Temp (withSystemTempDirectory)
+import System.Environment.Blank (getEnvironment)
 import Data.Ord (comparing)
-import GHC.Fingerprint
 import Test.Hspec.Expectations.Contrib qualified as Hspec
 import Data.Yaml (Value)
 import Data.Yaml qualified as Yaml
@@ -16,12 +15,13 @@ import Data.Yaml.Pretty qualified as Yaml
 import Text.RawString.QQ (r, rQ)
 
 import System.IO.Unsafe (unsafePerformIO)
-import System.Process
+import System.Process hiding (system)
 import System.Directory
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.IO.Utf8 qualified as Utf8
 import Data.ByteString qualified as B
+import Data.ByteString.Char8 qualified as Char8
 import Data.Map.Strict qualified as Map
 import Data.String.ANSI.Strip (stripAnsi)
 
@@ -47,13 +47,10 @@ xtest name args code annotation = before_ pending . test name args code annotati
 _ignore :: ()
 _ignore = let _ = (ftest, xtest) in ()
 
-normalizeGhcVersion :: String -> String
-normalizeGhcVersion = unpack . T.replace __GLASGOW_HASKELL_FULL_VERSION__ "9.10.0" . T.pack
-
-pretty :: String -> String
-pretty input = case Yaml.decodeThrow @Maybe @Value $ encodeUtf8 input of
+pretty :: ByteString -> ByteString
+pretty input = case Yaml.decodeThrow @Maybe @Value $ input of
   Nothing -> input
-  Just value -> decodeUtf8 (Yaml.encodePretty conf value)
+  Just value -> (Yaml.encodePretty conf value)
   where
     conf = Yaml.setConfCompare (comparing f) Yaml.defConfig
 
@@ -84,25 +81,42 @@ data ExpectedSolution = ExpectedSolution {
 }
 
 test :: HasCallStack => String -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
-test name extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions_ = it name do
+test name extraArgs code annotation solutions = do
+  testWith GHC_910 name extraArgs code annotation solutions
+  testWith GHC_912 name extraArgs code annotation solutions
+  testWith GHC_914 name extraArgs code annotation solutions
+
+testWith :: HasCallStack => GHC -> String -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
+testWith version name extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions_ = it name do
   unless (B.null code) do
     ensureFile src code
 
-  err <- translate <$> ghc []
-  errNoContext <- translate <$> ghc ["-fno-show-error-context"]
+  let
+    fingerprintFile = dir </> "fingerprint"
+    fingerprint = md5sum code <> "\n"
 
-  json <- pretty <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
-  ensureFile (dir </> "err.out") (encodeUtf8 $ stripAnsi err)
-  ensureFile (dir </> "err.yaml") (encodeUtf8 $ normalizeGhcVersion json)
-  parseAnnotated getAvailableImports (encodeUtf8 json) >>= \ case
+    errNoContextFile = dir </> "err-no-context.out"
+    errFile = dir </> "err.out"
+    jsonFile = dir </> "err.yaml"
+
+
+  isCached <- tryReadFile fingerprintFile <&> (== Just fingerprint)
+
+  unless isCached do
+    ensureFile errFile =<< translate <$> ghc []
+    ensureFile errNoContextFile =<< translate <$> ghc ["-fno-show-error-context"]
+    ensureFile jsonFile =<< pretty <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
+    ensureFile fingerprintFile fingerprint
+
+  err <- decodeUtf8 <$> B.readFile errFile
+  errNoContext <- decodeUtf8 <$> B.readFile errNoContextFile
+  json <- B.readFile jsonFile
+
+  parseAnnotated getAvailableImports json >>= \ case
     Nothing -> do
-      expectationFailure $ "Parsing JSON failed:\n\n" <> json
-    Just annotated -> addAnnotation (separator <> json <> separator <> err <> separator) do
-#if __GLASGOW_HASKELL__ >= 912
-      do
-#else
-      unless ("] [-W" `isInfixOf` stripAnsi err) do
-#endif
+      expectationFailure $ "Parsing JSON failed:\n\n" <> decodeUtf8 json
+    Just annotated -> addAnnotation (separator <> decodeUtf8 json <> separator <> err <> separator) do
+      unless (version == GHC_910 && "] [-W" `isInfixOf` stripAnsi err) do
         format FormatConfig { showErrorContext = True, color = False } annotated.diagnostic `shouldBe` stripAnsi err
         format FormatConfig { showErrorContext = False, color = False } annotated.diagnostic `shouldBe` stripAnsi errNoContext
         format FormatConfig { showErrorContext = True, color = True } annotated.diagnostic `shouldBe` err
@@ -128,67 +142,59 @@ test name extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions_ = it
           solution.withAppliedSolution dst
   where
     solutions :: [ExpectedSolution]
-#if __GLASGOW_HASKELL__ >= 912
-    solutions = solutions_
-#else
-    solutions = filter supportedByGhc910 solutions_
-      where
-        supportedByGhc910 :: ExpectedSolution -> Bool
-        supportedByGhc910 = \ case
-          ExpectedSolution IgnoreWarning {} _ -> False
-          _ -> True
-#endif
+    solutions = case version of
+      GHC_910 -> filter supportedByGhc910 solutions_
+        where
+          supportedByGhc910 :: ExpectedSolution -> Bool
+          supportedByGhc910 = \ case
+            ExpectedSolution IgnoreWarning {} _ -> False
+            _ -> True
+      _ -> solutions_
 
     separator :: String
     separator = replicate 30 '*' <> "\n"
 
+    fixture :: FilePath
+    fixture = "fixtures" </> name
+
     dir :: FilePath
-    dir = "fixtures" </> name
+    dir = fixture </> case version of
+      GHC_910 -> "ghc-9.10"
+      GHC_912 -> "ghc-9.12"
+      GHC_914 -> "ghc-9.14"
 
     src :: FilePath
-    src = dir </> "Foo.hs"
+    src = fixture </> "Foo.hs"
 
-    ghc :: [String] -> IO String
+    ghc :: [String] -> IO ByteString
     ghc args = do
-      cached "ghc" (["-XNoStarIsType", "-fno-code", "-fno-diagnostics-show-caret", "-fdiagnostics-color=always", "-fprint-error-index-links=always"] ++ args ++ extraArgs ++ [src])
+      system bin (["-XNoStarIsType", "-fno-code", "-fno-diagnostics-show-caret", "-fdiagnostics-color=always", "-fprint-error-index-links=always"] ++ args ++ extraArgs ++ [src])
+      where
+        bin = case version of
+          GHC_910 -> "ghc-9.10"
+          GHC_912 -> "ghc-9.12"
+          GHC_914 -> "ghc-9.14"
 
-    translate :: String -> String
-#if __GLASGOW_HASKELL__ >= 914
-    translate = id
-#else
-    translate = map \ case
+    translate :: ByteString -> ByteString
+    translate = case version of
+      GHC_910 -> translate_
+      GHC_912 -> translate_
+      GHC_914 -> id
+
+    translate_ :: ByteString -> ByteString
+    translate_ = Char8.map \ case
       '‘' -> '`'
       '’' -> '\''
       c -> c
-#endif
 
-cached :: FilePath -> [String] -> IO String
-cached program args = do
-  fingerprint <- combine program . fingerprintFingerprints <$> for args \ arg -> doesFileExist arg >>= \ case
-    False -> return $ fingerprintString arg
-    True -> combine arg <$> getFileHash arg
-
-  cache <- getCacheDirectory
-
+system :: FilePath -> [String] -> IO ByteString
+system program args = encodeUtf8 <$> do
+  env <- Just . filter (fst >>> (/= "GHC_ENVIRONMENT")) <$> getEnvironment
   let
-    cacheFile :: String
-    cacheFile = cache </> show fingerprint
-
     process :: CreateProcess
-    process = proc program args
-
-  doesFileExist cacheFile >>= \ case
-    False -> do
-      (_, _, err) <- readCreateProcessWithExitCode process ""
-      bracket (openTempFile cache "sensei") (hClose . snd) \ (file, h) -> do
-        hPutStr h err
-        renameFile file cacheFile
-      return err
-    True -> do
-      readFile cacheFile
-  where
-    combine :: String -> Fingerprint -> Fingerprint
-    combine a b = fingerprintFingerprints [fingerprintString a, b]
+    process = (proc program args) { env }
+  (_, _, err) <- readCreateProcessWithExitCode process ""
+  return err
 
 getAvailableImports :: IO AvailableImports
 getAvailableImports = do
@@ -455,6 +461,7 @@ spec = do
 
     test "found-hole" [] [r|
       module Foo where
+      import Prelude hiding (fail)
       foo :: FilePath -> IO String
       foo name = do
         r <- _ name
@@ -464,20 +471,16 @@ spec = do
       , HoleFit "readFile" "FilePath -> IO String"
       , HoleFit "readIO" "forall a. Read a => String -> IO a"
       , HoleFit "return" "forall (m :: Type -> Type) a. Monad m => a -> m a"
-#if __GLASGOW_HASKELL__ >= 914
-      , HoleFit "fail" "forall (m :: Type -> Type) a. (MonadFail m, GHC.Internal.Stack.Types.HasCallStack) => String -> m a"
-#else
-      , HoleFit "fail" "forall (m :: Type -> Type) a. MonadFail m => String -> m a"
-#endif
       , HoleFit "pure" "forall (f :: Type -> Type) a. Applicative f => a -> f a"
+      , HoleFit "mempty" "forall a. Monoid a => a"
       ]
       ) [
         replaceName_ "_" "foo"
       , replaceName_ "_" "readFile"
       , replaceName_ "_" "readIO"
       , replaceName_ "_" "return"
-      , replaceName_ "_" "fail"
       , replaceName_ "_" "pure"
+      , replaceName_ "_" "mempty"
       ]
 
     test "found-hole-no-type" ["-fno-show-type-of-hole-fits"] [r|
@@ -889,7 +892,7 @@ spec = do
       formatConfig = FormatConfig { showErrorContext = False, color = True }
 
     it "formats an annotated diagnostic message" do
-      Just annotated <- B.readFile "fixtures/not-in-scope/err.yaml" >>= parseAnnotated getAvailableImports
+      Just annotated <- B.readFile "fixtures/not-in-scope/ghc-9.14/err.yaml" >>= parseAnnotated getAvailableImports
       stripAnsi . unpack <$> formatAnnotated formatConfig 1 annotated `shouldBe` (2, unlines [
           "fixtures/not-in-scope/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: catMaybes"
@@ -899,19 +902,14 @@ spec = do
         ])
 
     it "formats an annotated diagnostic message" do
-      Just annotated <- B.readFile "fixtures/not-in-scope-operator/err.yaml" >>= parseAnnotated getAvailableImports
+      Just annotated <- B.readFile "fixtures/not-in-scope-operator/ghc-9.14/err.yaml" >>= parseAnnotated getAvailableImports
       stripAnsi . unpack <$> formatAnnotated formatConfig 1 annotated `shouldBe` (5, unlines [
           "fixtures/not-in-scope-operator/Foo.hs:2:7: error: [GHC-88464]"
         , "    Variable not in scope: <&>"
         , "    Suggested fix:"
         , "      Perhaps use one of these:"
-#if __GLASGOW_HASKELL__ >= 914
         , "        \8216<>\8217 (imported from Prelude), \8216<$>\8217 (imported from Prelude),"
         , "        \8216<*>\8217 (imported from Prelude)"
-#else
-        , "        `<>' (imported from Prelude), `<$>' (imported from Prelude),"
-        , "        `<*>' (imported from Prelude)"
-#endif
         , ""
         , solution 1 "Use <>"
         , solution 2 "Use <$>"

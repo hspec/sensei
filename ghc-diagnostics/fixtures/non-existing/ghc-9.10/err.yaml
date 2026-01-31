@@ -1,0 +1,8 @@
+version: '1.0'
+ghcVersion: ghc-9.10.3
+span: null
+severity: Error
+code: 49196
+message:
+- Can't find fixtures/non-existing/Foo.hs
+hints: []

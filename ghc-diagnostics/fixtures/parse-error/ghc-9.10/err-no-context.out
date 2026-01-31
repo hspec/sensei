@@ -1,0 +1,3 @@
+[;1mfixtures/parse-error/Foo.hs:3:6: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-47568\GHC-47568]8;;\][0m[0m[;1m
+    Malformed head of type or class declaration: foo[0m[0m
+

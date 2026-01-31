@@ -1,0 +1,7 @@
+[;1mfixtures/too-few-arguments/Foo.hs:3:7: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-83865\GHC-83865]8;;\][0m[0m[;1m
+    • Couldn't match expected type: Maybe Int
+                  with actual type: a0 -> Maybe a0
+    • Probable cause: ‘Just’ is applied to too few arguments
+      In the expression: Just
+      In an equation for ‘foo’: foo = Just[0m[0m
+

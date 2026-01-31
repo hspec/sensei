@@ -1,0 +1,5 @@
+[;1mfixtures/found-type-hole-named/Foo.hs:2:23: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-88464\GHC-88464]8;;\][0m[0m[;1m
+    • Found type wildcard `_foo' standing for `String'
+      To use the inferred type, enable PartialTypeSignatures
+    • In the type signature: foo :: FilePath -> IO _foo[0m[0m
+

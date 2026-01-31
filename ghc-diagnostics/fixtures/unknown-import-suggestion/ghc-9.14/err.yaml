@@ -1,0 +1,18 @@
+version: '1.1'
+ghcVersion: ghc-9.14.1
+span:
+  file: fixtures/unknown-import-suggestion/Foo.hs
+  start:
+    line: 2
+    column: 1
+  end:
+    line: 2
+    column: 16
+severity: Error
+code: 61948
+message:
+- |-
+  Could not find module ‘Syste.IO’.
+  Perhaps you meant System.IO (from base-4.22.0.0)
+  Use :set -v to see a list of the files searched for.
+hints: []

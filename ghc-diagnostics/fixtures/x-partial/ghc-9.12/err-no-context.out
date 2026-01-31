@@ -1,0 +1,5 @@
+[;1mfixtures/x-partial/Foo.hs:2:7: [;1m[35mwarning[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-63394\GHC-63394]8;;\] [[;1m[35m-Wx-partial[0m[0m[;1m][0m[0m[;1m
+    In the use of `head'
+    (imported from Prelude, but defined in GHC.Internal.List):
+    "This is a partial function, it throws an error on empty lists. Use pattern matching, 'Data.List.uncons' or 'Data.Maybe.listToMaybe' instead. Consider refactoring to use "Data.List.NonEmpty"."[0m[0m
+

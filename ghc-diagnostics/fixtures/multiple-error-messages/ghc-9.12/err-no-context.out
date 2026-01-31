@@ -1,0 +1,3 @@
+[;1mfixtures/multiple-error-messages/Foo.hs:3:13: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-39999\GHC-39999]8;;\][0m[0m[;1m
+    No instance for `Num String' arising from a use of `+'[0m[0m
+

@@ -1,0 +1,8 @@
+[;1mfixtures/unknown-import-multiline-suggestion/Foo.hs:2:1: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-61948\GHC-61948]8;;\][0m[0m[;1m
+    Could not find module `Data.Binary.Gut'.
+    Perhaps you meant
+      Data.Binary.Get (from binary-0.8.9.3)
+      Data.Binary.Put (from binary-0.8.9.3)
+      Data.Binary (from binary-0.8.9.3)
+    Use -v to see a list of the files searched for.[0m[0m
+

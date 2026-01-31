@@ -1,0 +1,5 @@
+[;1mfixtures/not-in-scope-operator-infix/Foo.hs:3:14: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-88464\GHC-88464]8;;\][0m[0m[;1m
+    Variable not in scope:
+      (&&&) :: (t0 a0 -> Int) -> (a1 -> a1) -> [a] -> (Int, [a])
+    Suggested fix: Perhaps use ‘&&’ (imported from Prelude)[0m[0m
+

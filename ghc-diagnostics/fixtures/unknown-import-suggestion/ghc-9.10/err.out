@@ -1,0 +1,5 @@
+[;1mfixtures/unknown-import-suggestion/Foo.hs:2:1: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-61948\GHC-61948]8;;\][0m[0m[;1m
+    Could not find module `Syste.IO'.
+    Perhaps you meant System.IO (from base-4.20.2.0)
+    Use -v to see a list of the files searched for.[0m[0m
+

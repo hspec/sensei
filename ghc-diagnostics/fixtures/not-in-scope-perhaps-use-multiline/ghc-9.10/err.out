@@ -1,0 +1,7 @@
+[;1mfixtures/not-in-scope-perhaps-use-multiline/Foo.hs:3:7: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-88464\GHC-88464]8;;\][0m[0m[;1m
+    Variable not in scope: fold
+    Suggested fix:
+      Perhaps use one of these:
+        `foldl' (imported from Data.List),
+        `foldr' (imported from Data.List)[0m[0m
+

@@ -1,0 +1,5 @@
+[;1mfixtures/non-exhaustive-pattern/Foo.hs:3:9: [;1m[31merror[0m[0m[;1m: []8;;https://errors.haskell.org/messages/GHC-62161\GHC-62161]8;;\] [[;1m[31m-Wincomplete-patterns[0m[0m[;1m, [;1m[31mWerror=incomplete-patterns[0m[0m[;1m][0m[0m[;1m
+    Pattern match(es) are non-exhaustive
+    In a case alternative:
+        Patterns of type `Maybe Int' not matched: Nothing[0m[0m
+
