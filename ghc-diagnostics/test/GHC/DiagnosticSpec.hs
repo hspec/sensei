@@ -35,8 +35,8 @@ import GHC.Diagnostic.Annotated
 shouldAnnotate :: Bool
 shouldAnnotate = True
 
-addAnnotation :: String -> IO a -> IO a
-addAnnotation m = if shouldAnnotate then Hspec.annotate m else id
+showOnFailure :: String -> IO a -> IO a
+showOnFailure m = if shouldAnnotate then Hspec.annotate m else id
 
 ftest, xtest :: HasCallStack => String -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
 
@@ -87,7 +87,7 @@ test name extraArgs code annotation solutions = do
   testWith GHC_914 name extraArgs code annotation solutions
 
 testWith :: HasCallStack => GHC -> String -> [String] -> String -> Maybe Annotation -> [ExpectedSolution] -> Spec
-testWith version name extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions_ = it name do
+testWith version name extraArgs (T.encodeUtf8 . unindent -> code) annotation solutions_ = it description do
   unless (B.null code) do
     ensureFile src code
 
@@ -108,19 +108,21 @@ testWith version name extraArgs (T.encodeUtf8 . unindent -> code) annotation sol
     ensureFile jsonFile =<< pretty <$> ghc ["-fdiagnostics-as-json", "--interactive", "-ignore-dot-ghci"]
     ensureFile fingerprintFile fingerprint
 
-  err <- decodeUtf8 <$> B.readFile errFile
-  errNoContext <- decodeUtf8 <$> B.readFile errNoContextFile
+  err <- readFile errFile
+  errNoContext <- readFile errNoContextFile
   json <- B.readFile jsonFile
 
+  let withDebugOutput = showOnFailure (separator <> decodeUtf8 json <> separator <> err <> separator)
+
   parseAnnotated getAvailableImports json >>= \ case
-    Nothing -> do
-      expectationFailure $ "Parsing JSON failed:\n\n" <> decodeUtf8 json
-    Just annotated -> addAnnotation (separator <> decodeUtf8 json <> separator <> err <> separator) do
+    Nothing -> expectationFailure $ "Parsing JSON failed:\n\n" <> decodeUtf8 json
+    Just annotated -> withDebugOutput do
+      let diagnostic = annotated.diagnostic
       unless (version == GHC_910 && "] [-W" `isInfixOf` stripAnsi err) do
-        format FormatConfig { showErrorContext = True, color = False } annotated.diagnostic `shouldBe` stripAnsi err
-        format FormatConfig { showErrorContext = False, color = False } annotated.diagnostic `shouldBe` stripAnsi errNoContext
-        format FormatConfig { showErrorContext = True, color = True } annotated.diagnostic `shouldBe` err
-        format FormatConfig { showErrorContext = False, color = True } annotated.diagnostic `shouldBe` errNoContext
+        format FormatConfig { showErrorContext = True, color = False } diagnostic `shouldBe` stripAnsi err
+        format FormatConfig { showErrorContext = False, color = False } diagnostic `shouldBe` stripAnsi errNoContext
+        format FormatConfig { showErrorContext = True, color = True } diagnostic `shouldBe` err
+        format FormatConfig { showErrorContext = False, color = True } diagnostic `shouldBe` errNoContext
 
       annotated.annotation `shouldBe` annotation
       annotated.solutions `shouldBe` map (.solution) solutions
@@ -141,6 +143,9 @@ testWith version name extraArgs (T.encodeUtf8 . unindent -> code) annotation sol
             apply tmp (Just n) edits
           solution.withAppliedSolution dst
   where
+    description :: FilePath
+    description = name ++ " " ++ show version
+
     solutions :: [ExpectedSolution]
     solutions = case version of
       GHC_910 -> filter supportedByGhc910 solutions_
