@@ -31,7 +31,7 @@ data GHC =
     GHC_910
   | GHC_912
   | GHC_914
-  deriving (Eq, Ord, Bounded)
+  deriving (Eq, Show, Ord, Bounded)
 
 requiredFor :: GHC -> a -> a
 requiredFor _ = id
