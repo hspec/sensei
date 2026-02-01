@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 module GHC.Diagnostic.Type (
   Diagnostic(..)
@@ -226,6 +227,9 @@ isErrorContext m = or [
   , startsWith "In the kind"
   , startsWith "In the type signature:"
   , startsWith "When deriving the instance for "
+#ifndef TEST
+  , startsWith "Relevant bindings include"
+#endif
   , case T.words m of
       "In" : "the" : _ : "argument" : "of" : _ -> True
       "In" : "the" : _ : "field" : "of" : "a" :  "record" : _ -> True
