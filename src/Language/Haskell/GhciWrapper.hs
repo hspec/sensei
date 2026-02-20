@@ -98,7 +98,7 @@ new startupFile config@Config{..} envDefaults args_ = do
     mandatoryArgs = ["-fshow-loaded-modules", "--interactive"]
 
     args :: [String]
-    args = "-ghci-script" : startupFile : setDiagnosticsAsJson args_ ++ catMaybes [
+    args = "-fdiagnostics-color=always" : "-ghci-script" : startupFile : setDiagnosticsAsJson args_ ++ catMaybes [
         if ignoreDotGhci then Just "-ignore-dot-ghci" else Nothing
       ] ++ writeIdeInfo ++ mandatoryArgs
 

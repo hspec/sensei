@@ -5,6 +5,7 @@ import           Data.Coerce (coerce)
 import qualified GHC.List as List
 
 import           System.Console.GetOpt
+import qualified Options.GHC as GHC
 
 splitArgs :: [String] -> ([String], [String])
 splitArgs args = case break (== "--") $ reverse args of
@@ -26,10 +27,12 @@ partitionOptions :: [Option] -> ([String], [String])
 partitionOptions = bimap (List.concat . coerce) (List.concat . coerce) . partitionEithers
 
 classify :: [String] -> [Option]
-classify = takeHspec >>> \ case
-  ([], []) -> []
-  ([], ghc : args) -> ghcOption [ghc] : classify args
-  (hspec, args) -> hspecOption hspec : classify args
+classify = GHC.takeGhc >>> \ case
+  ([], args) -> case takeHspec args of
+    ([], []) -> []
+    ([], file : rest) -> ghcOption [file] : classify rest
+    (hspec, rest) -> hspecOption hspec : classify rest
+  (ghc, rest) -> ghcOption ghc : classify rest
 
 takeHspec :: [String] -> ([String], [String])
 takeHspec = \ case
