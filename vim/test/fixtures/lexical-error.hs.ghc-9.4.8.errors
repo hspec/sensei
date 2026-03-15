@@ -1,0 +1,4 @@
+[1 of 2] Compiling Main             ( lexical-error.hs, lexical-error.o )
+
+lexical-error.hs:1:11: error:
+    lexical error in string/character literal at character '\n'

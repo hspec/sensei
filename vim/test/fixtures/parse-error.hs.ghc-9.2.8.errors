@@ -1,0 +1,5 @@
+[1 of 1] Compiling Main             ( parse-error.hs, parse-error.o )
+
+parse-error.hs:1:1: error:
+    Parse error: module header, import declaration
+    or top-level declaration expected.

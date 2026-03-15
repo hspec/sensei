@@ -1,0 +1,9 @@
+[1 of 1] Compiling Main             ( suggested-fix-multiline.hs, suggested-fix-multiline.o )
+
+suggested-fix-multiline.hs:1:1: error:
+    The type signature for ‘foo’ lacks an accompanying binding
+      Perhaps you meant ‘foo_’ (Defined at suggested-fix-multiline.hs:2:1)
+
+suggested-fix-multiline.hs:4:1: error:
+    The type signature for ‘bar’ lacks an accompanying binding
+      Perhaps you meant ‘bar_’ (Defined at suggested-fix-multiline.hs:5:1)
